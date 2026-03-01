@@ -1,0 +1,14 @@
+{
+  "name": "repokit-marketplace",
+  "owner": {
+    "name": "Lampshady",
+    "email": "lampshady24@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "repokit",
+      "source": "plugins/repokit",
+      "description": "TODO"
+    }
+  ]
+}
