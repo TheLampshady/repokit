@@ -1,0 +1,10 @@
+[project]
+name = "repokit"
+version = "0.1.0"
+description = "Codebase maintenance toolkit for AI agents"
+readme = "README.md"
+requires-python = ">=3.11"
+
+[project.urls]
+Homepage = "https://github.com/TheLampshady/repokit"
+Repository = "https://github.com/TheLampshady/repokit"

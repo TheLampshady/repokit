@@ -7,8 +7,8 @@
   "plugins": [
     {
       "name": "repokit",
-      "source": "plugins/repokit",
-      "description": "TODO"
+      "source": "./",
+      "description": "Codebase maintenance toolkit. Provides skills for documentation generation (dockit), stack modernization (modernizer), and developer onboarding, plus agents for code quality checks (sanity-checker) and documentation auditing (auditor)."
     }
   ]
 }

@@ -1,27 +1,75 @@
-# Example Policy Rules for Gemini CLI Extension
+# repokit Policy Rules for Gemini CLI Extension
 #
 # Extensions run in Tier 2 (Extension Tier).
-# Security Note: 'allow' decisions and 'yolo' mode configurations are ignored.
+# Security Note: 'allow' decisions and 'yolo' mode configurations are ignored by Gemini CLI.
 
-# Rule: Always ask the user before running a specific dangerous shell command.
+# ── Destructive Shell Commands ────────────────────────────────────────────────
+
+# Always confirm before rm -rf
 [[rule]]
 toolName = "run_shell_command"
 commandPrefix = "rm -rf"
 decision = "ask_user"
 priority = 100
 
-# Rule: Deny access to sensitive files using the grep tool.
+# Protect the ticket system from accidental deletion
+[[rule]]
+toolName = "run_shell_command"
+argsPattern = "rm.*spec/"
+decision = "ask_user"
+priority = 105
+deny_message = "This will delete the spec/ ticket system. Confirm you intend to do this."
+
+# Protect skill and agent definitions from bulk deletion
+[[rule]]
+toolName = "run_shell_command"
+argsPattern = "rm.*(agents/|\\.agents/)"
+decision = "ask_user"
+priority = 110
+deny_message = "This will delete agent or skill definitions. Confirm you intend to do this."
+
+# ── Git Operations ────────────────────────────────────────────────────────────
+
+# Confirm before pushing to remote
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git push"
+decision = "ask_user"
+priority = 120
+
+# ── Sensitive File Access ─────────────────────────────────────────────────────
+
+# Block reading sensitive credential files
 [[rule]]
 toolName = "grep_search"
-argsPattern = "(\.env|id_rsa|passwd)"
+argsPattern = "(\\.env|id_rsa|passwd|secrets)"
 decision = "deny"
 priority = 200
-deny_message = "Access to sensitive credentials or system files is restricted by the policy-example extension."
+deny_message = "Access to sensitive credentials or system files is restricted."
 
-# Safety Checker: Apply path validation to all write operations.
+# Block writing to .env files
+[[rule]]
+toolName = "write_file"
+argsPattern = "\\.env"
+decision = "deny"
+priority = 205
+deny_message = "Writing to .env files is restricted. Manage secrets outside of AI sessions."
+
+# ── Critical Context Files ────────────────────────────────────────────────────
+
+# Confirm before overwriting AI context files — accidental overwrites break sessions
+[[rule]]
+toolName = "write_file"
+argsPattern = "(CLAUDE\\.md|GEMINI\\.md)"
+decision = "ask_user"
+priority = 300
+
+# ── Safety Checkers ───────────────────────────────────────────────────────────
+
+# Validate file paths on all write operations
 [[safety_checker]]
 toolName = ["write_file", "replace"]
-priority = 300
+priority = 400
 [safety_checker.checker]
 type = "in-process"
 name = "allowed-path"
