@@ -15,6 +15,11 @@ A codebase maintenance toolkit for AI agents. Provides skills, agents, commands,
 gemini extensions install https://github.com/TheLampshady/repokit
 ```
 
+**GitHub Copilot CLI plugin:**
+```bash
+copilot plugin install https://github.com/TheLampshady/repokit
+```
+
 ---
 
 ## Tools

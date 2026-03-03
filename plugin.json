@@ -1,0 +1,12 @@
+{
+  "name": "repokit",
+  "description": "Codebase maintenance toolkit. Provides skills for documentation generation (dockit), stack modernization (modernizer), and developer onboarding, plus agents for code quality checks (sanity-checker) and codebase auditing (auditor).",
+  "version": "1.0.1",
+  "author": {
+    "name": "Lampshady"
+  },
+  "license": "MIT",
+  "keywords": ["documentation", "modernization", "onboarding", "code-quality", "maintenance"],
+  "agents": "agents/",
+  "skills": ["skills/"]
+}
