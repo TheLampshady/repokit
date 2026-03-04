@@ -7,7 +7,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Repokit is a codebase maintenance toolkit for AI agents. It provides:
 - **Skills** — cross-platform, invoked via slash commands, work on Claude and Gemini
 - **Agents** — Claude-specific subagents that auto-trigger based on task context
-- **Commands** — simple prompt-expansion slash commands
 - **Hooks & policies** — session lifecycle and security rules
 
 There is no build system or compiled code. Everything is Markdown, TOML, and JSON.
@@ -16,13 +15,14 @@ There is no build system or compiled code. Everything is Markdown, TOML, and JSO
 
 | Path | Purpose |
 |------|---------|
-| `.agents/skills/dockit/` | Documentation generation skill (init, sync, check, migrate, diagrams) |
-| `.agents/skills/modernizer/` | Stack modernization skill — audits tooling, writes tickets to `spec/` |
-| `.agents/skills/onboard/` | Onboarding skill — creates phased plans for new devs |
+| `skills/dockit/` | Documentation generation skill (init, sync, check, migrate, diagrams) |
+| `skills/modernizer/` | Stack modernization skill — audits tooling, writes tickets to `spec/` |
+| `skills/onboard/` | Onboarding skill — creates phased plans for new devs |
+| `skills/repokit/` | Tool menu skill — shows available tools and guides to the right one |
+| `.agents/skills/` | Symlink to `skills/` for Gemini cross-compatibility |
 | `agents/` | Distributed agents bundled with the plugin (sanity-checker, auditor) |
 | `.claude/agents/` | Internal dev-only agents — NOT distributed (component-reviewer only) |
 | `.claude-plugin/` | Claude plugin metadata (`plugin.json`) and marketplace catalog (`marketplace.json`) |
-| `commands/` | Slash commands (`/repokit` menu) |
 | `hooks/` | Session lifecycle hooks |
 | `policies/` | Gemini CLI policy engine rules |
 | `spec/` | Ticket system — created at runtime by agents, gitignored in this repo |
@@ -31,15 +31,16 @@ There is no build system or compiled code. Everything is Markdown, TOML, and JSO
 
 ## Architecture
 
-### Skills (`.agents/skills/`, cross-platform)
+### Skills (`skills/`, cross-platform)
 
-Skills have YAML frontmatter (`name`, `description`, `user-invocable: true`) and load on demand. Both Claude and Gemini recognize `.agents/skills/` automatically.
+Skills have YAML frontmatter (`name`, `description`, `user-invocable: true`) and load on demand. Claude discovers from `skills/` at plugin root; Gemini discovers from `.agents/skills/` (symlinked to `skills/`).
 
 | Skill | Modes | Key Behavior |
 |-------|-------|-------------|
 | `dockit` | init, sync, check, migrate, diagrams | Scales docs by project size; detects frameworks; never destroys content |
 | `modernizer` | analyze, status | Plans only, never executes; writes tickets to `spec/tickets/`, appends to `spec/backlog.md` with `[modernizer]` tag |
 | `onboard` | (single mode) | Reads existing docs first; asks for role before proceeding; chat-only, creates no files |
+| `repokit` | (single mode) | Shows the full tool menu and guides user to the right tool |
 
 ### Agents (`agents/`, distributed with plugin)
 
@@ -87,10 +88,10 @@ The `plugins/` subdirectory no longer exists — the root is the plugin.
 
 ## Adding a New Framework to dockit
 
-1. Add detection rule to `.agents/skills/dockit/frameworks/_index.md`
-2. Create `.agents/skills/dockit/frameworks/[name].md` (use `_default.md` as template)
-3. Create `.agents/skills/dockit/references/templates/[name]/` with framework-specific templates
-4. Add a sample to `.agents/skills/dockit/references/samples/[name]-project/`
+1. Add detection rule to `skills/dockit/frameworks/_index.md`
+2. Create `skills/dockit/frameworks/[name].md` (use `_default.md` as template)
+3. Create `skills/dockit/references/templates/[name]/` with framework-specific templates
+4. Add a sample to `skills/dockit/references/samples/[name]-project/`
 
 ## Hooks
 

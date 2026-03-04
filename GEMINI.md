@@ -13,6 +13,7 @@ Invoke with `/skill-name`. Gemini auto-detects them based on your request.
 | **dockit** | `/dockit` | Asked to generate docs, update README, sync docs with code, check doc freshness, or explain doc structure |
 | **modernizer** | `/modernizer` | Asked to audit the codebase, modernize tooling, find missing tests/hooks/CI, or check if dependencies are outdated |
 | **onboard** | `/onboard` | A new team member needs to get started, or someone asks how to contribute |
+| **repokit** | `/repokit` | Show the full tool menu and get guided to the right tool |
 
 ---
 

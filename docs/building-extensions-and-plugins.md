@@ -493,29 +493,29 @@ my-toolkit/
 │   └── marketplace.json
 ├── gemini-extension.json
 ├── GEMINI.md
+├── skills/                 ← canonical skill location (Claude auto-discovers here)
+│   ├── my-skill/
+│   │   └── SKILL.md
+│   └── other-skill/
+│       └── SKILL.md
 ├── .agents/
-│   └── skills/
-│       ├── my-skill/
-│       │   └── SKILL.md   ← loaded by both platforms
-│       └── other-skill/
-│           └── SKILL.md
+│   └── skills -> ../skills ← symlink for Gemini cross-compatibility
 ├── agents/                 ← distributed agents (Claude via plugin, Gemini optional)
 │   └── my-agent.md
-├── commands/
-│   └── menu.toml
 └── hooks/
     └── hooks.json
 ```
 
 ### Skills auto-discovery for cross-platform setups
 
-Claude auto-discovers skills from `skills/` at the plugin root. If your skills live in `.agents/skills/` for Gemini cross-compatibility, create a symlink so Claude can find them:
+Claude auto-discovers skills from `skills/` at the plugin root. Gemini discovers from `.agents/skills/`. To support both without duplicating files, keep skills in `skills/` and create a symlink for Gemini:
 
 ```bash
-ln -s .agents/skills skills
+# Inside .agents/
+ln -s ../skills skills
 ```
 
-This keeps one canonical skill location (`.agents/skills/`) shared by both platforms without duplicating files.
+> **Important**: Do not use a symlink at `skills/` pointing to `.agents/skills/` — Claude's remote plugin fetch does not resolve symlinks. The real files must live in `skills/`. Gemini installs via `git clone`, which resolves symlinks correctly, so `.agents/skills → ../skills` works fine for Gemini.
 
 ### Platform Differences
 
@@ -700,15 +700,15 @@ repokit/
 │   └── marketplace.json    # Single-plugin catalog, source: "./"
 ├── gemini-extension.json   # Gemini manifest, contextFileName: "GEMINI.md"
 ├── GEMINI.md               # Tool docs loaded by Gemini in any project
-├── .agents/skills/         # Cross-platform skills (canonical location)
+├── skills/                 # Cross-platform skills (Claude auto-discovers here)
 │   ├── dockit/SKILL.md
 │   ├── modernizer/SKILL.md
-│   └── onboard/SKILL.md
-├── skills -> .agents/skills # Symlink — lets Claude auto-discover skills
+│   ├── onboard/SKILL.md
+│   └── repokit/SKILL.md
+├── .agents/skills -> ../skills  # Symlink — Gemini cross-compatibility
 ├── agents/                 # Distributed agents (no color field)
-│   ├── sanity-checker.md
-│   └── auditor.md
-├── commands/repokit.toml   # /repokit menu command
+│   ├── sanity-checker.agent.md
+│   └── auditor.agent.md
 ├── hooks/hooks.json        # SessionStart backlog count
 ├── policies/policies.toml  # Safety guardrails
 └── Makefile                # Dev workflow (make setup, make check)

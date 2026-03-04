@@ -1,6 +1,6 @@
 # repokit
 
-A codebase maintenance toolkit for AI agents. Provides skills, agents, commands, hooks, and policies that help development teams maintain documentation, modernize tooling, onboard developers, and track technical debt.
+A codebase maintenance toolkit for AI agents. Provides skills, agents, hooks, and policies that help development teams maintain documentation, modernize tooling, onboard developers, and track technical debt.
 
 ## Install
 
@@ -8,7 +8,9 @@ A codebase maintenance toolkit for AI agents. Provides skills, agents, commands,
 ```bash
 /plugin marketplace add TheLampshady/repokit
 /plugin install repokit@repokit-marketplace
+# NOTE: Restart Claude
 ```
+
 
 **Gemini CLI extension:**
 ```bash
@@ -18,6 +20,25 @@ gemini extensions install https://github.com/TheLampshady/repokit
 **GitHub Copilot CLI plugin:**
 ```bash
 copilot plugin install https://github.com/TheLampshady/repokit
+```
+
+
+### Un-Install
+
+**Claude Code plugin:**
+```bash
+/plugin marketplace remove TheLampshady/repokit
+/plugin uninstall repokit@repokit-marketplace
+```
+
+**Gemini CLI extension:**
+```bash
+gemini extensions uninstall https://github.com/TheLampshady/repokit
+```
+
+**GitHub Copilot CLI plugin:**
+```bash
+copilot plugin uninstall https://github.com/TheLampshady/repokit
 ```
 
 ---
@@ -31,6 +52,7 @@ copilot plugin install https://github.com/TheLampshady/repokit
 | **dockit** | `/dockit` | Generate, sync, check, and migrate project documentation. Scales by project size, auto-detects frameworks. |
 | **modernizer** | `/modernizer` | Audit the codebase for outdated tooling, missing tests, and packaging gaps. Creates tickets in `spec/`. |
 | **onboard** | `/onboard` | Create personalized onboarding plans for new team members based on role or feature focus. |
+| **repokit** | `/repokit` | Show the full tool menu and get guided to the right tool. |
 
 ### Agents (auto-triggered)
 
@@ -40,12 +62,6 @@ copilot plugin install https://github.com/TheLampshady/repokit
 | **auditor** | You ask to review the codebase for outdated code, stale practices, or automation gaps | Claude |
 
 > **Gemini users:** See [Enabling Gemini Subagents](#gemini-subagents) to use agents on Gemini.
-
-### Commands
-
-| Command | Purpose |
-|---------|---------|
-| `/repokit` | Show the full tool menu and get guided to the right tool |
 
 ---
 
@@ -120,6 +136,7 @@ graph TD
         end
 
         subgraph skills_box["Skills"]
+            S_repokit["Tool Menu\nDiscover the right tool\n/repokit"]
             S_modernizer["Stack Modernizer\nAudit tooling & create tickets\n/modernizer"]
             S_onboard["Onboarding Guide\nPersonalized plans for new devs\n/onboard"]
         end
@@ -127,10 +144,6 @@ graph TD
         subgraph agents_box["Auto-Triggered Agents"]
             A_sanity["Sanity Checker\nLint, format, typecheck & test"]
             A_auditor["Auditor\nFind outdated code & practices"]
-        end
-
-        subgraph commands_box["Commands"]
-            C_repokit["Tool Menu\nDiscover the right tool\n/repokit"]
         end
     end
 
@@ -142,8 +155,6 @@ graph TD
     CA -->|"invokes"| foundation
     CA -->|"invokes"| skills_box
     CA -->|"triggers"| agents_box
-    CA -->|"browses"| commands_box
-    commands_box -->|"routes to"| skills_box
 
     S_dockit -.->|"required by"| S_onboard
     S_modernizer -.->|"invokes"| A_auditor
@@ -152,15 +163,13 @@ graph TD
 
     classDef skill   fill:#3b82f6,stroke:#1d4ed8,color:#fff
     classDef agent   fill:#8b5cf6,stroke:#6d28d9,color:#fff
-    classDef command fill:#10b981,stroke:#059669,color:#fff
     classDef storage fill:#f59e0b,stroke:#b45309,color:#000
     classDef dev     fill:#1e293b,stroke:#0f172a,color:#fff
     classDef ai      fill:#7c3aed,stroke:#5b21b6,color:#fff
     classDef found   fill:#0ea5e9,stroke:#0284c7,color:#fff
 
-    class S_modernizer,S_onboard skill
+    class S_repokit,S_modernizer,S_onboard skill
     class A_sanity,A_auditor agent
-    class C_repokit command
     class Spec storage
     class Dev dev
     class CA ai
@@ -271,14 +280,15 @@ graph LR
 
 ```
 repokit/
-├── .agents/skills/          ← cross-platform skills (Claude + Gemini)
+├── skills/                  ← cross-platform skills (Claude + Gemini)
 │   ├── dockit/
 │   ├── modernizer/
-│   └── onboard/
+│   ├── onboard/
+│   └── repokit/
+├── .agents/skills → skills/  ← symlink for Gemini (git clone resolves it)
 ├── agents/                  ← distributed agents (sanity-checker, auditor)
 ├── .claude/agents/          ← internal dev tools (component-reviewer)
 ├── .claude-plugin/          ← Claude plugin + marketplace metadata
-├── commands/                ← slash commands (/repokit menu)
 ├── hooks/                   ← session lifecycle hooks
 ├── policies/                ← Gemini policy engine rules
 ├── spec/                    ← ticket system
