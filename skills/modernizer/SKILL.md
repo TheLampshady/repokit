@@ -122,11 +122,11 @@ For monorepos, detect ALL languages present and note the primary one.
 #### 3. Discover Available Agents and Skills
 
 ```bash
-# Find available agents
-ls .claude/agents/*.md 2>/dev/null
+# Find available agents (distributed with plugin, or local)
+ls agents/*.md .claude/agents/*.md 2>/dev/null
 
-# Find available skills
-ls .claude/skills/*/SKILL.md 2>/dev/null
+# Find available skills (plugin skills at root, or local)
+ls skills/*/SKILL.md .claude/skills/*/SKILL.md 2>/dev/null
 
 # Check for speckit
 ls .specify/ 2>/dev/null
@@ -219,11 +219,21 @@ See language reference files for recommended tools per language.
 - [ ] Manageable file sizes
 - [ ] Idiomatic patterns for language
 
-#### 5. Documentation Health (via auditor)
+#### 5. Documentation Health (lightweight inline check)
 
-Invoke the **auditor agent** to review existing docs for staleness and automation gaps. The auditor returns a structured findings report — it does not write tickets. Take its findings and write tickets tagged `[modernizer]` in `spec/tickets/`, same as all other modernizer tickets.
+Do a quick doc health check — this does not require the auditor agent.
 
-If no docs were found in Phase 1, skip this step — note "no docs" as a finding and recommend dockit.
+| Check | How |
+|-------|-----|
+| Docs exist? | Look for `README.md`, `docs/` directory |
+| Docs stale? | Compare last doc commit vs last code commit (`git log -1 --format=%ct -- docs/ README.md` vs `git log -1 --format=%ct -- src/ lib/ app/`) |
+| Obvious gaps? | No ARCHITECTURE doc for a multi-service project, no ENVIRONMENTS doc when `.env*` files exist, no CONTRIBUTING doc when multiple contributors |
+
+If no docs were found in Phase 1, skip this step — note "no docs" as a finding and recommend `/repokit:dockit`.
+
+Write any doc-related tickets tagged `[modernizer]` in `spec/tickets/`, same as all other modernizer tickets.
+
+> For a deeper documentation audit (staleness details, automation gaps, troubleshooting coverage), suggest the user ask for a doc health review — the **auditor agent** auto-triggers for that and provides a comprehensive findings report.
 
 ---
 
@@ -433,9 +443,9 @@ AI: Analyzing codebase for AI-readiness...
 
 Created in `spec/`:
 - CHECKLIST.md (scorecard + task overview)
-- tasks/001-testing-setup.md (P1, Go, manual - no agent available)
-- tasks/002-golangci-lint.md (P1, Go, manual)
-- tasks/003-frontend-testing.md (P2, TypeScript, manual)
+- tickets/001-testing-setup.md (P1, Go, manual - no agent available)
+- tickets/002-golangci-lint.md (P1, Go, manual)
+- tickets/003-frontend-testing.md (P2, TypeScript, manual)
 
 ## Questions
 

@@ -10,7 +10,7 @@ Generate and maintain project documentation for humans and AI agents.
 
 **Modes:** `init` | `sync` | `check` | `migrate` | `diagrams`
 
-**Frameworks:** Wagtail, Django, FastAPI, React (auto-detected)
+**Frameworks:** Wagtail (dedicated module), others use `_default.md` (auto-detected)
 
 **Generates:** README, ARCHITECTURE, PRINCIPLES, ENVIRONMENTS, CLOUD, TROUBLESHOOTING, CONTRIBUTING
 

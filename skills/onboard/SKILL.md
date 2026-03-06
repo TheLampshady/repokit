@@ -81,27 +81,21 @@ Reference `docs/ARCHITECTURE.md` if it exists.
 
 - Use Markdown
 - Keep it friendly and conversational
-- Use emojis sparingly where they help readability
 - Offer follow-ups after each phase: "Want me to go deeper on any of these?"
 
 ---
 
-## Project Specifics
+## Auto-Detect Project Context
 
-> **Customize this section for your project.** Update before using in a real repo.
+Before building the plan, gather project context automatically — never ask the user for info you can detect.
 
-**Project:** [PROJECT_NAME]
-**Language:** [PRIMARY_LANGUAGE]
-**Package manager:** [PACKAGE_MANAGER]
+| What | Where to Look |
+|------|---------------|
+| **Project name** | `package.json` → `pyproject.toml` → `Cargo.toml` → `README.md` heading → directory name |
+| **Language & framework** | File extensions, config files (`package.json`, `pyproject.toml`, `go.mod`, etc.) |
+| **Package manager** | Lockfiles (`package-lock.json`, `uv.lock`, `poetry.lock`, `yarn.lock`, `go.sum`) |
+| **Setup command** | `Makefile` targets, `package.json` scripts, `README.md` quickstart section |
+| **Key directories** | `src/`, `lib/`, `app/`, `tests/`, `config/`, or whatever the project actually uses |
+| **Key documentation** | `README.md`, `docs/`, `ARCHITECTURE.md`, `ENVIRONMENTS.md`, `CONTRIBUTING.md` |
 
-**Key documentation:**
-- `README.md` — Project overview
-- `docs/ARCHITECTURE.md` — System design
-- `docs/ENVIRONMENTS.md` — Setup guide
-
-**Setup command:** `[SETUP_COMMAND]`
-
-**Key directories:**
-- Source: `[SOURCE_DIR]`
-- Tests: `[TESTS_DIR]`
-- Config: `[CONFIG_DIR]`
+Use what you find to tailor the onboarding plan — reference actual file paths, real setup commands, and the project's actual tech stack. If something can't be detected, mention it in the plan as a gap the new dev should ask the team about.
