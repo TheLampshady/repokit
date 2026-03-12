@@ -14,6 +14,7 @@ Show them this menu and ask what they want to do:
 
 | Tool | Type | When to Use |
 |------|------|-------------|
+| `/repokit:agentkit` | Skill | Generate project-level AI agents tailored to your codebase's custom code (Claude, Gemini, Copilot) |
 | `/repokit:dockit` | Skill | Generate or sync project documentation (README, ARCHITECTURE, ENVIRONMENTS, etc.) |
 | `/repokit:modernizer` | Skill | Audit the codebase for outdated tooling, missing tests, poor packaging — creates tickets in spec/ |
 | `/repokit:onboard` | Skill | Onboard a new team member or answer "how does X work?" questions |

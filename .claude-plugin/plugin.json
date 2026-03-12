@@ -1,14 +1,12 @@
 {
   "name": "repokit",
   "description": "Codebase maintenance toolkit. Provides skills for documentation generation (dockit), stack modernization (modernizer), and developer onboarding, plus agents for code quality checks (sanity-checker) and documentation auditing (auditor).",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "author": {
     "name": "Lampshady",
     "email": "lampshady24@gmail.com"
   },
   "homepage": "https://github.com/TheLampshady/repokit",
   "repository": "https://github.com/TheLampshady/repokit",
-  "license": "MIT",
-  "skills": ["skills/"],
-  "agents": ["agents/"]
+  "license": "MIT"
 }

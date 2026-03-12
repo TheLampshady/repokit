@@ -1,13 +1,13 @@
 # repokit
 
-A codebase maintenance toolkit for AI agents. Provides skills, agents, hooks, and policies that help development teams maintain documentation, modernize tooling, onboard developers, and track technical debt.
+A codebase maintenance toolkit for AI agents. Works with **Claude Code**, **Gemini CLI**, and **GitHub Copilot CLI**. Provides skills, agents, hooks, and policies that help development teams maintain documentation, modernize tooling, onboard developers, and track technical debt.
 
 ## Install
 
 **Claude Code plugin:**
 ```bash
-/plugin marketplace add TheLampshady/repokit
-/plugin install repokit@repokit-marketplace
+claude plugin marketplace add TheLampshady/repokit
+claude plugin install repokit@repokit-marketplace
 # NOTE: Restart Claude
 ```
 
@@ -23,12 +23,29 @@ copilot plugin install https://github.com/TheLampshady/repokit
 ```
 
 
+### Update
+
+**Claude Code plugin:**
+```bash
+claude plugin marketplace update repokit-marketplace
+```
+
+**Gemini CLI extension:**
+```bash
+gemini extensions update repokit
+```
+
+**GitHub Copilot CLI plugin:**
+```bash
+copilot plugin update repokit
+```
+
 ### Un-Install
 
 **Claude Code plugin:**
 ```bash
-/plugin marketplace remove TheLampshady/repokit
-/plugin uninstall repokit@repokit-marketplace
+claude plugin marketplace remove TheLampshady/repokit
+claude plugin uninstall repokit@repokit-marketplace
 ```
 
 **Gemini CLI extension:**
@@ -45,14 +62,15 @@ copilot plugin uninstall https://github.com/TheLampshady/repokit
 
 ## Tools
 
-### Skills (cross-platform: Claude + Gemini)
+### Skills (cross-platform: Claude + Gemini + Copilot)
 
-| Skill | Command | Purpose |
-|-------|---------|---------|
-| **dockit** | `/dockit` | Generate, sync, check, and migrate project documentation. Scales by project size, auto-detects frameworks. |
-| **modernizer** | `/modernizer` | Audit the codebase for outdated tooling, missing tests, and packaging gaps. Creates tickets in `spec/`. |
-| **onboard** | `/onboard` | Create personalized onboarding plans for new team members based on role or feature focus. |
-| **repokit** | `/repokit` | Show the full tool menu and get guided to the right tool. |
+| Skill | Command | Purpose | Status |
+|-------|---------|---------|--------|
+| **agentkit** | `/agentkit` | Generate project-level AI agents tailored to your codebase's custom code patterns. Supports Claude, Gemini, and Copilot. | WIP |
+| **dockit** | `/dockit` | Generate, sync, check, and migrate project documentation. Scales by project size, auto-detects frameworks. | Ready |
+| **modernizer** | `/modernizer` | Audit the codebase for outdated tooling, missing tests, and packaging gaps. Creates tickets in `spec/`. | In Review |
+| **onboard** | `/onboard` | Create personalized onboarding plans for new team members based on role or feature focus. | Ready |
+| **repokit** | `/repokit` | Show the full tool menu and get guided to the right tool. | In Review |
 
 ### Agents (auto-triggered)
 
@@ -128,55 +146,62 @@ cp agents/*.md ~/.gemini/agents/
 
 ```mermaid
 graph TD
-    subgraph repokit["repokit"]
+    subgraph repokit["The Repokit"]
         direction TB
 
         subgraph foundation["Foundation"]
-            S_dockit["Docs Generator\nCreate & sync project docs\n/dockit"]
+            S_repokit["repokit<br/>Tool menu & navigation"]
+            S_dockit["dockit<br/>Generate & sync project docs"]
         end
 
-        subgraph skills_box["Skills"]
-            S_repokit["Tool Menu\nDiscover the right tool\n/repokit"]
-            S_modernizer["Stack Modernizer\nAudit tooling & create tickets\n/modernizer"]
-            S_onboard["Onboarding Guide\nPersonalized plans for new devs\n/onboard"]
+        subgraph accelerators["Accelerators"]
+            S_modernizer["modernizer<br/>Audit tooling & create tickets"]
+            S_agentkit["agentkit<br/>Generate project-level AI agents"]
+            S_onboard["onboard<br/>Personalized plans for new devs"]
         end
 
-        subgraph agents_box["Auto-Triggered Agents"]
-            A_sanity["Sanity Checker\nLint, format, typecheck & test"]
-            A_auditor["Auditor\nFind outdated code & practices"]
+        subgraph agents_box["Quality Gates"]
+            A_auditor["auditor<br/>Find outdated code & practices"]
+            A_sanity["sanity-checker<br/>Lint, format, typecheck & test"]
         end
     end
 
-    Dev["👤 Developer"]
-    CA["🤖 Code Assist\nClaude · Gemini"]
-    Spec[("📋 spec/\nbacklog.md · tickets/")]
+    subgraph client_repo["Client Repo"]
+        direction TB
+        SME["SME Agents<br/>Custom code experts<br/>generated per-project"]
+        Spec[("spec/<br/>backlog.md · tickets/")]
+    end
 
-    Dev -->|"asks or instructs"| CA
+    CA["Code Assist<br/>Claude · Gemini · Copilot"]
+
     CA -->|"invokes"| foundation
-    CA -->|"invokes"| skills_box
+    CA -->|"invokes"| accelerators
+    CA -->|"delegates to"| SME
     CA -->|"triggers"| agents_box
 
-    S_dockit -.->|"required by"| S_onboard
+    foundation -.->|"required by"| accelerators
     S_modernizer -.->|"invokes"| A_auditor
 
+    S_agentkit -->|"generates"| SME
     S_modernizer -->|"writes tickets"| Spec
 
     classDef skill   fill:#3b82f6,stroke:#1d4ed8,color:#fff
     classDef agent   fill:#8b5cf6,stroke:#6d28d9,color:#fff
     classDef storage fill:#f59e0b,stroke:#b45309,color:#000
-    classDef dev     fill:#1e293b,stroke:#0f172a,color:#fff
     classDef ai      fill:#7c3aed,stroke:#5b21b6,color:#fff
     classDef found   fill:#0ea5e9,stroke:#0284c7,color:#fff
+    classDef sme     fill:#10b981,stroke:#059669,color:#fff
+    classDef client  fill:#1e293b,stroke:#475569,color:#94a3b8
 
-    class S_repokit,S_modernizer,S_onboard skill
+    class S_repokit,S_dockit found
+    class S_modernizer,S_onboard,S_agentkit skill
     class A_sanity,A_auditor agent
     class Spec storage
-    class Dev dev
     class CA ai
-    class S_dockit found
+    class SME sme
 ```
 
-> **Claude Code:** skills invoked as `/repokit:skill-name` · **Gemini CLI:** invoked as `/skill-name`, agents require [opt-in setup](#gemini-subagents)
+> **Claude Code:** skills invoked as `/repokit:skill-name` · **Gemini CLI / Copilot CLI:** invoked as `/skill-name`, agents require [opt-in setup](#gemini-subagents)
 
 ### Scenario Flows
 
@@ -280,7 +305,8 @@ graph LR
 
 ```
 repokit/
-├── skills/                  ← cross-platform skills (Claude + Gemini)
+├── skills/                  ← cross-platform skills (Claude + Gemini + Copilot)
+│   ├── agentkit/
 │   ├── dockit/
 │   ├── modernizer/
 │   ├── onboard/

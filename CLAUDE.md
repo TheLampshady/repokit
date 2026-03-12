@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What This Repo Is
 
 Repokit is a codebase maintenance toolkit for AI agents. It provides:
-- **Skills** — cross-platform, invoked via slash commands, work on Claude and Gemini
+- **Skills** — cross-platform, invoked via slash commands, work on Claude, Gemini, and Copilot
 - **Agents** — Claude-specific subagents that auto-trigger based on task context
 - **Hooks & policies** — session lifecycle and security rules
 
@@ -18,6 +18,7 @@ There is no build system or compiled code. Everything is Markdown, TOML, and JSO
 | `skills/dockit/` | Documentation generation skill (init, sync, check, migrate, diagrams) |
 | `skills/modernizer/` | Stack modernization skill — audits tooling, writes tickets to `spec/` |
 | `skills/onboard/` | Onboarding skill — creates phased plans for new devs |
+| `skills/agentkit/` | Agent generator skill — analyzes custom code, creates project-level agents for Claude/Gemini/Copilot |
 | `skills/repokit/` | Tool menu skill — shows available tools and guides to the right one |
 | `.agents/skills/` | Symlink to `skills/` for Gemini cross-compatibility |
 | `agents/` | Distributed agents bundled with the plugin (sanity-checker, auditor) |
@@ -33,13 +34,14 @@ There is no build system or compiled code. Everything is Markdown, TOML, and JSO
 
 ### Skills (`skills/`, cross-platform)
 
-Skills have YAML frontmatter (`name`, `description`, `user-invocable: true`) and load on demand. Claude discovers from `skills/` at plugin root; Gemini discovers from `.agents/skills/` (symlinked to `skills/`).
+Skills have YAML frontmatter (`name`, `description`, `user-invocable: true`) and load on demand. Claude discovers from `skills/` at plugin root; Gemini discovers from `.agents/skills/` (symlinked to `skills/`); Copilot discovers from `skills/` via plugin install.
 
 | Skill | Modes | Key Behavior |
 |-------|-------|-------------|
 | `dockit` | init, sync, check, migrate, diagrams | Scales docs by project size; detects frameworks; never destroys content |
 | `modernizer` | analyze, status | Plans only, never executes; writes tickets to `spec/tickets/`, appends to `spec/backlog.md` with `[modernizer]` tag |
 | `onboard` | (single mode) | Reads existing docs first; asks for role before proceeding; chat-only, creates no files |
+| `agentkit` | (single mode) | Analyzes custom code; generates project-level agents for Claude, Gemini, Copilot; scales by project size |
 | `repokit` | (single mode) | Shows the full tool menu and guides user to the right tool |
 
 ### Agents (`agents/`, distributed with plugin)
