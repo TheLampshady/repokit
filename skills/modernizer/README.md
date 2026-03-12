@@ -221,4 +221,4 @@ See `references/languages/*.md` for detailed options with licensing and establis
 
 **Author**: Zach Goldstein - Solutions Architect
 
-**Issues**: [Submit an issue](https://github.com/HugeInternal/zgoldstein_dev/issues/new?template=ai-skills.yml)
+**Issues**: [Report a bug](https://github.com/TheLampshady/repokit/issues/new?template=ai-skills.yml)

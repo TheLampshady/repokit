@@ -310,3 +310,11 @@ The Gemini extension includes security policies (`policies/policies.toml`):
 - Validates file paths on write operations
 
 ---
+
+## Report an Issue
+
+Found a bug or unexpected behavior with a skill or agent? [Open an issue](https://github.com/TheLampshady/repokit/issues/new?template=ai-skills.yml).
+
+Include which component (skill/agent), AI platform, and what you asked vs. what happened.
+
+---

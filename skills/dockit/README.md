@@ -124,4 +124,6 @@ dockit/
 
 ## Support
 
-**Author**: Zach Goldstein - Solutions Architect (zgoldstein@hugeinc.com)
+**Author**: Zach Goldstein - Solutions Architect
+
+**Issues**: [Report a bug](https://github.com/TheLampshady/repokit/issues/new?template=ai-skills.yml)
