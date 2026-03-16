@@ -14,6 +14,7 @@ Analyzes your codebase to find where your team has extended, customized, or buil
 4. **Distinguishes** custom logic from boilerplate — flags native alternatives
 5. **Proposes** agents scaled to your project size, with descriptions optimized for auto-triggering
 6. **Generates** agent files for Claude, Gemini, and/or Copilot
+7. **Enriches** your instruction file (CLAUDE.md, GEMINI.md, copilot-instructions) with agent routing
 
 ## Usage
 
@@ -34,7 +35,17 @@ Agent files are created in project-level directories:
 | Gemini | `.gemini/agents/` | `.md` |
 | Copilot | `.github/agents/` | `.agent.md` |
 
-Plus instruction snippets for your CLAUDE.md / GEMINI.md / copilot-instructions.
+Plus an agent routing section appended to your existing instruction files (CLAUDE.md / GEMINI.md / copilot-instructions).
+
+## Recommended Flow
+
+```
+/init          → Base instruction file (conventions, build commands)
+/dockit init   → Project documentation (README, ARCHITECTURE)
+/agentkit      → SME agents + agent routing in instruction file
+```
+
+Each tool owns its section. `/init` creates the foundation, `/dockit` generates docs, `/agentkit` adds agent routing.
 
 ## Updating repokit
 
@@ -42,7 +53,7 @@ To get the latest version of agentkit (and all repokit tools):
 
 | Platform | Command |
 |----------|---------|
-| Claude | `/plugin marketplace update repokit-marketplace` |
+| Claude | `claude plugin marketplace update repokit-marketplace` |
 | Gemini | `gemini extensions update repokit` |
 | Copilot | `copilot plugin update repokit` |
 
@@ -52,7 +63,7 @@ To get the latest version of agentkit (and all repokit tools):
 |-------------|-------|--------|
 | Small | 1–20 | 1–2 |
 | Medium | 21–50 | 2–4 |
-| Large | 51+ | 3–7 |
+| Large | 51+ | 3–5 |
 
 ## What Makes a Good Agent
 

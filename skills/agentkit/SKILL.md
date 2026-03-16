@@ -69,7 +69,7 @@ Classify project size:
 |------|-------------|---------------|
 | Small | 1–20 | 1–2 agents max (single "project-expert" covering all custom patterns) |
 | Medium | 21–50 | 2–4 agents (one per major custom area) |
-| Large | 51+ | 3–7 agents (specialized; may split by service in monorepos) |
+| Large | 51+ | 3–5 agents (specialized; may split by service in monorepos) |
 
 Detect structure type:
 - **Monorepo** — multiple `package.json`/`pyproject.toml` files, or directories like `services/`, `packages/`, `apps/`
@@ -257,32 +257,74 @@ For each approved agent, generate agent files for each selected platform.
 
 ### 4.1 Load Platform Specs
 
-Read the platform reference files to get the exact frontmatter format:
-- `references/platforms/claude.md` — Claude agent conventions
-- `references/platforms/gemini.md` — Gemini agent conventions
-- `references/platforms/copilot.md` — Copilot agent conventions
+Read `references/platforms.md` to get the exact frontmatter format and platform quirks for each target.
 
 ### 4.2 Load Agent Template
 
-Read the appropriate template from `references/templates/`:
-- `agent-claude.template.md`
-- `agent-gemini.template.md`
-- `agent-copilot.template.md`
+Read the unified template from `references/templates/agent.template.md`. The body is the same across all platforms — only frontmatter differs per platform.
 
 ### 4.3 Generate Agent Files
 
-For each agent, for each platform:
+For each agent:
 
-1. **Fill frontmatter** using platform spec (name, description with trigger examples, optional fields)
-2. **Fill body** using template structure:
-   - Role statement with project context
-   - Framework context (dependency, version, what's native vs custom)
-   - Custom patterns catalog with file paths, usage examples, and anti-patterns
-   - Key files table
-   - When-to-trigger scenarios with example user/assistant exchanges
-   - Common mistakes section
-   - Research prompts (how to use context7/web search to check for updates)
-   - Version awareness notes
+#### Build the body (once, shared across platforms)
+
+Use the unified template. Fill each section:
+
+1. **Architecture Context** — pull the relevant excerpt from `ARCHITECTURE.md` or `README.md` (if dockit generated them). Keep to 5-10 lines. If no docs exist, summarize from code.
+
+2. **Working Directories** — list the directories this agent operates in. Files outside these are not its concern.
+
+3. **Framework Context** — framework name and version from the dependency file. What's native vs what's custom in this area.
+
+4. **Conventions** — extract from actual code patterns: naming conventions, file organization, error handling, test patterns in this agent's domain.
+
+5. **Custom Patterns (hot memory)** — for the 2-3 most critical patterns, **read the actual source files** and embed representative code snippets. For the rest, describe in prose with file paths. The agent should be effective without reading any files.
+
+6. **Key Files** — table of files for deeper context, with "read when" guidance so the agent knows when to go deeper.
+
+7. **When to Trigger** — scenarios with examples.
+
+8. **Common Mistakes** — what AI gets wrong without this agent. This is the highest-value section.
+
+9. **Research** — check project docs first (README, ARCHITECTURE, docs/), then framework docs via context7 or web search, then check for native alternatives in newer versions.
+
+#### Size check — split if too large
+
+After building the body, check its size. An effective agent needs enough context to be useful but not so much that it becomes bloated or hits platform limits.
+
+**Target size per agent:**
+
+| Metric | Target | Split Signal |
+|--------|--------|-------------|
+| Body length | 3,000–8,000 characters | >10,000 characters |
+| Embedded code snippets | 2–3 critical patterns | >5 snippets |
+| Custom patterns covered | 3–10 per agent | >12 patterns |
+| Working directories | 1–4 directories | >6 directories |
+
+**If an agent exceeds the split signal:**
+
+1. Look for a natural domain boundary to divide on (e.g., "custom blocks" and "custom page types" instead of one "wagtail-customs" agent)
+2. Split into two focused agents, each with their own hot memory
+3. Re-check that each resulting agent still covers 3+ files (don't create tiny agents)
+4. Update the plan and confirm with the user before generating
+
+**Splitting is better than trimming.** Two focused agents with rich context outperform one bloated agent with thin coverage. The goal is: each agent has enough embedded knowledge to be useful *without reading any files*, but stays focused enough to trigger reliably.
+
+**Granularity guard — do NOT create:**
+- One agent per class or file (too specific, triggers overlap)
+- One agent per base class (unless 10+ files inherit from it)
+- Agents for isolated utilities with no shared pattern
+
+The right level is **one agent per domain area**: a group of related custom code that shares conventions, directories, and framework extension points.
+
+#### Prepend platform frontmatter (per platform)
+
+For each selected platform, prepend the appropriate frontmatter from the platform spec:
+Refer to `references/platforms.md` for each platform's frontmatter format and quirks:
+- Claude: include `<example>` blocks in description
+- Gemini: add YOLO mode safety note to body, tools as YAML list
+- Copilot: check total size stays under 30,000 chars
 
 3. **Write to output location:**
    - Claude: `.claude/agents/<agent-name>.md`
@@ -293,38 +335,88 @@ For each agent, for each platform:
 
 Create output directories if they don't exist.
 
-### 4.4 Generate Instruction Snippets
+### 4.4 Update Instruction Files
 
-For each platform that had agents generated, output a snippet the user can paste into their project instruction file:
+After generating agent files, enrich the project's AI instruction files with an agent routing section. This builds on the base instruction file created by each platform's `/init` command.
 
-**Claude (for CLAUDE.md):**
+#### Detection
+
+Check which instruction files exist:
+
+| Platform | Instruction File | Created By |
+|----------|-----------------|------------|
+| Claude | `CLAUDE.md` | `/init` in Claude Code |
+| Gemini | `GEMINI.md` | `/init` in Gemini CLI |
+| Copilot | `.github/copilot-instructions.md` | `/init` in Copilot CLI |
+
+#### If instruction file exists
+
+Ask the user: "I see you have a `CLAUDE.md`. Want me to add the agent routing section?"
+
+If yes, **append** (do not overwrite existing content) an agent routing section:
+
 ```markdown
 ## Project Agents
 
-| Agent | Auto-triggers when... |
-|-------|----------------------|
-| [agent-name] | [trigger description] |
+The following agents are project-specific experts generated by agentkit. They understand
+this project's custom code patterns and should be consulted for their areas of expertise.
+
+| Agent | Expertise | Trigger When |
+|-------|-----------|-------------|
+| [agent-name] | [custom area] | [when to use] |
+
+### Agent Routing
+
+| If you're working with... | Consult |
+|--------------------------|---------|
+| [file pattern or directory] | [agent-name] |
 ```
 
-**Gemini (for GEMINI.md):**
-```markdown
-## Project Agents
+If the instruction file already has a `## Project Agents` section (from a previous agentkit run), **replace** that section rather than duplicating it.
 
-| Agent | Triggers when... |
-|-------|-----------------|
-| [agent-name] | [trigger description] |
+#### If instruction file does not exist
+
+Inform the user:
+
+> No `CLAUDE.md` found. Run `/init` first to create your base instruction file — it will set up project conventions and build commands. Then re-run `/agentkit` or ask me to add the agent routing section.
+
+Do not create instruction files from scratch — that is `/init`'s job. Agentkit only enriches existing ones.
+
+#### Instruction file content per platform
+
+**Claude (CLAUDE.md):**
+- Agent routing table with trigger descriptions
+- Note that agents live in `.claude/agents/`
+- Include `<example>` trigger scenarios for each agent
+
+**Gemini (GEMINI.md):**
+- Agent routing table
+- Note that agents live in `.gemini/agents/`
+- Reminder that subagents require `experimental.enableAgents` in `.gemini/settings.json`
+
+**Copilot (.github/copilot-instructions.md):**
+- Agent routing table
+- Note that agents live in `.github/agents/`
+- Keep concise — Copilot instruction files should be focused
+
+---
+
+## Integration with /init and Other Skills
+
+Agentkit is designed to build on top of each platform's `/init` command and other repokit skills:
+
+```
+/init          → Base instruction file (conventions, build commands, project overview)
+/dockit        → Human docs (README, ARCHITECTURE, ENVIRONMENTS)
+/agentkit      → SME agents + agent routing section in instruction file
 ```
 
-**Copilot (for .github/copilot-instructions.md):**
-```markdown
-## Custom Agents
+**Recommended flow for new projects:**
+1. Run `/init` to create the base instruction file
+2. Run `/dockit init` to generate project documentation
+3. Run `/agentkit` to generate SME agents and add routing to the instruction file
 
-| Agent | Use for... |
-|-------|-----------|
-| [agent-name] | [trigger description] |
-```
-
-Present these snippets in the conversation for the user to review and paste.
+Each tool owns its section of the instruction file. `/init` owns the foundation, `/dockit` can reference generated docs, and `/agentkit` owns the agent routing table.
 
 ---
 
@@ -336,6 +428,7 @@ Present these snippets in the conversation for the user to review and paste.
 - **Does not replace existing agents** — detects and skips already-covered areas
 - **Does not create agents for native framework features** — only for custom/extended code
 - **Does not execute or modify project code** — only reads code and writes agent files
+- **Does not create instruction files** — that is `/init`'s job; agentkit only enriches them
 
 ## Audience
 

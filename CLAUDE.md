@@ -24,6 +24,7 @@ There is no build system or compiled code. Everything is Markdown, TOML, and JSO
 | `agents/` | Distributed agents bundled with the plugin (sanity-checker, auditor) |
 | `.claude/agents/` | Internal dev-only agents — NOT distributed (component-reviewer only) |
 | `.claude-plugin/` | Claude plugin metadata (`plugin.json`) and marketplace catalog (`marketplace.json`) |
+| `.mcp.json` | Bundled MCP servers (context7 for library documentation) |
 | `hooks/` | Session lifecycle hooks |
 | `policies/` | Gemini CLI policy engine rules |
 | `spec/` | Ticket system — created at runtime by agents, gitignored in this repo |

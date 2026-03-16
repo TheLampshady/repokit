@@ -72,12 +72,12 @@ copilot plugin uninstall https://github.com/TheLampshady/repokit
 | **onboard** | `/onboard` | Create personalized onboarding plans for new team members based on role or feature focus. | Ready |
 | **repokit** | `/repokit` | Show the full tool menu and get guided to the right tool. | In Review |
 
-### Agents (auto-triggered)
+### Agents
 
-| Agent | Triggers when... | Platform |
-|-------|-----------------|----------|
-| **sanity-checker** | You need to verify code quality, before committing, after fixing a bug | Claude |
-| **auditor** | You ask to review the codebase for outdated code, stale practices, or automation gaps | Claude |
+| Agent | Use when... | Platform |
+|-------|------------|----------|
+| **sanity-checker** | Verifying code quality, before committing, after fixing a bug | Claude |
+| **auditor** | Reviewing the codebase for outdated code, stale practices, or automation gaps | Claude |
 
 > **Gemini users:** See [Enabling Gemini Subagents](#gemini-subagents) to use agents on Gemini.
 
@@ -107,6 +107,29 @@ After making code changes, run dockit to check for documentation drift:
 - `/repokit:dockit sync` — auto-update stale sections (non-destructive)
 
 Run `check` before releases or PRs. Run `sync` when docs fall behind.
+
+---
+
+## Context7 (Library Documentation)
+
+Repokit's agentkit skill uses [Context7](https://github.com/upstash/context7) to fetch up-to-date framework documentation when analyzing your codebase. No API key required.
+
+**Claude Code & Copilot CLI** — bundled automatically via `.mcp.json`. Context7 starts when the plugin is installed.
+
+**Gemini CLI** — add to your `~/.gemini/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
+    }
+  }
+}
+```
+
+> For higher rate limits or private repo access, get a free API key at [context7.com/dashboard](https://context7.com/dashboard) and set `CONTEXT7_API_KEY` in your environment.
 
 ---
 
@@ -207,97 +230,107 @@ graph TD
 
 #### Documentation on Demand
 
-*Repos of any size and age accumulate missing or nonexistent documentation — the codebase grows faster than anyone writes about it.*
-
 ```mermaid
 graph LR
-    Scenario["📁 Codebase\nwithout documentation"]
-    Dev["👤 Developer"]
-    CA["🤖 Code Assist"]
-    Dockit["Docs Generator\ndockit init"]
-    Output["📄 README · ARCHITECTURE\nENVIRONMENTS"]
-    Result["✅ Docs created\nfrom the codebase\nin minutes"]
+    Codebase["Codebase"]
+    Dockit["/dockit init"]
+    Output["README<br/>ARCHITECTURE<br/>ENVIRONMENTS"]
 
-    Scenario --> Dev
-    Dev -->|"'Set up docs\nfor this repo'"| CA
-    CA -->|"invokes"| Dockit
-    Dockit -->|"scans & generates"| Output
-    Output --> Result
+    Codebase -->|"scans"| Dockit -->|"generates"| Output
 
     classDef skill fill:#3b82f6,stroke:#1d4ed8,color:#fff
-    classDef ai    fill:#7c3aed,stroke:#5b21b6,color:#fff
+    classDef output fill:#86efac,stroke:#16a34a,color:#000
     class Dockit skill
-    class CA ai
-    style Scenario fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
-    style Dev      fill:#1e293b,stroke:#0f172a,color:#fff
-    style Result   fill:#86efac,stroke:#16a34a,color:#000
+    class Output output
+    style Codebase fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
 ```
 
-> **Example:** An API service that's been running for two years has no README. A developer says "set up docs for this repo." The Code Assist invokes dockit, which scans the codebase and generates a README, ARCHITECTURE, and ENVIRONMENTS doc in under a minute.
+> Scans the codebase and generates docs from what's there. Run once to bootstrap, then `/dockit sync` to keep them current.
 
-#### Quality Gates Before Code Ships
-
-*Code quality issues — lint errors, type failures, broken tests — are cheaper to catch locally than after a push triggers CI.*
+#### Onboarding a New Developer
 
 ```mermaid
 graph LR
-    Scenario["💻 Developer\nfinishes a feature"]
-    Dev["👤 Developer"]
-    CA["🤖 Code Assist"]
-    Sanity["Sanity Checker\nauto-triggered agent"]
-    Fix["🔧 Issues fixed\nlocally before commit"]
-    Result["✅ Clean push\nCI passes first time"]
+    Role["Role + Focus Area"]
+    Onboard["/onboard"]
+    Plan["Phased Plan<br/>tailored to role"]
 
-    Scenario --> Dev
-    Dev -->|"'I just finished\nthe auth module'"| CA
-    CA -->|"triggers"| Sanity
-    Sanity -->|"fixes & reports"| Fix
-    Fix --> Result
+    Role -->|"input"| Onboard -->|"generates"| Plan
+
+    classDef skill fill:#3b82f6,stroke:#1d4ed8,color:#fff
+    classDef output fill:#86efac,stroke:#16a34a,color:#000
+    class Onboard skill
+    class Plan output
+    style Role fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
+```
+
+> Reads existing docs and codebase, asks for role, builds a personalized ramp-up plan.
+
+#### Generate SME Agents
+
+```mermaid
+graph LR
+    Codebase["Codebase"]
+    Dockit["/dockit init"]
+    Docs["README<br/>ARCHITECTURE"]
+    Agentkit["/agentkit"]
+    Agents["SME Agents<br/>per custom area"]
+
+    Codebase -->|"scans"| Dockit -->|"generates"| Docs
+    Docs -->|"enriches"| Agentkit
+    Codebase -->|"analyzes custom code"| Agentkit -->|"generates"| Agents
+
+    classDef skill fill:#3b82f6,stroke:#1d4ed8,color:#fff
+    classDef sme fill:#10b981,stroke:#059669,color:#fff
+    classDef output fill:#86efac,stroke:#16a34a,color:#000
+    class Dockit,Agentkit skill
+    class Agents sme
+    class Docs output
+    style Codebase fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
+```
+
+> Recommended flow: `/dockit init` first to generate project docs, then `/agentkit` uses those docs as architecture context when building agents. Agents are scaled to project size and generated for Claude/Gemini/Copilot.
+
+#### Quality Gates
+
+```mermaid
+graph LR
+    Code["Code Changes"]
+    Sanity["sanity-checker"]
+    Result["Clean Commit"]
+
+    Code -->|"invoke"| Sanity -->|"fixes & reports"| Result
 
     classDef agent fill:#8b5cf6,stroke:#6d28d9,color:#fff
-    classDef ai    fill:#7c3aed,stroke:#5b21b6,color:#fff
+    classDef output fill:#86efac,stroke:#16a34a,color:#000
     class Sanity agent
-    class CA ai
-    style Scenario fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
-    style Dev      fill:#1e293b,stroke:#0f172a,color:#fff
-    style Result   fill:#86efac,stroke:#16a34a,color:#000
+    class Result output
+    style Code fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
 ```
 
-> **Example:** A developer says "I just finished the auth module." The Code Assist recognizes this as a completion signal and triggers the sanity-checker, which finds a missing type annotation and a failing unit test — before a single `git push`.
+> Lint, format, typecheck, test — catches issues before they hit CI.
 
-#### What Do I Need to Update?
-
-*A single question triggers an orchestrated review — the Code Assist runs modernizer, which internally invokes the auditor to find outdated code, stale practices, and automation gaps. Modernizer takes the auditor's findings, combines them with its own tooling analysis, and writes all tickets to a shared backlog.*
+#### Stack Modernization
 
 ```mermaid
 graph LR
-    Scenario["💬 'What do I\nneed to update?'"]
-    CA["🤖 Code Assist"]
-    Modernizer["Stack Modernizer\nmodernizer"]
-    Auditor["Auditor\nauditor"]
-    Spec["📋 spec/backlog.md\nFindings tagged\nby source"]
-    Result["✅ Full picture\nof work needed\nReady to prioritize"]
+    Modernizer["/modernizer"]
+    Auditor["auditor"]
+    Spec["spec/backlog.md"]
 
-    Scenario --> CA
-    CA -->|"runs"| Modernizer
     Modernizer -->|"invokes"| Auditor
     Auditor -->|"findings"| Modernizer
-    Modernizer -->|"writes all tickets"| Spec
-    Spec --> Result
+    Modernizer -->|"writes tickets"| Spec
 
-    classDef skill   fill:#3b82f6,stroke:#1d4ed8,color:#fff
-    classDef agent   fill:#8b5cf6,stroke:#6d28d9,color:#fff
+    classDef skill fill:#3b82f6,stroke:#1d4ed8,color:#fff
+    classDef agent fill:#8b5cf6,stroke:#6d28d9,color:#fff
     classDef storage fill:#f59e0b,stroke:#b45309,color:#000
-    classDef ai      fill:#7c3aed,stroke:#5b21b6,color:#fff
     class Modernizer skill
     class Auditor agent
     class Spec storage
-    class CA ai
-    style Scenario fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
-    style Result   fill:#86efac,stroke:#16a34a,color:#000
 ```
 
-> **Example:** A developer asks "what do I need to update before the release?" The Code Assist runs modernizer. Modernizer invokes the auditor, which finds two setup commands in the README that no longer exist and a missing CI config. Modernizer finds no type checking configured and an outdated package manager. All findings land in `spec/backlog.md`, tagged by source.
+> Audits tooling, finds outdated code and practices, writes prioritized tickets to a shared backlog.
 
 ---
 
