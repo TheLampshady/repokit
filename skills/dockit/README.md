@@ -70,15 +70,15 @@ dockit/
 
 **Always generated** (from `templates/core/`):
 
-| File | Purpose |
-|------|---------|
-| `README.md` | Human overview, setup, quick start |
-| `docs/PRINCIPLES.md` | Tech decisions, conventions |
-| `docs/ARCHITECTURE.md` | Services, packages, data flow |
-| `docs/ENVIRONMENTS.md` | Local, staging, production configs |
-| `docs/CLOUD.md` | Infrastructure, deployment |
-| `docs/TROUBLESHOOTING.md` | Common issues and solutions |
-| `docs/CONTRIBUTING.md` | Development workflow by role |
+| File | Purpose                                       |
+|------|-----------------------------------------------|
+| `README.md` | Human overview, setup, quick start            |
+| `docs/PRINCIPLES.md` | Tech decisions, conventions, Code Foundations |
+| `docs/ARCHITECTURE.md` | Services, packages, data flow                 |
+| `docs/ENVIRONMENTS.md` | Local, staging, production configs            |
+| `docs/CLOUD.md` | Infrastructure, deployment                    |
+| `docs/TROUBLESHOOTING.md` | Common issues and solutions                   |
+| `docs/CONTRIBUTING.md` | Development workflow by role                  |
 
 **Framework-specific** (from `templates/[framework]/`):
 - Defined in each framework module

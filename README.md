@@ -8,7 +8,6 @@ A codebase maintenance toolkit for AI agents. Works with **Claude Code**, **Gemi
 ```bash
 claude plugin marketplace add TheLampshady/repokit
 claude plugin install repokit@repokit-marketplace
-# NOTE: Restart Claude
 ```
 
 

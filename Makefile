@@ -59,12 +59,12 @@ un-claude: ## Uninstall the local Claude plugin
 
 .PHONY: toml-to-md
 toml-to-md: ## Convert commands/*.toml → *.md (Claude format)
-	uv run python scripts/toml_to_md.py commands/
+	uv run python bin/toml_to_md.py commands/
 	@echo "✓ TOML commands converted to Markdown"
 
 .PHONY: md-to-toml
 md-to-toml: ## Convert commands/*.md → *.toml (Gemini format)
-	uv run python scripts/md_to_toml.py commands/
+	uv run python bin/md_to_toml.py commands/
 	@echo "✓ Markdown commands converted to TOML"
 
 # ── Cross-Platform ───────────────────────────────────────────────────────────

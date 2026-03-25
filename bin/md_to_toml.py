@@ -2,9 +2,9 @@
 """Convert Claude Code Markdown commands to Gemini CLI TOML format.
 
 Usage:
-    python3 scripts/md_to_toml.py commands/repokit.md
-    python3 scripts/md_to_toml.py commands/repokit.md commands/repokit.toml
-    python3 scripts/md_to_toml.py commands/          # convert all .md in a dir
+    python3 bin/md_to_toml.py commands/repokit.md
+    python3 bin/md_to_toml.py commands/repokit.md commands/repokit.toml
+    python3 bin/md_to_toml.py commands/          # convert all .md in a dir
 """
 
 import sys
