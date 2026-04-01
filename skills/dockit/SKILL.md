@@ -1,6 +1,6 @@
 ---
 name: dockit
-description: 'Generate, update, and maintain project documentation. Use when asked to: create/write/add docs, generate/make README, setup documentation, document this project, check doc freshness, explain doc structure, or sync docs with code. Modes: init, sync, check, migrate, diagrams. Auto-detects frameworks and scales by project size.'
+description: 'Generate, update, and maintain project documentation. Use when asked to: create/write/add docs, generate/make README, setup documentation, document this project, check doc freshness, explain doc structure, sync docs with code, verify docs against code, audit docs for accuracy, or cross-reference docs with codebase. Modes: init, sync, check, audit, migrate, diagrams. Auto-detects frameworks and scales by project size.'
 user-invocable: true
 ---
 
@@ -8,7 +8,7 @@ user-invocable: true
 
 Generate and maintain project documentation for humans and AI agents.
 
-**Modes:** `init` | `sync` | `check` | `migrate` | `diagrams`
+**Modes:** `init` | `sync` | `check` | `audit` | `migrate` | `diagrams`
 
 **Frameworks:** Wagtail (dedicated module), others use `_default.md` (auto-detected)
 
@@ -56,6 +56,7 @@ Auto-detects what to do based on project state.
 | CI environment | → check |
 | Git changes since docs | → sync |
 | Docs exist, wrong structure | → suggest migrate |
+| User asks to verify/audit/cross-reference docs | → audit |
 | Docs current | → "Up to date" |
 
 ### Explicit Modes
@@ -65,10 +66,11 @@ Auto-detects what to do based on project state.
 | `init` | Full doc generation | Yes | Can restructure |
 | `sync` | Update stale sections | No | Never - adds only |
 | `check` | CI mode - exit codes only | No | Read-only |
+| `audit` | Verify doc claims against code | No | Read-only |
 | `migrate` | Restructure legacy docs | Yes | Can restructure |
 | `diagrams` | Generate mermaid diagrams only | No | Updates diagrams only |
 
-**Safe modes** (no prompts, non-destructive): `sync`, `check`, `diagrams`
+**Safe modes** (no prompts, non-destructive): `sync`, `check`, `audit`, `diagrams`
 **Interactive modes** (prompts, can restructure): `init`, `migrate`
 
 ---
@@ -142,6 +144,7 @@ Show plan and offer options:
 | **init** | Questions → Plan → Confirm → Generate all docs from templates |
 | **sync** | Git diff → Update stale sections → Regenerate diagrams if needed |
 | **check** | Detect drift → Exit 0 (current) or Exit 1 (stale) |
+| **audit** | Extract references from docs → Verify against codebase → Report broken refs. See [AUDIT.md](./references/guides/AUDIT.md) |
 | **migrate** | Questions → Plan → Confirm → Merge into existing files |
 | **diagrams** | Generate/update mermaid diagrams only |
 
@@ -181,6 +184,7 @@ See guides for detection logic and document structure details.
 | [SIZE-LARGE.md](./references/guides/SIZE-LARGE.md) | Large project documentation structure |
 | [WRITING-GUIDE.md](./references/guides/WRITING-GUIDE.md) | How to write explanatory documentation |
 | [DIAGRAMS.md](./references/guides/DIAGRAMS.md) | Mermaid diagram standards |
+| [AUDIT.md](./references/guides/AUDIT.md) | Doc accuracy verification against codebase |
 | [GIT-HOOKS.md](./references/guides/GIT-HOOKS.md) | CI/pre-commit integration |
 
 ---
