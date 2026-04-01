@@ -67,6 +67,24 @@ md-to-toml: ## Convert commands/*.md → *.toml (Gemini format)
 	uv run python bin/md_to_toml.py commands/
 	@echo "✓ Markdown commands converted to TOML"
 
+# ── Sync ─────────────────────────────────────────────────────────────────────
+# Single sources in src/ are copied into each skill that uses them.
+# Edit in src/, then run `make sync` before committing.
+
+TICKET_TEMPLATE := src/ticket-template.md
+TICKET_TARGETS := \
+	skills/tik/references/ticket-template.md \
+	skills/figtik/references/ticket-template.md \
+	skills/modernizer/references/templates/ticket-template.md
+
+.PHONY: sync
+sync: $(TICKET_TARGETS) ## Sync src/ templates into skill directories
+	@echo "✓ Shared templates synced"
+
+$(TICKET_TARGETS): $(TICKET_TEMPLATE)
+	@mkdir -p $(dir $@)
+	cp $< $@
+
 # ── Cross-Platform ───────────────────────────────────────────────────────────
 
 .PHONY: cursorrules
