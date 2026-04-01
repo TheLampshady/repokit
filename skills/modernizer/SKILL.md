@@ -255,43 +255,36 @@ Before creating any ticket, check `spec/backlog.md` for duplicates. For each new
 
 #### Task Files (`spec/tickets/`)
 
-Each task gets its own file, structured for agent consumption:
+Each task uses the canonical ticket template at `./references/templates/ticket-template.md` (bundled with this skill). Modernizer extends the base template with agent-execution sub-sections under Goals.
 
-```markdown
-# Task: [TASK_ID] - [TITLE]
+**Overview** — Describe the modernization task in plain language. What's out of date, what improves when it's done.
 
-## Metadata
-- **Priority**: P1 | P2 | P3
-- **Category**: testing | packaging | linting | documentation
-- **Language**: Python | JavaScript | TypeScript | Java | Go | Rust
-- **Executor**: [AGENT_NAME] or [SKILL_NAME] or manual
-- **Depends On**: [TASK_IDS] or none
-- **Status**: pending | in_progress | completed
+**Goals** — Include the standard goal bullets plus these modernizer-specific sub-sections:
 
-## Current State
-[Description of what exists now]
+* **Current State** — What currently exists (files, configs, behavior). Include evidence snippets.
+* **Desired State** — What should exist when complete. Include target config/structure.
+* **Execution**
+  - **Priority**: P1 | P2 | P3
+  - **Category**: testing | packaging | linting | documentation | structure
+  - **Language**: Python | JavaScript | TypeScript | Java | Go | Rust | Multi
+  - **Executor**: [AGENT_NAME] | [SKILL_NAME] | manual
+  - **Depends On**: [TASK_IDS] or none
+  - **Status**: pending | in_progress | completed
+* **Implementation Notes** — Language-specific guidance, key decisions, constraints, patterns to match.
+  - **Files to Modify**: table with File | Action | Notes
+  - **Recommended Approach**: numbered steps
+* **Verification** — Commands to verify completion + expected output.
+* **Rollback** — Commands or git instructions to revert if issues arise.
 
-## Desired State
-[Description of end goal]
+**Acceptance Criteria** — Use the standard Given/When/Then format. Always include:
+- Specific verifiable criteria for the modernization change
+- All existing tests pass
+- No regressions introduced
 
-## Acceptance Criteria
-- [ ] [Specific, verifiable criterion]
-- [ ] [Another criterion]
-- [ ] Tests pass after change
-- [ ] No regressions introduced
-
-## Implementation Notes
-[Language-specific guidance for the executor]
-
-## Verification
-```bash
-[Language-appropriate verification commands]
-```
-
-## speckit Compatible
+**Tech Details** — Use for speckit compatibility info:
 - Feature: [FEATURE_NAME]
-- Type: chore | enhancement
-```
+- Type: chore | enhancement | bugfix
+- Labels: [ai-readiness, tooling, testing, etc.]
 
 ---
 

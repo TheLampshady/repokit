@@ -1,95 +1,86 @@
-# Task: [TASK_ID] - [TITLE]
+# [TITLE]
 
-> This task file is structured for both human review and agent consumption.
+> This task file uses the canonical ticket template (see `references/ticket-template.md`)
+> with modernizer-specific sub-sections under Goals for agent execution.
 
-## Metadata
+## Overview
 
-```yaml
-id: [TASK_ID]
-title: [TITLE]
-priority: P1 | P2 | P3
-category: testing | packaging | linting | documentation | structure
-language: Python | JavaScript | TypeScript | Java | Kotlin | Go | Rust | Multi
-executor: [AGENT_NAME] | [SKILL_NAME] | manual
-depends_on: [] | [TASK_IDS]
-status: pending | in_progress | completed  # completed tasks are deleted on /modernizer status
-created: [DATE]
-updated: [DATE]
-```
+[1-3 sentences describing the modernization task for non-technical readers. What's out of
+date, what improves when it's done.]
 
-## Current State
+> **Note:** [Only if there's a business-critical consideration — e.g., security vulnerability,
+compliance deadline, blocking other teams. Omit if not applicable.]
 
-[Description of what currently exists. Be specific about files, configurations, and current behavior.]
+## Goals
 
-**Evidence:**
-```
-[Relevant file paths, config snippets, or command output showing current state]
-```
+* **Current State**
 
-## Desired State
+  [Description of what currently exists. Be specific about files, configurations, and current behavior.]
 
-[Clear description of the end goal. What should exist when this task is complete?]
+  **Evidence:**
+  ```
+  [Relevant file paths, config snippets, or command output showing current state]
+  ```
 
-**Target:**
-```
-[Expected file structure, config, or behavior after completion]
-```
+* **Desired State**
 
-## Acceptance Criteria
+  [Clear description of the end goal. What should exist when this task is complete?]
 
-- [ ] [Specific, verifiable criterion]
-- [ ] [Another criterion]
-- [ ] [Criterion with measurable outcome]
-- [ ] All existing tests pass
-- [ ] No regressions introduced
+  **Target:**
+  ```
+  [Expected file structure, config, or behavior after completion]
+  ```
 
-## Implementation Notes
+* **Execution**
+  - **Priority**: P1 | P2 | P3
+  - **Category**: testing | packaging | linting | documentation | structure
+  - **Language**: Python | JavaScript | TypeScript | Java | Kotlin | Go | Rust | Multi
+  - **Executor**: [AGENT_NAME] | [SKILL_NAME] | manual
+  - **Depends On**: [] | [TASK_IDS]
+  - **Status**: pending | in_progress | completed
 
-[Specific guidance for the executor. Include:]
-- Key decisions already made
-- Constraints to follow
-- Patterns to match
-- Files to modify
+* **Implementation Notes**
 
-### Recommended Approach
+  [Specific guidance for the executor:]
+  - Key decisions already made
+  - Constraints to follow
+  - Patterns to match
 
-1. [Step 1]
-2. [Step 2]
-3. [Step 3]
+  **Files to Modify:**
 
-### Files to Modify
+  | File | Action | Notes |
+  |------|--------|-------|
+  | [path/to/file] | create/modify/delete | [notes] |
 
-| File | Action | Notes |
-|------|--------|-------|
-| [path/to/file] | create/modify/delete | [notes] |
+  **Recommended Approach:**
 
-## Verification
+  1. [Step 1]
+  2. [Step 2]
+  3. [Step 3]
 
-Run these commands to verify task completion:
+* **Verification**
 
-```bash
-[Verification command 1]
-[Verification command 2]
-```
+  Run these commands to verify task completion:
 
-**Expected output:**
-```
-[What success looks like]
-```
+  ```bash
+  [Verification command 1]
+  [Verification command 2]
+  ```
 
-## Rollback
+  **Expected output:**
+  ```
+  [What success looks like]
+  ```
 
-If issues arise, rollback with:
+* **Rollback**
 
-```bash
-[Rollback commands or git instructions]
-```
+  If issues arise, rollback with:
 
----
+  ```bash
+  [Rollback commands or git instructions]
+  ```
 
-## speckit Compatibility
-
-This task can be converted to a speckit ticket:
+## Tech Details
 
 ```yaml
 feature: [FEATURE_NAME]
@@ -97,27 +88,33 @@ type: chore | enhancement | bugfix
 labels: [ai-readiness, tooling, testing, etc.]
 ```
 
-## Agent Instructions
+**Open Questions (for spec process):**
+- [Any unresolved technical decisions — flag for speckit if applicable]
 
-If you are an agent executing this task:
+## References
 
-1. Read the **Current State** to understand context
-2. Follow the **Recommended Approach**
-3. Verify each **Acceptance Criterion**
-4. Run **Verification** commands
-5. Update **status** to `completed` when done
-6. Report any blockers or deviations
+- [Relevant documentation, config files, or external links]
 
----
+## Acceptance Criteria
 
-## Completion Log
+* **Given:** [Current state or precondition]
+  **When:** [The modernization change is applied]
+  **Then:** [Expected outcome]
+  **and Then:** [Additional verifiable outcome]
 
-[AGENT/USER fills this in when completing]
+* **Given:** [Existing tests and functionality]
+  **When:** [The change is complete]
+  **Then:** All existing tests pass
+  **and Then:** No regressions introduced
 
-**Completed by:** [agent-name | user]
-**Completed on:** [DATE]
-**Notes:** [Any relevant completion notes]
-**Verification output:**
-```
-[Paste verification command output]
-```
+## Other
+
+**Completion Log** *(filled in when completing)*
+
+- **Completed by:** [agent-name | user]
+- **Completed on:** [DATE]
+- **Notes:** [Any relevant completion notes]
+- **Verification output:**
+  ```
+  [Paste verification command output]
+  ```
