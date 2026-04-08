@@ -11,13 +11,15 @@ Before running any commands, you MUST discover what tools and commands are avail
 
 ### Discovery Priority (check in order)
 
-1. **CLAUDE.md** - Check for documented build/test commands (most reliable, project-specific)
+1. **CLAUDE.md / GEMINI.md** - Check for documented build/test commands (most reliable, project-specific)
 2. **README.md** - Often contains development setup and commands
-3. **Makefile** - Parse available targets
+3. **Makefile / Justfile / Taskfile.yml** - Parse available targets
 4. **package.json** - Check `scripts` section for JS/TS projects
-5. **pyproject.toml** - Check for task runners (`[tool.poe.tasks]`, `[tool.taskipy.tasks]`)
+5. **pyproject.toml** - Check for task runners (`[tool.poe.tasks]`, `[tool.taskipy.tasks]`, `[tool.hatch]`)
 6. **Cargo.toml** - Rust projects (use `cargo` commands)
 7. **go.mod** - Go projects (use `go` commands)
+8. **pom.xml / build.gradle / build.gradle.kts** - Java/Kotlin projects
+9. **mix.exs** - Elixir projects (use `mix` commands)
 
 ### Discovery Commands
 
@@ -25,12 +27,70 @@ Before running any commands, you MUST discover what tools and commands are avail
 # Check for Makefile targets
 make help 2>/dev/null || make -qp 2>/dev/null | awk -F':' '/^[a-zA-Z0-9][^$#\/\t=]*:([^=]|$)/ {print $1}' | sort -u
 
+# Check for Justfile targets
+just --list 2>/dev/null
+
+# Check for Taskfile targets
+task --list 2>/dev/null
+
 # Check package.json scripts
 cat package.json 2>/dev/null | grep -A 50 '"scripts"' | head -50
 
 # Check pyproject.toml for task runners
 cat pyproject.toml 2>/dev/null | grep -A 20 '\[tool.poe\|tool.taskipy\|tool.hatch'
+
+# Check for Gradle tasks
+./gradlew tasks --group=verification 2>/dev/null | head -20
+
+# Check for Mix tasks
+mix help 2>/dev/null | grep -E 'format|credo|test' | head -10
 ```
+
+### Detect Package Manager (JS/TS)
+
+The lockfile determines the right runner. Using the wrong one can fail if `node_modules/` wasn't installed by it.
+
+| Lockfile | Runner | Install |
+|----------|--------|---------|
+| `bun.lockb` or `bun.lock` | `bun` | `bun install` |
+| `pnpm-lock.yaml` | `pnpm` | `pnpm install` |
+| `yarn.lock` | `yarn` | `yarn install` |
+| `package-lock.json` | `npm` | `npm install` |
+
+```bash
+# Detect JS package manager
+if [ -f bun.lockb ] || [ -f bun.lock ]; then echo "bun"
+elif [ -f pnpm-lock.yaml ]; then echo "pnpm"
+elif [ -f yarn.lock ]; then echo "yarn"
+else echo "npm"
+fi
+```
+
+Use the detected runner for all JS/TS commands (e.g., `pnpm run lint` not `npm run lint`). If no lockfile exists, default to `npm`.
+
+### Detect Python Runner
+
+The project tooling determines whether commands need a runner prefix.
+
+| Indicator | Runner Prefix | Why |
+|-----------|--------------|-----|
+| `uv.lock` or `[tool.uv]` in pyproject.toml | `uv run` | uv-managed virtualenv |
+| `poetry.lock` or `[tool.poetry]` in pyproject.toml | `poetry run` | poetry-managed virtualenv |
+| `Pipfile.lock` | `pipenv run` | pipenv-managed virtualenv |
+| Active virtualenv (`$VIRTUAL_ENV` set) | (none) | Already in the venv |
+| None of the above | (none) | Try bare commands |
+
+```bash
+# Detect Python runner
+if [ -f uv.lock ] || grep -q '\[tool.uv\]' pyproject.toml 2>/dev/null; then echo "uv run"
+elif [ -f poetry.lock ] || grep -q '\[tool.poetry\]' pyproject.toml 2>/dev/null; then echo "poetry run"
+elif [ -f Pipfile.lock ]; then echo "pipenv run"
+elif [ -n "$VIRTUAL_ENV" ]; then echo ""
+else echo ""
+fi
+```
+
+Use the detected prefix for all Python commands (e.g., `poetry run ruff check .` not `ruff check .`).
 
 ## Step 2: Detect Tech Stack
 
@@ -39,11 +99,27 @@ Identify the project type to know what checks are relevant:
 | Indicator File | Stack | Typical Tools |
 |---|---|---|
 | `pyproject.toml`, `requirements.txt`, `setup.py` | Python | ruff/flake8/pylint, black/ruff, mypy/pyright, pytest |
-| `package.json` | JavaScript/TypeScript | eslint, prettier, tsc, jest/vitest/mocha |
+| `package.json` | JavaScript/TypeScript | eslint/biome, prettier/biome, tsc, jest/vitest/mocha |
 | `Cargo.toml` | Rust | cargo clippy, cargo fmt, cargo test |
 | `go.mod` | Go | golangci-lint, gofmt, go test |
-| `pom.xml`, `build.gradle` | Java/Kotlin | checkstyle/spotless, junit |
+| `pom.xml`, `build.gradle`, `build.gradle.kts` | Java/Kotlin | checkstyle/spotless, google-java-format, junit |
 | `mix.exs` | Elixir | mix format, mix credo, mix test |
+| `Gemfile`, `*.gemspec` | Ruby | rubocop, rspec/minitest |
+| `composer.json` | PHP | phpstan/psalm, php-cs-fixer, phpunit |
+
+### Monorepo Detection
+
+Check if the project has multiple sub-projects:
+
+```bash
+# Look for sub-project indicators (one level deep)
+ls */package.json */pyproject.toml */Cargo.toml */go.mod */pom.xml */build.gradle 2>/dev/null
+```
+
+If multiple sub-projects exist:
+1. Check for a **root-level task runner** first (Makefile, Justfile, Taskfile.yml, root package.json with workspace scripts). Root-level commands usually run checks across all sub-projects — prefer these.
+2. If no root runner exists, identify sub-projects and run checks in each one sequentially. Focus on sub-projects that have changed recently (`git diff --name-only HEAD~5 | cut -d/ -f1 | sort -u`).
+3. Report results per sub-project in the output.
 
 ## Step 3: Map Commands to Universal Workflow
 
@@ -53,16 +129,16 @@ Map discovered commands to these categories:
 
 | Category | Purpose | Examples |
 |---|---|---|
-| **lint** | Static analysis, code smells | `make lint`, `npm run lint`, `cargo clippy` |
-| **format** | Code formatting | `make format`, `npm run format`, `cargo fmt` |
-| **typecheck** | Type validation | `make typecheck`, `npm run typecheck`, `tsc --noEmit` |
-| **test** | Run test suite | `make test`, `npm test`, `cargo test`, `go test ./...` |
-| **check/all** | Combined command | `make check`, `npm run ci`, `make hooks` |
+| **lint** | Static analysis, code smells | `make lint`, `pnpm run lint`, `cargo clippy` |
+| **format** | Code formatting | `make format`, `pnpm run format`, `cargo fmt` |
+| **typecheck** | Type validation | `make typecheck`, `pnpm run typecheck`, `tsc --noEmit` |
+| **test** | Run test suite | `make test`, `pnpm test`, `cargo test`, `go test ./...` |
+| **check/all** | Combined command | `make check`, `pnpm run ci`, `just check`, `task check` |
 
 ## Execution Strategy
 
 ### IMPORTANT: Avoid Redundant Runs
-- If a combined command exists (like `make check` or `npm run ci`), prefer it over individual commands
+- If a combined command exists (like `make check` or `pnpm run ci`), prefer it over individual commands
 - **Never run both individual commands AND combined commands** - choose one approach
 - If you run individual commands, do NOT run the combined command after
 
@@ -99,6 +175,18 @@ Provide a clear summary after running checks:
 [Overall status and any actions taken]
 ```
 
+For monorepos, report per sub-project:
+
+```
+### frontend/ (TypeScript)
+| Check | Status | Notes |
+| ... | ... | ... |
+
+### backend/ (Python)
+| Check | Status | Notes |
+| ... | ... | ... |
+```
+
 ## Handling Failures
 
 **Fix issues immediately before running the next command.** Do not proceed until current step is clean.
@@ -110,23 +198,24 @@ Provide a clear summary after running checks:
 
 ## Fallback Defaults
 
-If no documented commands are found, use these defaults based on detected stack:
+If no documented commands are found, use these defaults based on detected stack. Use the detected package manager / Python runner from Step 1.
 
 ### Python (pyproject.toml/requirements.txt)
 ```bash
-# Check for package manager
-uv run ruff check --fix . 2>/dev/null || ruff check --fix . 2>/dev/null || python -m flake8
-uv run ruff format . 2>/dev/null || ruff format . 2>/dev/null || python -m black .
-uv run mypy . 2>/dev/null || mypy . 2>/dev/null || python -m mypy .
-uv run pytest 2>/dev/null || pytest 2>/dev/null || python -m pytest
+# $PY_RUN = detected runner prefix (e.g., "uv run", "poetry run", or "")
+$PY_RUN ruff check --fix . 2>/dev/null || $PY_RUN python -m flake8
+$PY_RUN ruff format . 2>/dev/null || $PY_RUN python -m black .
+$PY_RUN mypy . 2>/dev/null || $PY_RUN python -m mypy .
+$PY_RUN pytest 2>/dev/null || $PY_RUN python -m pytest
 ```
 
 ### JavaScript/TypeScript (package.json)
 ```bash
-npm run lint 2>/dev/null || npx eslint .
-npm run format 2>/dev/null || npx prettier --write .
-npm run typecheck 2>/dev/null || npx tsc --noEmit
-npm test
+# $JS_RUN = detected package manager (npm, pnpm, yarn, bun)
+$JS_RUN run lint 2>/dev/null || npx eslint .
+$JS_RUN run format 2>/dev/null || npx prettier --write .
+$JS_RUN run typecheck 2>/dev/null || npx tsc --noEmit
+$JS_RUN test
 ```
 
 ### Rust (Cargo.toml)
@@ -143,6 +232,38 @@ golangci-lint run --fix 2>/dev/null || go vet ./...
 gofmt -w .
 # (Go has no separate typecheck - compiler does it)
 go test ./...
+```
+
+### Java/Kotlin (build.gradle / pom.xml)
+```bash
+# Gradle
+./gradlew spotlessApply 2>/dev/null   # format
+./gradlew check 2>/dev/null           # lint + test combined
+
+# Maven (if no Gradle)
+./mvnw spotless:apply 2>/dev/null     # format
+./mvnw verify 2>/dev/null             # lint + test combined
+```
+
+### Elixir (mix.exs)
+```bash
+mix format
+mix credo --strict 2>/dev/null        # lint (if credo is a dependency)
+# (Elixir has no separate typecheck unless dialyzer is configured)
+mix test
+```
+
+### Ruby (Gemfile)
+```bash
+bundle exec rubocop -A 2>/dev/null    # lint + format (auto-fix)
+bundle exec rspec 2>/dev/null || bundle exec rake test
+```
+
+### PHP (composer.json)
+```bash
+./vendor/bin/phpstan analyse 2>/dev/null    # lint/typecheck
+./vendor/bin/php-cs-fixer fix 2>/dev/null   # format
+./vendor/bin/phpunit                        # test
 ```
 
 ## Step 5: Ticket Unfixable Issues
@@ -170,4 +291,18 @@ If any check produced issues that could not be auto-fixed and require significan
 
 ## Pre-commit Hooks
 
-If the project uses pre-commit (`.pre-commit-config.yaml`), running `pre-commit run --all-files` or equivalent (often `make hooks`) will run all configured checks. This is often the most comprehensive option.
+If the project uses pre-commit, running all configured checks is often the most comprehensive option.
+
+Check for pre-commit config in these locations:
+- `.pre-commit-config.yaml` (standard)
+- `.config/.pre-commit-config.yaml` (alternate)
+
+```bash
+# Find pre-commit config
+PC_CONFIG=$(ls .pre-commit-config.yaml .config/.pre-commit-config.yaml 2>/dev/null | head -1)
+if [ -n "$PC_CONFIG" ]; then
+  pre-commit run --all-files -c "$PC_CONFIG" 2>/dev/null || echo "pre-commit not installed"
+fi
+```
+
+A Makefile target like `make hooks` or `make check` often wraps pre-commit — prefer those if they exist.

@@ -19,7 +19,7 @@ There is no build system or compiled code. Everything is Markdown, TOML, and JSO
 | `skills/modernizer/` | Stack modernization skill — audits tooling, writes tickets to `spec/` |
 | `skills/onboard/` | Onboarding skill — creates phased plans for new devs |
 | `skills/agentkit/` | Agent generator skill — analyzes custom code, creates project-level agents for Claude/Gemini/Copilot |
-| `skills/repokit/` | Tool menu skill — shows available tools and guides to the right one |
+| `skills/repokit/` | Maintenance hub — repo health dashboard, post-change sync, deep audits, project bootstrap (status, sync, audit, init) |
 | `.agents/skills/` | Symlink to `skills/` for Gemini cross-compatibility |
 | `agents/` | Distributed agents bundled with the plugin (sanity-checker, auditor) |
 | `.claude/agents/` | Internal dev-only agents — NOT distributed (component-reviewer only) |
@@ -43,7 +43,7 @@ Skills have YAML frontmatter (`name`, `description`, `user-invocable: true`) and
 | `modernizer` | analyze, status | Plans only, never executes; writes tickets to `spec/tickets/`, appends to `spec/backlog.md` with `[modernizer]` tag |
 | `onboard` | (single mode) | Reads existing docs first; asks for role before proceeding; chat-only, creates no files |
 | `agentkit` | (single mode) | Analyzes custom code; generates project-level agents for Claude, Gemini, Copilot; scales by project size |
-| `repokit` | (single mode) | Shows the full tool menu and guides user to the right tool |
+| `repokit` | status, sync, audit, init | Maintenance hub — orchestrates other tools; repo health dashboard, post-change sync, deep audits, project bootstrap |
 
 ### Agents (`agents/`, distributed with plugin)
 
