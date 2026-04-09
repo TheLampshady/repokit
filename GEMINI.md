@@ -15,6 +15,9 @@ Invoke with `/skill-name`. Gemini auto-detects them based on your request.
 | **modernizer** | `/modernizer` | Asked to audit the codebase, modernize tooling, find missing tests/hooks/CI, or check if dependencies are outdated |
 | **onboard** | `/onboard` | A new team member needs to get started, or someone asks how to contribute |
 | **repokit** | `/repokit` | Maintenance hub — check repo health (`status`), sync after changes (`sync`), deep audit (`audit`), or bootstrap a new project (`init`). Also shows the full tool menu. |
+| **tik** | `/tik` | Asked to create a ticket, write a task, draft a feature request, or turn a request into a ticket (no Figma/Stitch context) |
+| **figtik** | `/figtik` | User mentions Figma (URL, file key, or the word "figma") AND wants a ticket or wants to update an existing ticket with Figma data |
+| **stitchtik** | `/stitchtik` | User mentions Stitch, references a `stitch/` directory, or asks about UI mockups when Stitch exports exist |
 
 ---
 
@@ -22,10 +25,10 @@ Invoke with `/skill-name`. Gemini auto-detects them based on your request.
 
 When tools find work to be done, they write to a shared backlog:
 
-- `spec/backlog.md` — master checklist, items tagged by source (`[modernizer]`, `[auditor]`, `[dockit]`)
-- `spec/tickets/` — individual ticket files with full context
+- `specs/backlog.md` — master checklist, items tagged by source (`[tik]`, `[figtik]`, `[stitchtik]`, `[modernizer]`, `[auditor]`, `[dockit]`)
+- `specs/tickets/` — individual ticket files with full context
 
-Check `spec/backlog.md` before creating any ticket to avoid duplicates.
+Check `specs/backlog.md` before creating any ticket to avoid duplicates.
 
 ---
 
@@ -43,7 +46,7 @@ To enable subagents, see setup instructions in the [repokit README](https://gith
 ## Policies Active
 
 This extension enforces:
-- Confirmation before `rm -rf` or deleting `spec/` / `agents/` directories
+- Confirmation before `rm -rf` or deleting `specs/` / `agents/` directories
 - Confirmation before `git push`
 - Block on writing to `.env` files
 - Confirmation before overwriting `CLAUDE.md` or `GEMINI.md`

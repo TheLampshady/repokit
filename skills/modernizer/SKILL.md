@@ -1,6 +1,6 @@
 ---
 name: modernizer
-description: 'Analyze and modernize codebases. Audits for AI-readiness, outdated tooling, and missing quality infrastructure. Generates actionable tickets in spec/tickets/ and a progress checklist in spec/CHECKLIST.md. Use when asked to: modernize the codebase, audit code quality, check if tools are up to date, improve the dev setup, find what testing/linting/packaging improvements are needed. Modes: analyze, status.'
+description: 'Analyze and modernize codebases. Audits for AI-readiness, outdated tooling, and missing quality infrastructure. Generates actionable tickets in specs/tickets/ and a progress checklist in specs/CHECKLIST.md. Use when asked to: modernize the codebase, audit code quality, check if tools are up to date, improve the dev setup, find what testing/linting/packaging improvements are needed. Modes: analyze, status.'
 user-invocable: true
 ---
 
@@ -22,14 +22,14 @@ executors, and creates structured task plans that other agents can consume.
 
 | Mode | Command | Description |
 |------|---------|-------------|
-| `analyze` | `/modernizer` or `/modernizer analyze` | Audit codebase, generate plans in `spec/` |
+| `analyze` | `/modernizer` or `/modernizer analyze` | Audit codebase, generate plans in `specs/` |
 | `status` | `/modernizer status` | Show task status, clean up completed tasks |
 
 ### Status Mode
 
 When `/modernizer status` is invoked:
 
-1. **Read all task files** in `spec/tickets/`
+1. **Read all task files** in `specs/tickets/`
 2. **Check status** of each task (from metadata yaml block)
 3. **Cross-reference with code state** — For each pending task, check if the acceptance criteria are now met in the actual codebase:
    - "No tests exist" → check if test files now exist
@@ -65,10 +65,10 @@ Example output:
 
 ## Output Location
 
-All outputs go to `spec/`:
+All outputs go to `specs/`:
 
 ```
-spec/
+specs/
 ├── backlog.md                 # Master checklist, one line per item, tagged [modernizer]
 └── tickets/                   # Individual task files for agents
     ├── 001-testing-setup.md
@@ -231,7 +231,7 @@ Do a quick doc health check — this does not require the auditor agent.
 
 If no docs were found in Phase 1, skip this step — note "no docs" as a finding and recommend `/repokit:dockit`.
 
-Write any doc-related tickets tagged `[modernizer]` in `spec/tickets/`, same as all other modernizer tickets.
+Write any doc-related tickets tagged `[modernizer]` in `specs/tickets/`, same as all other modernizer tickets.
 
 > For a deeper documentation audit (staleness details, automation gaps, troubleshooting coverage), suggest the user ask for a doc health review — the **auditor agent** auto-triggers for that and provides a comprehensive findings report.
 
@@ -239,21 +239,24 @@ Write any doc-related tickets tagged `[modernizer]` in `spec/tickets/`, same as 
 
 ### Phase 3: Plan Generation
 
-Generate structured output in `spec/`:
+Generate structured output in `specs/`:
 
-#### CHECKLIST.md (`spec/CHECKLIST.md`)
+#### CHECKLIST.md (`specs/CHECKLIST.md`)
 
 Overall scores, task overview, and quick checklist (see template). This is the persistent artifact for tracking progress.
 
-#### Backlog (`spec/backlog.md`)
+#### Backlog (`specs/backlog.md`)
 
-Before creating any ticket, check `spec/backlog.md` for duplicates. For each new ticket, append a line:
+Before creating any ticket, check `specs/backlog.md` for duplicates. For each new ticket, append a line prefixed with the implementation order number:
 
 ```
-- [ ] [Short description] `[modernizer]` → tickets/NNN-slug.md
+- [ ] `001` Testing setup [modernizer] → tickets/001-testing-setup.md
+- [ ] `002` Package modernization [modernizer] → tickets/002-package-modernization.md
 ```
 
-#### Task Files (`spec/tickets/`)
+The backtick-wrapped number makes priority order visible at a glance when scanning the backlog.
+
+#### Task Files (`specs/tickets/`)
 
 Each task uses the canonical ticket template at `./references/templates/ticket-template.md` (bundled with this skill). Modernizer extends the base template with agent-execution sub-sections under Goals.
 
@@ -434,7 +437,7 @@ AI: Analyzing codebase for AI-readiness...
 
 ## Generated Plans
 
-Created in `spec/`:
+Created in `specs/`:
 - CHECKLIST.md (scorecard + task overview)
 - tickets/001-testing-setup.md (P1, Go, manual - no agent available)
 - tickets/002-golangci-lint.md (P1, Go, manual)

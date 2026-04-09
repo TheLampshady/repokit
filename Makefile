@@ -70,6 +70,9 @@ md-to-toml: ## Convert commands/*.md → *.toml (Gemini format)
 # ── Sync ─────────────────────────────────────────────────────────────────────
 # Single sources in src/ are copied into each skill that uses them.
 # Edit in src/, then run `make sync` before committing.
+# Note: stitchtik is NOT a sync target — its template has Stitch-specific
+# customizations (Component Inventory, Design References, Responsive Requirements)
+# baked into the base structure. Update it manually when the canonical template changes.
 
 TICKET_TEMPLATE := src/ticket-template.md
 TICKET_TARGETS := \

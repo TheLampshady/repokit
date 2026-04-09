@@ -15,10 +15,10 @@ priority = 100
 # Protect the ticket system from accidental deletion
 [[rule]]
 toolName = "run_shell_command"
-argsPattern = "rm.*spec/"
+argsPattern = "rm.*specs/"
 decision = "ask_user"
 priority = 105
-deny_message = "This will delete the spec/ ticket system. Confirm you intend to do this."
+deny_message = "This will delete the specs/ ticket system. Confirm you intend to do this."
 
 # Protect skill and agent definitions from bulk deletion
 [[rule]]

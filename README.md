@@ -67,9 +67,12 @@ copilot plugin uninstall https://github.com/TheLampshady/repokit
 |-------|---------|---------|--------|
 | **agentkit** | `/agentkit` | Generate project-level AI agents tailored to your codebase's custom code patterns. Supports Claude, Gemini, and Copilot. | WIP |
 | **dockit** | `/dockit` | Generate, sync, check, and migrate project documentation. Scales by project size, auto-detects frameworks. | Ready |
-| **modernizer** | `/modernizer` | Audit the codebase for outdated tooling, missing tests, and packaging gaps. Creates tickets in `spec/`. | In Review |
+| **figtik** | `/figtik` | Turn Figma designs into structured implementation tickets. Fetches design data via API, compares against codebase. | Ready |
+| **modernizer** | `/modernizer` | Audit the codebase for outdated tooling, missing tests, and packaging gaps. Creates tickets in `specs/`. | In Review |
 | **onboard** | `/onboard` | Create personalized onboarding plans for new team members based on role or feature focus. | Ready |
 | **repokit** | `/repokit` | Show the full tool menu and get guided to the right tool. | In Review |
+| **stitchtik** | `/stitchtik` | Turn Google Stitch UI exports into structured implementation tickets. Compares mockups against codebase. | Ready |
+| **tik** | `/tik` | Default ticket creation — turn text requests into structured, well-written tickets. | Ready |
 
 ### Agents
 
@@ -84,17 +87,17 @@ copilot plugin uninstall https://github.com/TheLampshady/repokit
 
 ## Ticket System
 
-All tools write work items to a shared backlog under `spec/`:
+All tools write work items to a shared backlog under `specs/`:
 
 ```
-spec/
+specs/
 ├── backlog.md       ← master checklist, items tagged by source
 └── tickets/
     ├── 001-add-tests.md
     └── 002-stale-setup-docs.md
 ```
 
-Tags in `backlog.md` show which tool created each item: `[modernizer]`, `[sanity-checker]`, `[manual]`. (The auditor does not write tickets directly — its findings flow through modernizer.)
+Tags in `backlog.md` show which tool created each item: `[tik]`, `[figtik]`, `[stitchtik]`, `[modernizer]`, `[sanity-checker]`, `[manual]`. (The auditor does not write tickets directly — its findings flow through modernizer.)
 
 ---
 
@@ -182,6 +185,12 @@ graph TD
             S_onboard["onboard<br/>Personalized plans for new devs"]
         end
 
+        subgraph ticketing["Ticket Creation"]
+            S_tik["tik<br/>Text → tickets"]
+            S_figtik["figtik<br/>Figma → tickets"]
+            S_stitchtik["stitchtik<br/>Stitch → tickets"]
+        end
+
         subgraph agents_box["Quality Gates"]
             A_auditor["auditor<br/>Find outdated code & practices"]
             A_sanity["sanity-checker<br/>Lint, format, typecheck & test"]
@@ -191,13 +200,14 @@ graph TD
     subgraph client_repo["Client Repo"]
         direction TB
         SME["SME Agents<br/>Custom code experts<br/>generated per-project"]
-        Spec[("spec/<br/>backlog.md · tickets/")]
+        Spec[("specs/<br/>backlog.md · tickets/")]
     end
 
     CA["Code Assist<br/>Claude · Gemini · Copilot"]
 
     CA -->|"invokes"| foundation
     CA -->|"invokes"| accelerators
+    CA -->|"invokes"| ticketing
     CA -->|"delegates to"| SME
     CA -->|"triggers"| agents_box
 
@@ -206,6 +216,9 @@ graph TD
 
     S_agentkit -->|"generates"| SME
     S_modernizer -->|"writes tickets"| Spec
+    S_tik -->|"writes tickets"| Spec
+    S_figtik -->|"writes tickets"| Spec
+    S_stitchtik -->|"writes tickets"| Spec
 
     classDef skill   fill:#3b82f6,stroke:#1d4ed8,color:#fff
     classDef agent   fill:#8b5cf6,stroke:#6d28d9,color:#fff
@@ -217,6 +230,7 @@ graph TD
 
     class S_repokit,S_dockit found
     class S_modernizer,S_onboard,S_agentkit skill
+    class S_tik,S_figtik,S_stitchtik skill
     class A_sanity,A_auditor agent
     class Spec storage
     class CA ai
@@ -315,7 +329,7 @@ graph LR
 graph LR
     Modernizer["/modernizer"]
     Auditor["auditor"]
-    Spec["spec/backlog.md"]
+    Spec["specs/backlog.md"]
 
     Modernizer -->|"invokes"| Auditor
     Auditor -->|"findings"| Modernizer
@@ -331,6 +345,29 @@ graph LR
 
 > Audits tooling, finds outdated code and practices, writes prioritized tickets to a shared backlog.
 
+#### Design-to-Ticket Pipeline
+
+```mermaid
+graph LR
+    Input["Design Input"]
+    Tik["/tik"]
+    Figtik["/figtik"]
+    Stitchtik["/stitchtik"]
+    Spec["specs/backlog.md"]
+
+    Input -->|"text request"| Tik -->|"writes"| Spec
+    Input -->|"Figma URL"| Figtik -->|"writes"| Spec
+    Input -->|"Stitch export"| Stitchtik -->|"writes"| Spec
+
+    classDef skill fill:#3b82f6,stroke:#1d4ed8,color:#fff
+    classDef storage fill:#f59e0b,stroke:#b45309,color:#000
+    class Tik,Figtik,Stitchtik skill
+    class Spec storage
+    style Input fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
+```
+
+> Three paths to the same backlog. `tik` for text requests, `figtik` for Figma designs, `stitchtik` for Google Stitch exports. All compare against the existing codebase before writing tickets.
+
 ---
 
 ## Structure
@@ -340,16 +377,19 @@ repokit/
 ├── skills/                  ← cross-platform skills (Claude + Gemini + Copilot)
 │   ├── agentkit/
 │   ├── dockit/
+│   ├── figtik/
 │   ├── modernizer/
 │   ├── onboard/
-│   └── repokit/
+│   ├── repokit/
+│   ├── stitchtik/
+│   └── tik/
 ├── .agents/skills → skills/  ← symlink for Gemini (git clone resolves it)
 ├── agents/                  ← distributed agents (sanity-checker, auditor)
 ├── .claude/agents/          ← internal dev tools (component-reviewer)
 ├── .claude-plugin/          ← Claude plugin + marketplace metadata
 ├── hooks/                   ← session lifecycle hooks
 ├── policies/                ← Gemini policy engine rules
-├── spec/                    ← ticket system
+├── specs/                    ← ticket system
 │   ├── backlog.md
 │   └── tickets/
 ├── CLAUDE.md                ← Claude context

@@ -104,7 +104,7 @@ Identify the project type to know what checks are relevant:
 | `go.mod` | Go | golangci-lint, gofmt, go test |
 | `pom.xml`, `build.gradle`, `build.gradle.kts` | Java/Kotlin | checkstyle/spotless, google-java-format, junit |
 | `mix.exs` | Elixir | mix format, mix credo, mix test |
-| `Gemfile`, `*.gemspec` | Ruby | rubocop, rspec/minitest |
+| `Gemfile`, `*.gemspec` | Ruby | rubocop, rspecs/minitest |
 | `composer.json` | PHP | phpstan/psalm, php-cs-fixer, phpunit |
 
 ### Monorepo Detection
@@ -270,10 +270,10 @@ bundle exec rspec 2>/dev/null || bundle exec rake test
 
 If any check produced issues that could not be auto-fixed and require significant manual effort, create tickets for them.
 
-1. Check if `spec/backlog.md` exists — create `spec/` directory if needed
+1. Check if `specs/backlog.md` exists — create `specs/` directory if needed
 2. For each unfixable issue:
-   - Create `spec/tickets/NNN-slug.md` with the issue details, error output, and suggested fix approach
-   - Append to `spec/backlog.md`: `- [ ] Description [sanity-checker] → tickets/NNN-slug.md`
+   - Create `specs/tickets/NNN-slug.md` with the issue details, error output, and suggested fix approach
+   - Append to `specs/backlog.md`: `- [ ] Description [sanity-checker] → tickets/NNN-slug.md`
 3. Check existing backlog entries first to avoid duplicates
 
 **Only create tickets for:**

@@ -20,8 +20,8 @@ When invoked bare (`/repokit` with no mode), detect what the user likely needs:
 
 | Condition | Suggest |
 |-----------|---------|
-| No `docs/` or `README.md` and no `spec/` | → `init` |
-| `spec/backlog.md` has open items | → `status` (show what needs attention) |
+| No `docs/` or `README.md` and no `specs/` | → `init` |
+| `specs/backlog.md` has open items | → `status` (show what needs attention) |
 | Git changes since last doc sync | → `sync` |
 | User asks "what can repokit do" | → show tool menu |
 | Otherwise | → show tool menu with live status summary |
@@ -32,16 +32,16 @@ Always show the tool menu as a fallback, but lead with a recommendation when the
 
 ## Tool Menu (bare invocation or when guiding)
 
-When showing the menu, enhance it with live status if `spec/` or `docs/` exist.
+When showing the menu, enhance it with live status if `specs/` or `docs/` exist.
 
 ### Gather Status Counts
 
 ```bash
 # Open backlog items
-grep -c '^\- \[ \]' spec/backlog.md 2>/dev/null || echo "0"
+grep -c '^\- \[ \]' specs/backlog.md 2>/dev/null || echo "0"
 
 # Pending tickets
-ls spec/tickets/*.md 2>/dev/null | wc -l
+ls specs/tickets/*.md 2>/dev/null | wc -l
 
 # Doc staleness (commits since last doc touch)
 git rev-list --count $(git log -1 --format=%H -- docs/ README.md 2>/dev/null || echo HEAD)..HEAD 2>/dev/null || echo "?"
@@ -85,17 +85,17 @@ Run these checks and present a unified dashboard:
 
 ```bash
 # Read backlog
-cat spec/backlog.md 2>/dev/null
+cat specs/backlog.md 2>/dev/null
 
 # Count by tag
-grep -o '\[.*\]' spec/backlog.md 2>/dev/null | sort | uniq -c
+grep -o '\[.*\]' specs/backlog.md 2>/dev/null | sort | uniq -c
 
 # Count open vs completed
-grep -c '^\- \[ \]' spec/backlog.md 2>/dev/null  # open
-grep -c '^\- \[x\]' spec/backlog.md 2>/dev/null  # done
+grep -c '^\- \[ \]' specs/backlog.md 2>/dev/null  # open
+grep -c '^\- \[x\]' specs/backlog.md 2>/dev/null  # done
 
 # Pending ticket files
-ls spec/tickets/*.md 2>/dev/null
+ls specs/tickets/*.md 2>/dev/null
 ```
 
 #### 2. Documentation Freshness
@@ -135,8 +135,8 @@ ls .github/workflows/*.yml 2>/dev/null
 #### 4. Last Tool Runs
 
 ```bash
-# When was modernizer last run? (proxy: last spec/ change)
-git log -1 --format="%cr" -- spec/ 2>/dev/null || echo "never"
+# When was modernizer last run? (proxy: last specs/ change)
+git log -1 --format="%cr" -- specs/ 2>/dev/null || echo "never"
 
 # When was dockit last run? (proxy: last docs/ change with dockit patterns)
 git log -1 --format="%cr" -- docs/ 2>/dev/null || echo "never"
@@ -150,7 +150,7 @@ git log -1 --format="%cr" -- docs/ 2>/dev/null || echo "never"
 | Area | Status | Details |
 |------|--------|---------|
 | Backlog | 🟡 3 open | 1 modernizer, 1 auditor, 1 manual |
-| Tickets | 📋 2 pending | spec/tickets/ |
+| Tickets | 📋 2 pending | specs/tickets/ |
 | Docs | 🟢 Fresh | Last updated 2 days ago (14 code commits since) |
 | Pre-commit | 🟢 Installed | .pre-commit-config.yaml present |
 | Linting | 🟢 Configured | ruff |
@@ -189,7 +189,7 @@ LAST_DOC=$(git log -1 --format=%H -- docs/ README.md 2>/dev/null)
 git diff --name-only "$LAST_DOC"..HEAD 2>/dev/null | head -30
 
 # What changed since last spec update?
-LAST_SPEC=$(git log -1 --format=%H -- spec/ 2>/dev/null)
+LAST_SPEC=$(git log -1 --format=%H -- specs/ 2>/dev/null)
 git diff --name-only "$LAST_SPEC"..HEAD 2>/dev/null | head -30
 ```
 
@@ -203,10 +203,10 @@ Follow the dockit skill's `sync` mode — it handles git diff detection, section
 
 #### Step 3: Refresh tickets (delegate to modernizer)
 
-If `spec/tickets/` exists, invoke `modernizer status`. This:
+If `specs/tickets/` exists, invoke `modernizer status`. This:
 - Checks if pending tickets have been resolved by recent code changes
 - Cleans up completed tickets
-- Updates `spec/CHECKLIST.md`
+- Updates `specs/CHECKLIST.md`
 
 Tell the user: "Running modernizer status to refresh tickets..."
 
@@ -300,7 +300,7 @@ Combine outputs from all tools into a unified report. Don't just concatenate —
 [From auditor 🔵 FYI tier + modernizer P3 items]
 
 ### Tickets Created
-[List any new tickets written to spec/tickets/ by modernizer]
+[List any new tickets written to specs/tickets/ by modernizer]
 
 ### Next Steps
 1. [Most impactful action]
@@ -334,7 +334,7 @@ ls .pre-commit-config.yaml Makefile 2>/dev/null
 ls .ruff.toml eslint.config.js biome.json 2>/dev/null
 
 # Existing repokit artifacts
-ls spec/backlog.md spec/tickets/ 2>/dev/null
+ls specs/backlog.md specs/tickets/ 2>/dev/null
 
 # AI instruction files
 ls CLAUDE.md GEMINI.md .github/copilot-instructions.md 2>/dev/null
@@ -364,7 +364,7 @@ Based on your project, here's what I recommend:
 [ ] Type checking → run `/repokit:modernizer`
 
 ### Phase 3: Maintenance Workflow
-[ ] spec/ directory for tickets
+[ ] specs/ directory for tickets
 [ ] Backlog tracking
 
 Run all phases now, or pick one to start with?
@@ -376,7 +376,7 @@ For each phase the user approves:
 
 - **Phase 1:** Invoke `dockit init` — handles all doc generation with its own question/plan/confirm flow
 - **Phase 2:** Invoke `modernizer analyze` — audits tooling and generates tickets for improvements
-- **Phase 3:** Create `spec/` directory and `spec/backlog.md` if they don't exist. Any tickets from Phase 2 will already be there.
+- **Phase 3:** Create `specs/` directory and `specs/backlog.md` if they don't exist. Any tickets from Phase 2 will already be there.
 
 Let each skill handle its own interaction (questions, confirmations). Repokit just sequences them and provides transitions.
 
@@ -387,8 +387,8 @@ Let each skill handle its own interaction (questions, confirmations). Repokit ju
 
 ### What was created
 - docs/README.md, docs/ARCHITECTURE.md, docs/ENVIRONMENTS.md (via dockit)
-- spec/backlog.md with 4 items (via modernizer)
-- spec/tickets/001-*.md through 004-*.md
+- specs/backlog.md with 4 items (via modernizer)
+- specs/tickets/001-*.md through 004-*.md
 
 ### What's next
 - Review generated docs and fill [TODO] markers
@@ -403,12 +403,12 @@ Let each skill handle its own interaction (questions, confirmations). Repokit ju
 
 ### Ticket Deduplication
 
-Before any mode creates or delegates ticket creation, check `spec/backlog.md` for existing items. Pass this context to modernizer so it doesn't create duplicates.
+Before any mode creates or delegates ticket creation, check `specs/backlog.md` for existing items. Pass this context to modernizer so it doesn't create duplicates.
 
 ### Missing Infrastructure
 
 If a mode needs something that doesn't exist:
-- `status` with no `spec/`: suggest `init` or `audit`
+- `status` with no `specs/`: suggest `init` or `audit`
 - `sync` with no docs: suggest `init`
 - `audit` on a fresh project: suggest `init` instead
 

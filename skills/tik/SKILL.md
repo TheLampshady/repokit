@@ -1,6 +1,6 @@
 ---
 name: tik
-description: "Create structured tickets from requests. Use this skill when the user asks to: create a ticket, write a ticket, make a ticket, draft a task, write up a feature request, create a story, write a bug report, or turn a request into a ticket. Also triggers when the user says things like 'ticket this', 'can you write that up', 'make a card for this', 'I need a ticket for X'. This is the default ticket creation skill — use it for any ticket request that does NOT involve a Figma link. If the user provides a Figma URL or mentions creating a ticket from a Figma design, use figtik instead."
+description: "Create structured tickets from requests. Use this skill when the user asks to: create a ticket, write a ticket, make a ticket, draft a task, write up a feature request, create a story, write a bug report, or turn a request into a ticket. Also triggers when the user says things like 'ticket this', 'can you write that up', 'make a card for this', 'I need a ticket for X'. This is the default ticket creation skill — use it for any ticket request that does NOT involve a Figma link or Stitch exports. If the user provides a Figma URL or mentions Figma, use figtik instead. If the user references Stitch exports or a stitch/ directory, use stitchtik instead."
 user-invocable: true
 ---
 
@@ -12,7 +12,7 @@ Turn simple requests into structured, well-written tickets. The output should be
 
 This is the default ticket creation skill. The user might say anything from "I need a ticket for adding dark mode" to a detailed paragraph about a bug they found. Your job is to expand their request into a complete ticket.
 
-If the user provides a Figma link or wants a ticket based on a Figma design, hand off to `/figtik` instead. If they want a codebase audit, redirect to `/modernizer`.
+If the user provides a Figma link or wants a ticket based on a Figma design, hand off to `/figtik` instead. If they reference Stitch exports or a `stitch/` directory, hand off to `/stitchtik`. If they want a codebase audit, redirect to `/modernizer`.
 
 ## Process
 
@@ -28,7 +28,7 @@ Read the user's request carefully. Identify:
 
 Before asking the user anything, check the codebase and docs for answers:
 - Read relevant source files, configs, READMEs, and existing docs
-- Check `spec/` for related tickets or prior work
+- Check `specs/` for related tickets or prior work
 - Look at the project structure to understand what exists and what conventions are in place
 
 This reduces back-and-forth and produces better tickets because they reflect the actual state of the project.
@@ -40,13 +40,13 @@ If questions remain after researching the codebase, ask the user — but do it w
 - **Batch questions together** — 2-3 max per round.
 - **It's OK to leave some things open.** This ticket will likely be passed to speckit for spec generation, where deeper technical research happens. Questions like "which caching strategy?" or "should we use a new service or extend the existing one?" can be flagged as open in the Tech Details section rather than blocking ticket creation. Mark these clearly so speckit knows to resolve them during the spec process.
 
-### 4. Write the Ticket to `spec/tickets/`
+### 4. Write the Ticket to `specs/tickets/`
 
-Always save tickets to `spec/tickets/<slug>.md`:
+Always save tickets to `specs/tickets/<slug>.md`:
 - Generate a **unique, descriptive kebab-case slug** from the ticket's subject — e.g., `inventory-search-filter`, `dark-mode-support`, `checkout-flow-retry-logic`. No numbers or prefixes needed, just a clear name that won't collide with existing tickets.
-- Check `spec/tickets/` for existing files to avoid duplicate slugs. If a collision exists, make the slug more specific.
-- If `spec/backlog.md` exists, append a line: `- [ ] <Title> [tik] → tickets/<slug>.md`
-- Create `spec/tickets/` if it doesn't exist yet.
+- Check `specs/tickets/` for existing files to avoid duplicate slugs. If a collision exists, make the slug more specific.
+- If `specs/backlog.md` exists, append a line: `- [ ] <Title> [tik] → tickets/<slug>.md`
+- Create `specs/tickets/` if it doesn't exist yet.
 
 After writing the ticket, give the user a **brief summary** in the conversation:
 - The ticket title and file path

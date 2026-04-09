@@ -16,7 +16,7 @@ Gather every markdown file that constitutes project documentation:
 - `CLAUDE.md`, `GEMINI.md`, `CONTRIBUTING.md`, `CHANGELOG.md`
 - Any `.md` files referenced by the above via links
 
-Skip files inside `node_modules/`, `.git/`, `vendor/`, `dist/`, `build/`, and `spec/tickets/`.
+Skip files inside `node_modules/`, `.git/`, `vendor/`, `dist/`, `build/`, and `specs/tickets/`.
 
 ### Step 2: Extract references
 

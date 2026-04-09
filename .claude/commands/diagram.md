@@ -97,7 +97,7 @@ graph TD
 
     Dev["👤 Developer"]
     CA["🤖 Code Assist\nClaude · Gemini"]
-    Spec[("📋 spec/\nbacklog.md · tickets/")]
+    Spec[("📋 specs/\nbacklog.md · tickets/")]
 
     Dev -->|"asks or instructs"| CA
     CA -->|"invokes"| foundation
@@ -225,7 +225,7 @@ graph LR
     CA["🤖 Code Assist"]
     Modernizer["Stack Modernizer\nmodernizer"]
     Auditor["Auditor\nauditor"]
-    Spec["📋 spec/backlog.md\nFindings tagged\nby source"]
+    Spec["📋 specs/backlog.md\nFindings tagged\nby source"]
     Result["✅ Full picture\nof work needed\nReady to prioritize"]
 
     Scenario --> CA
@@ -247,7 +247,7 @@ graph LR
     style Result   fill:#86efac,stroke:#16a34a,color:#000
 ```
 
-> **Example:** A developer asks "what do I need to update before the release?" The Code Assist runs modernizer. Modernizer invokes the auditor, which finds two setup commands in the README that no longer exist and a missing CI config. Modernizer finds no type checking configured and an outdated package manager. All findings land in `spec/backlog.md`, tagged by source.
+> **Example:** A developer asks "what do I need to update before the release?" The Code Assist runs modernizer. Modernizer invokes the auditor, which finds two setup commands in the README that no longer exist and a missing CI config. Modernizer finds no type checking configured and an outdated package manager. All findings land in `specs/backlog.md`, tagged by source.
 
 ---
 

@@ -16,10 +16,13 @@ There is no build system or compiled code. Everything is Markdown, TOML, and JSO
 | Path | Purpose |
 |------|---------|
 | `skills/dockit/` | Documentation generation skill (init, sync, check, migrate, diagrams) |
-| `skills/modernizer/` | Stack modernization skill — audits tooling, writes tickets to `spec/` |
+| `skills/modernizer/` | Stack modernization skill — audits tooling, writes tickets to `specs/` |
 | `skills/onboard/` | Onboarding skill — creates phased plans for new devs |
 | `skills/agentkit/` | Agent generator skill — analyzes custom code, creates project-level agents for Claude/Gemini/Copilot |
 | `skills/repokit/` | Maintenance hub — repo health dashboard, post-change sync, deep audits, project bootstrap (status, sync, audit, init) |
+| `skills/tik/` | Default ticket creation skill — turns text requests into structured tickets in `specs/tickets/` |
+| `skills/figtik/` | Figma-to-ticket skill — fetches Figma designs via API, creates implementation tickets |
+| `skills/stitchtik/` | Stitch-to-ticket skill — analyzes Google Stitch UI exports against codebase, creates implementation tickets |
 | `.agents/skills/` | Symlink to `skills/` for Gemini cross-compatibility |
 | `agents/` | Distributed agents bundled with the plugin (sanity-checker, auditor) |
 | `.claude/agents/` | Internal dev-only agents — NOT distributed (component-reviewer only) |
@@ -27,7 +30,7 @@ There is no build system or compiled code. Everything is Markdown, TOML, and JSO
 | `.mcp.json` | Bundled MCP servers (context7 for library documentation) |
 | `hooks/` | Session lifecycle hooks |
 | `policies/` | Gemini CLI policy engine rules |
-| `spec/` | Ticket system — created at runtime by agents, gitignored in this repo |
+| `specs/` | Ticket system — created at runtime by agents, gitignored in this repo |
 | `GEMINI.md` | Gemini extension context (tool docs, not project context) |
 | `gemini-extension.json` | Gemini extension manifest |
 
@@ -40,10 +43,13 @@ Skills have YAML frontmatter (`name`, `description`, `user-invocable: true`) and
 | Skill | Modes | Key Behavior |
 |-------|-------|-------------|
 | `dockit` | init, sync, check, migrate, diagrams | Scales docs by project size; detects frameworks; never destroys content |
-| `modernizer` | analyze, status | Plans only, never executes; writes tickets to `spec/tickets/`, appends to `spec/backlog.md` with `[modernizer]` tag |
+| `modernizer` | analyze, status | Plans only, never executes; writes tickets to `specs/tickets/`, appends to `specs/backlog.md` with `[modernizer]` tag |
 | `onboard` | (single mode) | Reads existing docs first; asks for role before proceeding; chat-only, creates no files |
 | `agentkit` | (single mode) | Analyzes custom code; generates project-level agents for Claude, Gemini, Copilot; scales by project size |
 | `repokit` | status, sync, audit, init | Maintenance hub — orchestrates other tools; repo health dashboard, post-change sync, deep audits, project bootstrap |
+| `tik` | (single mode) | Default ticket skill — turns text requests into structured tickets in `specs/tickets/` |
+| `figtik` | create, update | Fetches Figma design data via API; compares against codebase; writes tickets to `specs/tickets/` with `[figtik]` tag |
+| `stitchtik` | (single mode) | Analyzes Google Stitch UI exports (`screen.png`, `code.html`, `DESIGN.md`) against codebase; writes tickets to `specs/tickets/` with `[stitchtik]` tag |
 
 ### Agents (`agents/`, distributed with plugin)
 
@@ -60,18 +66,23 @@ Agents auto-trigger based on their description. They run in isolated context win
 |-------|---------|
 | `component-reviewer` | Reviews skills, agents, and commands for frontmatter correctness, description quality, and cross-platform compatibility — uses Opus, internal only |
 
-### Ticket System (`spec/`)
+### Ticket System (`specs/`)
 
 All skills and agents that find work write to a shared location:
-- `spec/backlog.md` — master checklist, one line per item, tagged by source
-- `spec/tickets/NNN-slug.md` — individual tickets with full context
+- `specs/backlog.md` — master checklist, one line per item, tagged by source
+- `specs/tickets/NNN-slug.md` — individual tickets with full context
 
 Format in `backlog.md`:
 ```
-- [ ] Description `[tool-name]` → tickets/NNN-slug.md
+- [ ] `001` Design system tokens [stitchtik] → tickets/001-design-system-tokens/ticket.md
+- [ ] `002` Bottom nav bar [stitchtik] → tickets/002-bottom-nav-bar/ticket.md
+- [ ] Add dark mode support [tik] → tickets/dark-mode-support.md
+- [ ] `001` Testing setup [modernizer] → tickets/001-testing-setup.md
 ```
 
-Always check `spec/backlog.md` before creating a ticket to avoid duplicates.
+Skills that produce numbered tickets (stitchtik, modernizer) prefix entries with backtick-wrapped order numbers. Skills that don't (tik, figtik) omit the prefix.
+
+Always check `specs/backlog.md` before creating a ticket to avoid duplicates.
 
 ### Plugin Structure
 
@@ -102,7 +113,7 @@ The `plugins/` subdirectory no longer exists — the root is the plugin.
 
 | Event | Behavior |
 |-------|----------|
-| `SessionStart` | Shows count of open items in `spec/backlog.md` if any exist |
+| `SessionStart` | Shows count of open items in `specs/backlog.md` if any exist |
 | `Stop` | Reminds user to run sanity-checker if code was modified |
 
 ## Policies
@@ -111,7 +122,7 @@ The `plugins/` subdirectory no longer exists — the root is the plugin.
 
 | Category | Rules |
 |----------|-------|
-| Destructive ops | Confirm `rm -rf`, confirm deleting `spec/` or `agents/` dirs |
+| Destructive ops | Confirm `rm -rf`, confirm deleting `specs/` or `agents/` dirs |
 | Git | Confirm `git push` |
 | Secrets | Deny reading `.env`/`id_rsa`/`passwd`, deny writing to `.env*` |
 | Context files | Confirm before overwriting `CLAUDE.md` or `GEMINI.md` |

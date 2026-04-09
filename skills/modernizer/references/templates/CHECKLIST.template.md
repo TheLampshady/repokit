@@ -74,7 +74,7 @@
 
 ## Next Steps
 
-1. Review task files in `spec/tickets/`
+1. Review task files in `specs/tickets/`
 2. Prioritize based on project needs
 3. Run recommended executors or implement manually
 4. Re-run `/modernizer` to verify improvements
@@ -84,7 +84,7 @@
 [IF_SPECKIT_AVAILABLE]
 Tasks can be converted to speckit tickets. Run:
 ```
-/speckit.taskstoissues spec/tickets/
+/speckit.taskstoissues specs/tickets/
 ```
 [ENDIF]
 

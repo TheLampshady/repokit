@@ -1,6 +1,7 @@
 ---
 name: figtik
-description: "Turn Figma designs into structured implementation tickets. Use this skill when the user mentions Figma (a URL, file key, or the word 'figma') AND wants to create a ticket, break down the design into work items, or get an explanation of how to implement the design. Also triggers when the user wants to UPDATE an existing ticket with additional scope — Figma links, motion specs, interaction details, or any feature addition (e.g., 'add fadeout to the name-page ticket'). Key trigger phrases: 'create a ticket from this figma', 'ticket this figma', 'how would I implement this figma', 'break this design into tasks', 'make a ticket from this design', 'add motion to this ticket', 'update the ticket with this figma', 'add X to the Y ticket'. This skill should NOT trigger if the user just wants to inspect Figma data, export assets, or look at styles without creating a ticket — and should NOT trigger for general ticket requests without a Figma link (use tik instead)."
+description: "Turn Figma designs into structured implementation tickets. Use this skill when the user mentions Figma (a URL, file key, or the word 'figma') AND wants to create a ticket, break down the design into work items, or get an explanation of how to implement the design. Also triggers when the user wants to UPDATE an existing ticket with additional scope — Figma links, motion specs, interaction details, or any feature addition (e.g., 'add fadeout to the name-page ticket'). Key trigger phrases: 'create a ticket from this figma', 'ticket this figma', 'how would I implement this figma', 'break this design into tasks', 'make a ticket from this design', 'add motion to this ticket', 'update the ticket with this figma', 'add X to the Y ticket'. This skill should NOT trigger if the user just wants to inspect Figma data, export assets, or look at styles without creating a ticket — should NOT trigger for general ticket requests without a Figma link (use tik instead) — and should NOT trigger for Google Stitch exports (use stitchtik instead)."
+user-invocable: true
 ---
 
 # figtik
@@ -272,6 +273,12 @@ Produced by the fetch/parse scripts and stored in the ticket folder:
 **Always view the PNG** before writing the ticket.
 
 If the user provides extra screenshots or reference files, save them in the ticket folder.
+
+### Backlog
+
+If `specs/backlog.md` exists, append: `- [ ] <Title> [figtik] → tickets/<ticket-name>/ticket.md`
+
+If it doesn't exist, create it with the entry.
 
 ## Conventions
 

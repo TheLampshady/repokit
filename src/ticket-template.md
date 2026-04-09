@@ -102,6 +102,7 @@ asking follow-up questions. Skills extend this section with domain-specific sub-
 |-------|-----------------|
 | tik | (none — uses base format) |
 | figtik | Component Inventory, State & Interaction, Motion & Animation, Platform Priority |
+| stitchtik | Component Inventory, Design References, Responsive Requirements |
 | modernizer | Current State, Desired State, Execution (metadata, executor, verification, rollback) |
 
 **Tech Details** — Only include when there's something non-obvious. Use `[TBD]` for

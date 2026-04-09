@@ -34,7 +34,7 @@ Analyzes the codebase and generates:
 ### Status Mode
 Shows task progress and cleans up:
 - Reports completed vs remaining tasks
-- **Deletes completed task files** from `spec/tickets/`
+- **Deletes completed task files** from `specs/tickets/`
 - Updates CHECKLIST.md
 - Shows next priority task
 
@@ -133,8 +133,8 @@ uv run pytest -v
     │   └── Score: docs, packages, tests, quality, patterns
     │
     ├── 3. Plan Generation
-    │   ├── spec/CHECKLIST.md
-    │   └── spec/tickets/*.md
+    │   ├── specs/CHECKLIST.md
+    │   └── specs/tickets/*.md
     │
     └── 4. Discussion
         ├── Present summary
@@ -147,7 +147,7 @@ uv run pytest -v
 ```
 /modernizer status
     │
-    ├── Read task files in spec/tickets/
+    ├── Read task files in specs/tickets/
     ├── Delete completed tasks (status: completed)
     ├── Update CHECKLIST.md
     └── Report: completed, remaining, next priority
@@ -179,7 +179,7 @@ Task files are structured for speckit compatibility:
 
 ```bash
 # Convert tasks to speckit tickets
-/speckit.taskstoissues spec/tickets/
+/speckit.taskstoissues specs/tickets/
 ```
 
 ## Technology Recommendations (2025)

@@ -6,7 +6,7 @@ Repokit ships five cross-platform skills. Each lives in `skills/<name>/SKILL.md`
 |-------|---------|---------|---------|
 | **dockit** | `/dockit` | Generate, sync, and maintain project documentation. Auto-detects frameworks and scales by project size. | [skills/dockit/SKILL.md](../skills/dockit/SKILL.md) |
 | **agentkit** | `/agentkit` | Generate project-level AI subagents tailored to your codebase's custom code patterns. Supports Claude, Gemini, and Copilot. | [skills/agentkit/SKILL.md](../skills/agentkit/SKILL.md) |
-| **modernizer** | `/modernizer` | Audit the codebase for outdated tooling, missing quality infrastructure, and AI-readiness gaps. Writes tickets to `spec/`. | [skills/modernizer/SKILL.md](../skills/modernizer/SKILL.md) |
+| **modernizer** | `/modernizer` | Audit the codebase for outdated tooling, missing quality infrastructure, and AI-readiness gaps. Writes tickets to `specs/`. | [skills/modernizer/SKILL.md](../skills/modernizer/SKILL.md) |
 | **onboard** | `/onboard` | Create personalized onboarding plans for new team members based on role or feature focus. | [skills/onboard/SKILL.md](../skills/onboard/SKILL.md) |
 | **repokit** | `/repokit` | Show the full tool menu and guide the user to the right tool. | [skills/repokit/SKILL.md](../skills/repokit/SKILL.md) |
 
@@ -18,7 +18,7 @@ Repokit ships five cross-platform skills. Each lives in `skills/<name>/SKILL.md`
 /dockit init  -->  /agentkit  -->  /modernizer analyze
    |                  |                  |
    v                  v                  v
- docs/           SME agents        spec/tickets/
+ docs/           SME agents        specs/tickets/
 ```
 
 1. **dockit** first — bootstrap project documentation
