@@ -1,8 +1,8 @@
-# Canonical Ticket Template
+# Stitchtik Ticket Template
 
-Adapted from repokit's canonical template. This is the base structure — stitchtik adds
-Stitch-specific sub-sections under Goals (Component Inventory, Design References,
-Responsive Requirements).
+Adapted from repokit's canonical template. Stitchtik adds a Design section with
+embedded mockup images, and a Component Inventory under Goals. This template is
+independent — it is NOT synced from `src/ticket-template.md` via `make sync`.
 
 ## Base Template
 
@@ -19,28 +19,43 @@ implementation.>
 risk, dependency on another team, cost implications, breaking change, etc. Omit this block
 entirely if there's nothing notable.>
 
+## Design
+
+<Embed Stitch mockup images so the reader sees the design before reading the work breakdown.
+Use markdown image syntax. Include all variants (desktop, mobile) that were analyzed.>
+
+![Desktop](desktop-screen.png)
+![Mobile](mobile-screen.png)
+
+**Breakpoint behavior:** <One line on how the layout adapts between desktop and mobile.
+Only include when both variants exist.>
+
+**HTML reference:** `code.html` — structural reference only, not project tech stack.
+<Only include this line when code.html exists in the Stitch export.>
+
+## Component Inventory
+
+- **Leverage existing:** `path/to/Component` — [what changes]
+- **Build new:** [Component name] — [what it is, why no existing match]
+- **No change:** [Component] — already matches mockup
+
+<This section tells speckit what to reuse vs. build. Be specific — include file paths
+for existing components.>
+
 ## Goals
 
 <Bulleted list detailing what needs to be done. Use sub-bullets for specifics. Group
-related items under bold sub-headings when the ticket covers multiple areas of work.>
+related items under bold sub-headings when the ticket covers multiple areas of work.
+Include desktop/mobile differences inline per component — don't repeat them in a
+separate section.>
 
-* **Component Inventory**
-  - **Leverage existing:** `path/to/Component` — [what changes]
-  - **Build new:** [Component name] — [what it is, why no existing match]
-  - **No change:** [Component] — already matches mockup
-
-* **Design References**
-  - Stitch mockup: `specs/tickets/<name>/screen.png`
-  - HTML reference: `specs/tickets/<name>/code.html` (reference only)
-  - Design system: `specs/design-system.md` or DESIGN.md notes
-
-* **Responsive Requirements** (when desktop + mobile variants exist)
-  - Desktop: [layout description] — see `desktop-screen.png`
-  - Mobile: [layout description] — see `mobile-screen.png`
-  - Breakpoint behavior: [how layout adapts]
-
-* **<Additional goal areas as needed>**
+* **<Component or area of work>**
   - <Specific task or requirement>
+  - Desktop: <desktop-specific detail>
+  - Mobile: <mobile-specific detail>
+
+* **<Another component or area>**
+  - <Detail>
 
 ## Tech Details
 
@@ -55,10 +70,12 @@ related items under bold sub-headings when the ticket covers multiple areas of w
 
 ## References
 
-- Stitch mockup(s): `specs/tickets/<name>/screen.png`
-- Stitch HTML reference: `specs/tickets/<name>/code.html` (visual reference only — not project tech stack)
+- Design system: `specs/design-system.md` <or DESIGN.md notes>
 - <Existing component files that need modification>
-- <Design system doc if exists>
+- <Other docs, links, or resources>
+
+<Code paths and docs only. Mockup images are embedded in the Design section above —
+do NOT repeat image paths here.>
 
 ## Acceptance Criteria
 
@@ -75,7 +92,8 @@ related items under bold sub-headings when the ticket covers multiple areas of w
 
 ## Other
 
-<Priority, dependencies, related tickets, rollout notes. Omit if nothing to add.>
+<Priority, dependencies, related tickets, rollout notes. Omit if nothing to add.
+Reference dependencies by slug name, not numbers.>
 ```
 
 ## Section Guidelines
@@ -83,13 +101,21 @@ related items under bold sub-headings when the ticket covers multiple areas of w
 **Overview** — Write for the person who won't read the rest. They should understand what's
 being built and why in under 10 seconds.
 
+**Design** — The most important section visually. Embedded images let the reader see exactly
+what's being built before reading the details. Include breakpoint behavior as a single line
+when both desktop and mobile variants exist. Mention code.html only when it exists.
+
+**Component Inventory** — Tells speckit what to reuse vs. build. Always include file paths
+for existing components. This section is separate from Goals because it's a lookup table,
+not a work breakdown.
+
 **Goals** — Specific enough that a developer or agent can start without asking follow-up
-questions. The Component Inventory is critical — it tells speckit what to reuse vs. build.
+questions. Desktop/mobile differences go inline per component — don't create a separate
+responsive section that duplicates the goals.
 
 **Tech Details** — Only when non-obvious. Flag unknowns with `[TBD]` for speckit.
 
-**References** — Real paths only. Always include the Stitch screen.png. Note that code.html
-is reference-only.
+**References** — Code paths and docs only. No image paths — those are embedded in Design.
 
 **Acceptance Criteria** — Given/When/Then. Each independently testable. Visual match first,
 then interactions, then edge cases.

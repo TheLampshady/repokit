@@ -191,22 +191,61 @@ Create in `specs/tickets/<ticket-name>/`:
 
 ### Ticket Structure
 
-Follow the canonical ticket template in `./references/ticket-template.md`. Add these Stitch-specific sub-sections under Goals:
+Follow the ticket template in `./references/ticket-template.md`. The key sections in order:
 
-* **Component Inventory**
-  - **Leverage existing:** `path/to/Component` — [what changes]
-  - **Build new:** [Component name] — [what it is, why no existing match]
-  - **No change:** [Component] — already matches mockup
+#### Design (after Overview)
 
-* **Design References**
-  - Stitch mockup: `specs/tickets/<name>/screen.png`
-  - HTML reference: `specs/tickets/<name>/code.html` (reference only — not project tech stack)
-  - Design system: link to `specs/design-system.md` or DESIGN.md notes
+Embed mockup images directly using markdown image syntax so the reader **sees** the design before reading the work breakdown:
 
-* **Responsive Requirements** (when desktop + mobile exports both exist)
-  - Desktop: [layout description] — see `desktop-screen.png`
-  - Mobile: [layout description] — see `mobile-screen.png`
-  - Breakpoint behavior: [how layout adapts]
+```markdown
+## Design
+
+![Desktop](desktop-screen.png)
+![Mobile](mobile-screen.png)
+
+**Breakpoint behavior:** Layout switches from two-column to stacked at 768px.
+
+**HTML reference:** `code.html` — structural reference only, not project tech stack.
+```
+
+- Embed ALL variant images (desktop, mobile, tablet) — don't just list paths
+- Breakpoint behavior is one line — don't repeat layout descriptions that belong in Goals
+- Only mention `code.html` if it exists in the export
+- This section replaces the old "Design References" and "Responsive Requirements" sub-sections
+
+#### Component Inventory (after Design)
+
+```markdown
+## Component Inventory
+
+- **Leverage existing:** `frontend/src/components/PostCard.tsx` — remove borders, apply editorial styling
+- **Build new:** FloatingActionButton — no existing FAB component
+- **No change:** Drag-and-drop reorder logic (dnd-kit)
+```
+
+Always include file paths for existing components. This is a lookup table for speckit, not a work breakdown.
+
+#### Goals
+
+Desktop/mobile differences go **inline per component** — don't create a separate responsive section:
+
+```markdown
+* **Page heading**
+  - Desktop: "Gallery Stream" (headline-md) + subtitle
+  - Mobile: "Recent Content" + subtitle
+  - Left-aligned, generous top padding
+```
+
+#### References
+
+Code paths and docs only. **No image paths** — those are embedded in Design:
+
+```markdown
+## References
+
+- Design system: `specs/design-system.md`
+- Existing: `frontend/src/pages/HomePage.tsx`, `frontend/src/components/PostCard.tsx`
+```
 
 ### Acceptance Criteria
 
@@ -268,13 +307,17 @@ Structure as numbered sections. One structural change per prompt — if multiple
 ## Conventions
 
 - Always view `screen.png` before writing — visual context is non-negotiable
+- **Embed images in the Design section** using `![alt](path)` — don't just list paths. The reader should SEE the mockup.
+- **No duplicate image links** — images appear once (embedded in Design). Don't repeat them in References or Goals.
 - Extract real values from code.html/DESIGN.md when available — don't approximate
 - code.html is reference only — note this in tickets to prevent direct copying
 - **Prefer existing project choices over mockup choices.** If the mockup uses different icons, fonts, colors, or libraries than the project already has, default to the project's existing tools and note the mapping. The mockup is a design reference, not a technology spec.
-- Component inventory must distinguish "leverage existing" from "build new" so speckit prioritizes reuse
+- Component Inventory is its own section (not under Goals) — it's a lookup table for speckit, not a work item
+- **Desktop/mobile differences go inline per component in Goals** — don't create a separate Responsive Requirements section that duplicates the goals
 - **Decide, don't ask.** Make ticket scope and priority decisions yourself using atomic design ordering. Present your decisions for confirmation — don't ask open-ended "what do you want?"
 - Shared component changes get ONE ticket noting all affected pages, not per-page tickets
 - Desktop + mobile variants: auto-detect platform state (see Platform-Aware Ticketing in Step 2) — responsive codebase → one ticket; new platform → infrastructure tickets first, then bundled page tickets
 - Flag backend API gaps when mockup shows data that doesn't match existing endpoints
 - Keep ticket scope focused — if the comparison reveals 5 unrelated changes, that's 5 tickets, not 1
+- Reference dependencies by slug name in the Other section — e.g., "Blocked by: `design-system-tokens`, `mobile-navigation`"
 - **Stitch is the beginning, not the end.** Stitch outputs are mid-fidelity prototypes. Tickets should capture the design intent while accounting for what the codebase actually needs — don't over-spec pixel values from a prototype.
