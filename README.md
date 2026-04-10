@@ -93,8 +93,8 @@ All tools write work items to a shared backlog under `specs/`:
 specs/
 ├── backlog.md       ← master checklist, items tagged by source
 └── tickets/
-    ├── 001-add-tests.md
-    └── 002-stale-setup-docs.md
+    ├── add-tests.md
+    └── stale-setup-docs.md
 ```
 
 Tags in `backlog.md` show which tool created each item: `[tik]`, `[figtik]`, `[stitchtik]`, `[modernizer]`, `[sanity-checker]`, `[manual]`. (The auditor does not write tickets directly — its findings flow through modernizer.)

@@ -50,15 +50,15 @@ Example output:
 ## Task Status
 
 **Cleaned up:** 3 completed tasks removed
-- ~~001-testing-setup.md~~ (completed)
-- ~~002-linting-setup.md~~ (completed)
-- ~~003-pre-commit.md~~ (completed)
+- ~~testing-setup.md~~ (completed)
+- ~~linting-setup.md~~ (completed)
+- ~~pre-commit.md~~ (completed)
 
 **Remaining:** 2 tasks
-| ID | Task | Priority | Status |
-|----|------|----------|--------|
-| 004 | Add type checking | P2 | pending |
-| 005 | Documentation | P3 | pending |
+| Task | Priority | Status |
+|------|----------|--------|
+| type-checking | P2 | pending |
+| documentation | P3 | pending |
 
 **Next up:** 004 - Add type checking (P2)
 ```
@@ -71,8 +71,8 @@ All outputs go to `specs/`:
 specs/
 ├── backlog.md                 # Master checklist, one line per item, tagged [modernizer]
 └── tickets/                   # Individual task files for agents
-    ├── 001-testing-setup.md
-    ├── 002-package-modernization.md
+    ├── testing-setup.md
+    ├── package-modernization.md
     └── ...
 ```
 
@@ -247,14 +247,12 @@ Overall scores, task overview, and quick checklist (see template). This is the p
 
 #### Backlog (`specs/backlog.md`)
 
-Before creating any ticket, check `specs/backlog.md` for duplicates. For each new ticket, append a line prefixed with the implementation order number:
+Before creating any ticket, check `specs/backlog.md` for duplicates. For each new ticket, append a line. **Position in the backlog IS the priority order** — add tickets in priority order (P1 first, then P2, etc.):
 
 ```
-- [ ] `001` Testing setup [modernizer] → tickets/001-testing-setup.md
-- [ ] `002` Package modernization [modernizer] → tickets/002-package-modernization.md
+- [ ] Testing setup [modernizer] → tickets/testing-setup.md
+- [ ] Package modernization [modernizer] → tickets/package-modernization.md
 ```
-
-The backtick-wrapped number makes priority order visible at a glance when scanning the backlog.
 
 #### Task Files (`specs/tickets/`)
 
@@ -439,9 +437,9 @@ AI: Analyzing codebase for AI-readiness...
 
 Created in `specs/`:
 - CHECKLIST.md (scorecard + task overview)
-- tickets/001-testing-setup.md (P1, Go, manual - no agent available)
-- tickets/002-golangci-lint.md (P1, Go, manual)
-- tickets/003-frontend-testing.md (P2, TypeScript, manual)
+- tickets/testing-setup.md (P1, Go, manual - no agent available)
+- tickets/golangci-lint.md (P1, Go, manual)
+- tickets/frontend-testing.md (P2, TypeScript, manual)
 
 ## Questions
 

@@ -44,7 +44,7 @@ The user points you to a directory with one or more exports. For each:
 Build a mental inventory: what pages, sections, components, interactions, and data each screen shows.
 
 **Group related exports** before analyzing:
-- Same base name + `_mobile` suffix → responsive variants of one page (analyze together)
+- Same base name + `_mobile` suffix → responsive variants of one page (analyze together, ticket strategy depends on platform detection in Step 1b)
 - Same base name + version suffix → design iterations (use the latest version)
 - Different base names → different pages/features
 
@@ -57,6 +57,21 @@ Understand what's already built:
 - **Design system** — Tailwind config, CSS variables, existing tokens
 - **Data flow** — API endpoints, models, what data the UI consumes
 - **Existing design docs** — check `specs/design-system.md` if it exists
+- **Platform coverage** — determine what platforms the codebase currently supports (see below)
+
+#### Platform Detection
+
+Check for existing responsive/multi-platform infrastructure to classify the project:
+
+1. **Responsive infrastructure** — media queries, breakpoint configs (Tailwind `screens`, CSS `@media`), responsive utility classes, container queries
+2. **Mobile-specific components** — bottom navigation, mobile drawers/sheets, touch gesture handlers, mobile layout wrappers
+3. **Mobile routes or viewports** — separate mobile routes (`/m/`, responsive meta tags), mobile-specific page variants
+4. **Platform-specific code splitting** — dynamic imports by viewport, separate mobile bundles, platform detection utilities
+
+Classify into one of three states:
+- **Both platforms exist** — responsive infrastructure is in place, components adapt to breakpoints
+- **One platform only** — only desktop or only mobile exists in the codebase (no breakpoints, no responsive components, or only one viewport targeted)
+- **Partial** — some responsive infrastructure exists but key pieces are missing (e.g., breakpoints defined but no mobile navigation, or media queries exist but only for a few pages)
 
 ## Step 2: Codebase Comparison
 
@@ -113,6 +128,38 @@ Order tickets using the atomic design principle — smallest building blocks fir
 
 Within the same level, order by how many other tickets depend on it (most dependents first). Note dependencies explicitly in each ticket so speckit can parallelize where possible.
 
+### Platform-Aware Ticketing
+
+When Stitch exports include both desktop and mobile variants (e.g., `posts_home` + `posts_home_mobile_v2`), use the platform detection from Step 1b to decide the ticketing strategy automatically:
+
+#### Scenario A: Both platforms exist (responsive codebase)
+
+The project already has responsive infrastructure — breakpoints, media queries, mobile-aware components. Desktop + mobile variants of the same page become **ONE ticket** with a Responsive Requirements section. Both `screen.png` files go in the same ticket directory. This is breakpoint/layout work, not a new feature.
+
+#### Scenario B: New platform (desktop-only adding mobile, or vice versa)
+
+The project only targets one platform today. The Stitch exports introduce the other platform for the first time. Split into:
+
+1. **Platform infrastructure tickets** (early in atomic ordering):
+   - Responsive foundation — breakpoint config, viewport meta, responsive utilities
+   - Mobile/desktop navigation — bottom tab bar, sidebar, hamburger menu (whichever is new)
+   - Layout system — mobile layout wrapper, responsive container, platform-specific shell
+   - Touch/interaction patterns — swipe handlers, mobile gestures (if adding mobile)
+
+2. **Per-page tickets** still bundle both variants — each page ticket includes desktop + mobile `screen.png` and a Responsive Requirements section. But these tickets **depend on** the infrastructure tickets above and are ordered after them.
+
+Present the infrastructure tickets as prerequisites in the ticket plan:
+> "Your codebase is desktop-only — the Stitch exports introduce mobile for the first time. I'll create infrastructure tickets first:
+> 1. **Responsive foundation** (breakpoints, viewport, utilities)
+> 2. **Mobile navigation** (bottom tab bar)
+> Then per-page tickets that depend on those:
+> 3. **Posts home** (desktop update + mobile variant) — depends on 1, 2
+> 4. **Admin settings** (desktop update + mobile variant) — depends on 1, 2"
+
+#### Scenario C: Partial platform support
+
+Some responsive infrastructure exists but key pieces are missing (e.g., breakpoints defined but no mobile navigation). Create tickets **only for the missing infrastructure** — don't re-ticket what's already built. Per-page tickets bundle both variants as in Scenario A, but depend on the gap-filling infrastructure tickets.
+
 ## Step 3: Interview
 
 After presenting the comparison and ticket plan, ask only questions where the mockup and codebase genuinely leave ambiguity. The skill should be opinionated — make decisions, present them, and let the user correct rather than asking open-ended questions.
@@ -136,9 +183,9 @@ Keep it to 2-3 questions max. If nothing is genuinely ambiguous, skip the interv
 
 ### Ticket Location
 
-Create in `specs/tickets/<NNN>-<ticket-name>/`:
-- Prefix with a 3-digit number reflecting implementation order (from the atomic design dependency ordering in Step 2): `001-design-system-tokens`, `002-bottom-nav-bar`, `003-post-detail-redesign`
-- These numbers represent the order to implement things, not spec/feature IDs. Design tokens come first, shared components next, pages last.
+Create in `specs/tickets/<ticket-name>/`:
+- Use a **descriptive kebab-case slug** — e.g., `design-system-tokens`, `bottom-nav-bar`, `post-detail-redesign`. No numeric prefixes.
+- Implementation order is expressed through **position in the backlog** and **dependency references** inside each ticket — not in filenames.
 - Copy the relevant `screen.png` files into the ticket directory so the ticket is self-contained
 - If `code.html` exists, copy it too (clearly labeled as reference)
 
@@ -171,15 +218,13 @@ Cover:
 
 ### Backlog
 
-If `specs/backlog.md` exists, append one line per ticket, prefixed with the implementation order number so the backlog is scannable by dependency:
+If `specs/backlog.md` exists, append one line per ticket. **Position in the backlog IS the implementation order** — add tickets in dependency order (design tokens first, shared components next, pages last):
 
 ```
-- [ ] `001` Design system tokens [stitchtik] → tickets/001-design-system-tokens/ticket.md
-- [ ] `002` Bottom nav bar [stitchtik] → tickets/002-bottom-nav-bar/ticket.md
-- [ ] `003` Post detail redesign [stitchtik] → tickets/003-post-detail-redesign/ticket.md
+- [ ] Design system tokens [stitchtik] → tickets/design-system-tokens/ticket.md
+- [ ] Bottom nav bar [stitchtik] → tickets/bottom-nav-bar/ticket.md
+- [ ] Post detail redesign [stitchtik] → tickets/post-detail-redesign/ticket.md
 ```
-
-The backtick-wrapped number makes the ordering visible at a glance — readers can scan the backlog and see what to implement first without opening each ticket.
 
 If `specs/backlog.md` doesn't exist, create it with the entries.
 
@@ -229,7 +274,7 @@ Structure as numbered sections. One structural change per prompt — if multiple
 - Component inventory must distinguish "leverage existing" from "build new" so speckit prioritizes reuse
 - **Decide, don't ask.** Make ticket scope and priority decisions yourself using atomic design ordering. Present your decisions for confirmation — don't ask open-ended "what do you want?"
 - Shared component changes get ONE ticket noting all affected pages, not per-page tickets
-- Desktop + mobile variants of the same page become ONE ticket with responsive requirements
+- Desktop + mobile variants: auto-detect platform state (see Platform-Aware Ticketing in Step 2) — responsive codebase → one ticket; new platform → infrastructure tickets first, then bundled page tickets
 - Flag backend API gaps when mockup shows data that doesn't match existing endpoints
 - Keep ticket scope focused — if the comparison reveals 5 unrelated changes, that's 5 tickets, not 1
 - **Stitch is the beginning, not the end.** Stitch outputs are mid-fidelity prototypes. Tickets should capture the design intent while accounting for what the codebase actually needs — don't over-spec pixel values from a prototype.

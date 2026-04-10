@@ -272,8 +272,8 @@ If any check produced issues that could not be auto-fixed and require significan
 
 1. Check if `specs/backlog.md` exists — create `specs/` directory if needed
 2. For each unfixable issue:
-   - Create `specs/tickets/NNN-slug.md` with the issue details, error output, and suggested fix approach
-   - Append to `specs/backlog.md`: `- [ ] Description [sanity-checker] → tickets/NNN-slug.md`
+   - Create `specs/tickets/<slug>.md` with the issue details, error output, and suggested fix approach
+   - Append to `specs/backlog.md`: `- [ ] Description [sanity-checker] → tickets/<slug>.md`
 3. Check existing backlog entries first to avoid duplicates
 
 **Only create tickets for:**

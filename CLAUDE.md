@@ -70,17 +70,18 @@ Agents auto-trigger based on their description. They run in isolated context win
 
 All skills and agents that find work write to a shared location:
 - `specs/backlog.md` — master checklist, one line per item, tagged by source
-- `specs/tickets/NNN-slug.md` — individual tickets with full context
+- `specs/tickets/<slug>.md` or `specs/tickets/<slug>/ticket.md` — individual tickets with full context
 
-Format in `backlog.md`:
+Format in `backlog.md` — position in the list IS the priority/dependency order:
 ```
-- [ ] `001` Design system tokens [stitchtik] → tickets/001-design-system-tokens/ticket.md
-- [ ] `002` Bottom nav bar [stitchtik] → tickets/002-bottom-nav-bar/ticket.md
+- [ ] Design system tokens [stitchtik] → tickets/design-system-tokens/ticket.md
+- [ ] Bottom nav bar [stitchtik] → tickets/bottom-nav-bar/ticket.md
 - [ ] Add dark mode support [tik] → tickets/dark-mode-support.md
-- [ ] `001` Testing setup [modernizer] → tickets/001-testing-setup.md
+- [ ] Hero section redesign [figtik] → tickets/hero-section-redesign/ticket.md
+- [ ] Testing setup [modernizer] → tickets/testing-setup.md
 ```
 
-Skills that produce numbered tickets (stitchtik, modernizer) prefix entries with backtick-wrapped order numbers. Skills that don't (tik, figtik) omit the prefix.
+All skills use plain kebab-case slugs — no numeric prefixes. Dependencies are expressed via position in the backlog and references inside each ticket.
 
 Always check `specs/backlog.md` before creating a ticket to avoid duplicates.
 

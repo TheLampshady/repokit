@@ -159,13 +159,13 @@ git log -1 --format="%cr" -- docs/ 2>/dev/null || echo "never"
 | Last audit | 🟡 3 weeks ago | Consider running `/repokit audit` |
 
 ### Open Backlog Items
-- [ ] Add type checking `[modernizer]` → tickets/004-type-checking.md
-- [ ] Update ARCHITECTURE.md `[dockit]` → tickets/007-arch-docs.md
-- [ ] Fix flaky auth test `[manual]`
+- [ ] Add type checking [modernizer] → tickets/type-checking.md
+- [ ] Update ARCHITECTURE.md [dockit] → tickets/arch-docs.md
+- [ ] Fix flaky auth test [manual]
 
 ### Suggested Next Steps
 1. Run `/repokit sync` — docs are 14 commits behind
-2. Address P1 ticket: 004-type-checking.md
+2. Address P1 ticket: type-checking.md
 ```
 
 Use 🟢 for healthy, 🟡 for needs attention, 🔴 for missing/broken. Adapt the checks to whatever project structure exists — not all projects will have all of these.
@@ -388,11 +388,11 @@ Let each skill handle its own interaction (questions, confirmations). Repokit ju
 ### What was created
 - docs/README.md, docs/ARCHITECTURE.md, docs/ENVIRONMENTS.md (via dockit)
 - specs/backlog.md with 4 items (via modernizer)
-- specs/tickets/001-*.md through 004-*.md
+- specs/tickets/ with 4 ticket files
 
 ### What's next
 - Review generated docs and fill [TODO] markers
-- Address P1 tickets first: 001-testing-setup.md
+- Address P1 tickets first (top of backlog)
 - Run `/repokit status` anytime to check progress
 - Run `/repokit sync` after making changes
 ```

@@ -45,8 +45,8 @@ docs/
 └── aiprep/
     ├── CHECKLIST.md           # Scorecard with scores and task overview
     └── tasks/                 # Individual task files for agents
-        ├── 001-testing-setup.md
-        ├── 002-package-modernization.md
+        ├── testing-setup.md
+        ├── package-modernization.md
         └── ...
 ```
 
