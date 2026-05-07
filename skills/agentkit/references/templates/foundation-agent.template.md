@@ -1,15 +1,27 @@
-# Foundation-Owner Agent Body Template
+# Foundation-Owner Agent Template
 
-Variant of `agent.template.md` for agents that own one or more rows in `docs/FOUNDATIONS.md`.
-Adds the `Owned Foundations` and `Maintenance` sections. Prepend the appropriate platform
-frontmatter (with `tools` and, on Claude, `permissionMode: acceptEdits`) from
-`references/platforms.md` during generation.
+Variant of `agent.template.md` for agents that own one or more rows in `docs/FOUNDATIONS.md`. Adds the `Owned Foundations` and `Maintenance` sections, plus elevated permissions in frontmatter.
 
 **Hot memory rule:** for each owned foundation, embed its **invariants** and **change checklist** verbatim from FOUNDATIONS.md. The agent must be able to act on them without re-reading the doc.
 
+**Required-fields rule:** Every generated agent file MUST start with frontmatter containing `name` and `description`. Without those two, the agent isn't discoverable on any platform — it just sits as inert markdown. The body is useless without them. Foundation-owner agents additionally need `tools` (so they can edit `docs/`) and on Claude, `permissionMode: acceptEdits`.
+
 ---
 
-<!-- BEGIN TEMPLATE — everything below this line goes into the agent body -->
+<!-- BEGIN TEMPLATE — everything below this line goes into the agent file -->
+
+---
+name: {{AGENT_NAME}}
+description: {{AGENT_DESCRIPTION}}
+# Required for foundation-owner agents — see references/platforms.md for full details:
+# Claude:  tools: Read, Edit, Write, Glob, Grep, Bash      (enforced)
+#          permissionMode: acceptEdits                     (enforced)
+# Gemini:  model: gemini-2.5-pro
+#          max_turns: 20
+#          NO tools field — Gemini does NOT enforce a frontmatter tools allowlist.
+#          Scope comes from the YOLO note in the body + description + self-policing.
+# Copilot: tools: [readFile, editFile, createFile, search, terminal]   (enforced)
+---
 
 <!-- agentkit-managed -->
 

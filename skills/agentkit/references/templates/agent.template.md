@@ -1,15 +1,24 @@
-# Agent Body Template
+# Agent Template
 
-This is the unified body template for all platforms (Claude, Gemini, Copilot).
-Prepend the appropriate platform frontmatter from `references/platforms.md` during generation.
+This is the unified template for all platforms (Claude, Gemini, Copilot). It includes a frontmatter scaffold (required fields) plus the body. Platform-specific frontmatter additions come from `references/platforms.md`.
 
-**Hot memory rule:** Embed real code snippets for the 2-3 most critical patterns.
-Describe the rest in prose. The agent should be effective without reading any files,
-but can go deeper by reading the files listed in Key Files.
+**Hot memory rule:** Embed real code snippets for the 2-3 most critical patterns. Describe the rest in prose. The agent should be effective without reading any files, but can go deeper by reading the files listed in Key Files.
+
+**Required-fields rule:** Every generated agent file MUST start with frontmatter containing `name` and `description`. Without those two, the agent isn't discoverable on any platform — it just sits as inert markdown. The body is useless without them.
 
 ---
 
-<!-- BEGIN TEMPLATE — everything below this line goes into the agent body -->
+<!-- BEGIN TEMPLATE — everything below this line goes into the agent file -->
+
+---
+name: {{AGENT_NAME}}
+description: {{AGENT_DESCRIPTION}}
+# Add platform-specific fields per references/platforms.md:
+# Claude:  tools (optional, enforced), permissionMode (optional), model (optional)
+# Gemini:  model, temperature, max_turns, timeout_mins, kind: local
+#          (Gemini does NOT enforce a frontmatter tools allowlist — omit it)
+# Copilot: tools (enforced), no permission concept
+---
 
 You are an expert in {{PROJECT_NAME}}'s custom {{CUSTOM_AREA}}. Your role is to help
 AI assistants understand and correctly use the project's custom patterns instead of

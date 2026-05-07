@@ -27,7 +27,7 @@ Generate and maintain project-level AI subagents that understand your team's fou
 | Mode | When to use | Behavior |
 |------|------------|----------|
 | (default, no args) | Any time | Auto-detects: no agents → init; agents + drift → sync; otherwise → status |
-| `init` | Fresh project, or starting over | Discover, plan, generate (Phases 1–5) |
+| `init` | Fresh project, or starting over | Discover, plan, generate, then stop (Phases 1–6) |
 | `sync` | Code or FOUNDATIONS.md changed since agents were generated | Reconcile existing agents against current state. See `references/guides/SYNC.md`. |
 | `status` | Read-only inventory | What agents exist, what they own, what's drifted from FOUNDATIONS.md |
 
@@ -43,21 +43,70 @@ Generate and maintain project-level AI subagents that understand your team's fou
 
 ## FOUNDATIONS.md Guard
 
-Before doing anything else, check whether `docs/FOUNDATIONS.md` exists.
+Before doing anything else, detect the project's state from observable signals — no markers, no metadata files. Two checks:
 
-**If absent:**
+1. **Source file count** — run the same scan Phase 1.3 uses (count `*.py`, `*.ts`, `*.go`, etc. excluding the standard exclusions). This tells you whether the project is small, medium, or large.
+2. **Documentation state** — does `docs/FOUNDATIONS.md` exist? Does `docs/` have other files? Does `README.md` reference docs?
 
-> agentkit needs `docs/FOUNDATIONS.md` to know which foundations to assign to agents. It looks like dockit hasn't generated it yet.
+### State table
+
+| Source files | FOUNDATIONS.md | Other docs | State | Action |
+|--------------|----------------|------------|-------|--------|
+| any | exists | any | **1: foundations available** | Continue to Phase 1 |
+| > 20 | missing | yes (ARCHITECTURE.md, PRINCIPLES.md, etc.) | **2: dockit ran but pre-foundations** | Recommend `/dockit sync` |
+| > 20 | missing | no | **3: no docs at all** | Recommend `/dockit init` |
+| ≤ 20 | missing | any | **4: small project** | Confirm with user, then custom-code-only flow |
+
+The size check is the same one Phase 1.3 already runs — we just do it once up front so the guard can branch on it.
+
+### How to respond per state
+
+**State 1** → continue to Phase 1.
+
+**State 2 (medium/large project, no foundations layer)** → recommend **sync**:
+
+> Your project already has documentation in `docs/`, but `docs/FOUNDATIONS.md` is missing. That's the foundations registry agentkit needs — it lists which code is load-bearing across features, with invariants and consumers.
 >
-> Run one of:
-> - `/dockit init` — first-time setup, generates the full doc set including FOUNDATIONS.md
-> - `/dockit sync` — refresh the registry if dockit was run before
+> Recommended: `/dockit sync` — it adds FOUNDATIONS.md to your existing doc set without restructuring anything else. Then re-run `/agentkit`.
 >
-> Then re-run `/agentkit`. (For very small projects where foundations aren't worth tracking, agentkit can fall back to custom-code-only analysis — say "skip dockit" and I'll proceed.)
+> (Avoid `/dockit init` here — that's for fresh projects and may restructure your existing docs.)
 
-**Wait for the user to either run dockit or explicitly skip.** If they skip, run the legacy custom-code-only flow — Phase 1.4 (custom-code scan) and Phase 3.2 (custom-code assessment) only; no Owned Foundations sections, no Maintenance sections.
+**State 3 (medium/large project, no docs)** → recommend **init**:
 
-**If present:** continue to Phase 1.
+> No documentation found in this project. agentkit relies on `docs/FOUNDATIONS.md` (and benefits from `docs/ARCHITECTURE.md`) to generate agents that understand the codebase.
+>
+> Recommended: `/dockit init` — first-time setup, generates the full doc set including FOUNDATIONS.md. Then re-run `/agentkit`.
+
+**State 4 (small project, ≤20 source files)** → ask, then proceed without foundations:
+
+> This project has [N] source files — small enough that a foundations registry is overkill. Dockit's small-project mode skips FOUNDATIONS.md by design.
+>
+> Want me to generate a single project-expert agent covering all custom patterns? (No foundations, no per-foundation maintenance — just an SME agent for what's in the codebase.)
+
+If the user confirms, run the custom-code-only flow: Phase 1.4 (custom-code scan) and Phase 3.2 (custom-code assessment). No Owned Foundations sections, no Maintenance sections. Use `agent.template.md`, not `foundation-agent.template.md`.
+
+### Wait, don't fill the gap
+
+In states 2 and 3, **stop and wait** for the user to run dockit. Do not:
+- Ask the user open-ended questions about the project's direction or future features (that's not agentkit's job — see "Scope Boundary" below)
+- Try to infer foundations on the fly by reading the codebase yourself (dockit's scoring methodology is not something agentkit reproduces)
+- Generate agents anyway with weaker context
+
+---
+
+## Scope Boundary
+
+**Agentkit reads what exists; it does not propose what could be.**
+
+Out of scope:
+- Suggesting new features the team might want
+- Proposing architectural improvements or refactors
+- Recommending framework upgrades (read the version, work with what's there)
+- Asking the user about future direction or where they'd like to take the project
+
+Why: agents are generated to support the team's **current** codebase. Speculation about future directions belongs in tickets (`tikkit:foundationtik`, `tikkit:modernizer`), not in the agent-generation conversation. Asking the user "where do you want to take this" wastes their time and produces agents that drift from reality.
+
+If the user asks agentkit a future-direction question (e.g., "what features should we add?"), redirect: *"That's a question for `/tikkit:modernizer` (stack audit + improvement tickets) or your team's planning process. Agentkit's job is to set up agents for what's in the codebase today — want me to proceed with that?"*
 
 ---
 
@@ -114,8 +163,8 @@ For each dependency, record:
 For each **major framework** detected (not every small library — focus on the 2-3 that define the project's architecture):
 
 1. **Resolve library docs** — Use `context7` (resolve-library-id → query-docs) to pull current documentation
-2. **Identify extension points** — What does this framework expect teams to customize? Where do custom implementations typically live?
-3. **Check version delta** — Is the project on an older version? What native features were added in newer versions that the team might be reimplementing?
+2. **Identify extension points at the project's pinned version** — Where does this framework expect teams to customize at the version this project uses? This tells you what `core/`, `middleware/`, `blocks/`, etc. are *supposed* to contain, so you can spot custom code that diverges from convention.
+3. **Note the version, don't speculate about upgrades** — Record the framework version. Do NOT brainstorm what newer versions could offer or whether the team should upgrade — that's `tikkit:modernizer`'s job, not agentkit's. Stay grounded in what the codebase uses today.
 
 **What counts as a "major framework":**
 - Web frameworks (Django, FastAPI, Express, Rails, Spring, Gin, etc.)
@@ -188,7 +237,7 @@ Group related custom code into agent-sized clusters:
 - Merge small clusters (<3 files) into the nearest related agent
 - Never create an agent for a single file unless it's highly complex (100+ lines of custom logic)
 
-### 1.5 Detect Existing Agents
+### 1.5 Detect and Review Existing Agents
 
 Check for pre-existing project agents:
 
@@ -198,22 +247,59 @@ Check for pre-existing project agents:
 | Gemini | `.gemini/agents/*.md` | All `.md` files |
 | Copilot | `.github/agents/*.agent.md` | All `.agent.md` files |
 
-For each existing agent, parse:
-- The `<!-- agentkit-managed -->` marker (if present — marks agentkit-generated agents)
-- The `## Owned Foundations` section (if present — names of foundations this agent claims)
-- Frontmatter `description` (used to detect coverage areas for non-agentkit agents)
+#### Hard rule: never modify hand-authored agents
 
-**Decision tree:**
+If an agent file does **not** contain the `<!-- agentkit-managed -->` marker, it is hand-authored. Agentkit treats those as off-limits:
+
+- Do not overwrite
+- Do not edit
+- Do not append `agentkit-managed`
+- Do not delete
+
+Even if the user explicitly asks to "regenerate everything," ask before touching a hand-authored file. Hand-authored agents represent thought the team put in deliberately; rewriting them silently destroys that work.
+
+The agentkit-generated agents (with the marker) follow the normal sync rules — those CAN be updated by sync mode without prompt.
+
+#### What to do instead: review the agent
+
+For each hand-authored agent, produce a structured review that the user reads in Phase 4. The review answers four questions:
+
+1. **What does this agent do?** — read its frontmatter description and body. Summarize its scope in 1–2 lines.
+2. **Which foundations does it touch?** — compare its scope against FOUNDATIONS.md catalog rows. An overlap exists when the agent's working directories, named patterns, or expertise area matches a foundation's path or domain.
+3. **Where does it not align with the foundations registry?** — gaps relative to FOUNDATIONS.md: invariants the agent doesn't acknowledge, foundations in the same domain it ignores, change-checklist items it misses.
+4. **How should it coexist with the agents agentkit would generate?** — identify whether agentkit's planned grouping would create coverage overlap, leave it as a useful specialist alongside the new agents, or supersede it entirely.
+
+#### Detection signals for foundation overlap
+
+The agent doesn't have to declare ownership for the analysis to find overlaps. Use these signals:
+
+- **Path mention** — the agent's body or frontmatter references a foundation's path (e.g., `core/auth/`, `core.notifications`)
+- **Working directory match** — the agent's "Working Directories" section (or equivalent) overlaps a foundation's directory tree
+- **Domain match** — the agent's description names a domain that matches a foundation (auth, data, notifications, etc.)
+- **Pattern match** — embedded code patterns reference a foundation's public API or invariant subject
+
+#### Three recommendation types
+
+For each hand-authored agent, end the review with one recommendation. **Don't apply the recommendation** — present it as an option for the user.
+
+| Recommendation | When to use |
+|---------------|-------------|
+| **Keep as-is alongside generated agents** | Agent covers a niche the foundation registry doesn't (e.g., a vendor-SDK helper). Low overlap, useful specialist. Note potential triggering conflicts if any. |
+| **Retire — covered by new agent** | Agent's scope is fully contained in a planned foundation-owner agent. The new agent will know more (it has FOUNDATIONS.md context). Recommend deletion after the user reviews. |
+| **Merge content into a generated agent, then retire** | Agent has unique knowledge worth preserving (custom patterns, project-specific gotchas) but lives in a domain a new foundation-owner would cover. Recommend the user copy specific sections into the new agent's `Custom Patterns` before deleting. Identify which sections. |
+
+If you can't decide between two recommendations, present both with the reasoning — the user picks.
+
+#### Decision tree (agentkit-generated agents only)
+
+For agents that DO have the `agentkit-managed` marker, the simpler rules apply:
 
 | Situation | Default action |
 |-----------|----------------|
-| Agent has no `agentkit-managed` marker (user-authored or hand-edited) | **Warn and recommend** — list it in the plan, don't overwrite. Suggest the user re-author or accept replacement. |
-| Agent has marker + ownership matches current FOUNDATIONS.md + invariants/paths match | Skip — already in sync |
-| Agent has marker + ownership orphaned (foundation removed) | Flag for sync; don't generate a duplicate |
-| Agent has marker + content drift (invariants or paths disagree with FOUNDATIONS.md) | Flag for sync; don't generate a duplicate |
+| Marker + ownership matches current FOUNDATIONS.md + invariants/paths match | Skip — already in sync |
+| Marker + ownership orphaned (foundation removed) | Flag for sync; don't generate a duplicate |
+| Marker + content drift (invariants or paths disagree with FOUNDATIONS.md) | Flag for sync; don't generate a duplicate |
 | No agent exists for a current foundation | Add to the plan as new |
-
-**Never auto-overwrite a hand-authored agent.** When in doubt, prompt.
 
 ---
 
@@ -263,21 +349,35 @@ Slug: [kebab-case]
 Path: [path]
 Status: [active/deprecated/etc.]
 Health: [healthy/hotspot/unknown]
-Heavy?: [yes/no — see AGENT-SIZING.md "Heavy Foundation" criteria]
+Owner: [team/person from FOUNDATIONS.md]
 Consumers: [count] across [N] feature folders
 Invariants: [count]
 Sub-doc: [path or none]
 Custom code in same tree: [list areas + file counts]
 ```
 
-Then apply the **Mapping Heuristic** from `references/guides/AGENT-SIZING.md` to group foundations into agents:
+Then apply the **Grouping Principle: Change-coupling beats domain-tidiness** from `references/guides/AGENT-SIZING.md`. Default to merging:
 
-- ≤ 3 foundations, all small → 1 combined agent
-- 4–6 foundations, related domains → 2–3 agents grouped by domain or shared consumers
-- > 6 foundations OR any heavy → 1 agent per heavy + cluster the rest by domain
-- Monorepo with services → per-service grouping wins; one agent owns all foundations within its service
+1. Start by assuming **one agent owns all foundations**.
+2. For each foundation, run "the test" from AGENT-SIZING:
+   > *"If a feature came in that needed to touch this foundation and another, would I be OK with the human (or LLM) consulting two agents and merging their advice — every time, for the life of this project?"*
+3. Only split off a foundation when **change-coupling is genuinely absent** — different owner team, orthogonal invariants, hotspot/healthy mismatch, or different consumer base. See AGENT-SIZING § "When to keep foundations separate."
+4. Apply the size budget as a final check — if a merged agent exceeds 10,000 chars body, split on the weakest change-coupling boundary.
 
-**Cap at 3–5 agents total.** Custom-code findings (3.2) fold into these — don't add separate agents unless the custom code is unrelated to any foundation.
+The point is **fewer agents**. Two agents that both touch a feature when it lands will conflict on triggering and drift apart on maintenance. One agent with broader ownership keeps the picture coherent.
+
+**Sanity ceilings (not targets):**
+
+| Project | Soft ceiling on agent count |
+|---------|------------------------------|
+| Small (≤20 source files) | 1 |
+| Medium (21–50) | up to 3 |
+| Large (51+) | up to 5 |
+| Large monorepo with services | up to 5 — per-service grouping wins |
+
+Many projects should land below these. Numbers exist to flag "you've split too far," not to push you to split.
+
+Custom-code findings (3.2) fold into the foundation agents — don't add separate agents unless the custom code is unrelated to any foundation.
 
 ### 3.2 Custom Code Assessment (always runs)
 
@@ -355,8 +455,35 @@ Present the analysis as a clear plan. **Do not generate any files yet.**
 ### Domain-Expert Agents (no foundation ownership)
 - [name] — [why it stands alone]
 
-### Existing Agents (warnings)
-- `.claude/agents/legacy.md` — hand-authored, no `agentkit-managed` marker. **Recommend the user review or replace.** Will skip unless told otherwise.
+### Existing Agents (review only — won't be modified)
+
+For each hand-authored agent (no `agentkit-managed` marker), present the structured review built in Phase 1.5. Do not modify any of these files; this is information for the user to act on.
+
+```markdown
+#### `.claude/agents/auth-helper.md` (hand-authored)
+
+**Scope:** Helps with OAuth2 token management — refresh, scope validation, refresh-token rotation.
+
+**Foundation overlap:**
+
+| Foundation | Overlap | Notes |
+|-----------|---------|-------|
+| `core.auth` | partial | This agent covers tokens; the foundation also covers session lifecycle and replay-window enforcement |
+| `core.permissions` | none | — |
+
+**Gaps relative to FOUNDATIONS.md:**
+- Doesn't acknowledge the `core.auth` invariant *"replay window must be enforced on all token validations"*
+- No mention of the change checklist for auth foundations
+
+**Recommendation: Merge content into the new `auth` agent, then retire**
+- Copy the OAuth-specific patterns (token refresh, scope validation) from this agent into the new `auth` agent's `Custom Patterns` section
+- Then delete `.claude/agents/auth-helper.md`
+- Reasoning: the new `auth` agent will own `core.auth` from FOUNDATIONS.md plus this agent's specifics, and avoids the triggering conflict
+
+(Other recommendation options shown if relevant: *Keep as-is alongside generated agents*, *Retire — covered by new agent*.)
+```
+
+If multiple hand-authored agents are present, repeat this block per agent. Don't lump them together — each gets its own scope/overlap/gaps/recommendation.
 
 ### Skipped Foundations
 - [name] — [reason: sunset / pretender / user opted out]
@@ -375,12 +502,15 @@ Present the analysis as a clear plan. **Do not generate any files yet.**
 
 ### What to Ask About
 
+Only ask questions that affect the **grouping plan above**. Don't ask the user about future direction, upgrades, or what features they might add — that's out of scope (see Scope Boundary).
+
 - **Foundation grouping** — "I clustered `core.notifications` and `core.events` into one `messaging` agent (shared consumers, same domain). Split them?"
 - **Heavy foundation own agent** — "`core.database` has its own sub-doc and 14 consumers. Recommend its own agent. OK?"
 - **Folding custom code** — "Your `custom-paginator.py` lives near `core.api`. Folding into the api agent. OK?"
 - **Borderline custom code** — "Your `CustomPaginator` adds only `max_page_size`. Skip this or include in the api agent?"
-- **Potential native replacements** — "Wagtail 6.3 added native `TableBlock`. Your `CustomTableBlock` may be replaceable. Want the agent to flag this?"
-- **Existing hand-authored agents** — "I see `.claude/agents/legacy.md` was hand-written. Leave alone, or replace with a foundation-aware version?"
+- **Existing hand-authored agents** — present the per-agent review (scope / foundation overlap / gaps / recommendation) and ask: "For each, do you want to (k)eep alongside, (r)etire, or (m)erge content first then retire?" Default: leave them untouched until the user picks.
+
+**Don't ask the user about upgrade paths or native replacements.** If the agent's framework version has a known native replacement for one of its patterns (e.g., the project is on Wagtail 6.0 but 6.3 added `TableBlock`), put that in the generated agent's `Common Mistakes` or `Research` section as a *flag*, not as a question to the user during planning. Modernizer/foundationtik handle upgrade tickets — agentkit just records the fact.
 
 **Wait for user approval before proceeding to Phase 5.**
 
@@ -405,9 +535,55 @@ Foundation-owner agents get extra sections: `Owned Foundations`, `Invariants (ho
 
 ### 5.3 Generate Agent Files
 
-For each agent:
+For each agent, follow this sequence — frontmatter first, body second, validate, then write. Skipping any step (especially the frontmatter step) produces an inert agent file that no platform can discover.
 
-#### Build the body (once, shared across platforms)
+#### Step 1 — Build the frontmatter (REQUIRED on every platform)
+
+Every agent file starts with frontmatter. Two fields are non-negotiable:
+
+| Field | Purpose | Without it |
+|-------|---------|-----------|
+| `name` | Identifier — what the agent is called for routing/triggering | Some platforms reject the file; on others the filename is used silently |
+| `description` | When to trigger and what the agent does — primary mechanism for auto-invocation | The agent never auto-triggers; it only exists if name-called |
+
+**Compose `name`:** kebab-case from the agent's domain (e.g., `auth`, `data-layer`, `messaging`). Match the filename you'll write to.
+
+**Compose `description` — scope-bounded.** This is the field that decides when the host AI delegates to this agent. The description has to do **two jobs**:
+
+1. **Define positive scope** — what the agent owns: foundations by name, working directories with paths, file patterns. Use concrete codebase references, not topic words. *"Use when modifying `core/auth/`"* triggers correctly; *"Use for auth"* triggers on every casual auth mention.
+2. **Define negative scope** — what looks similar but should NOT trigger this agent: generic library questions, third-party SDK help, work in other parts of the codebase, adjacent areas owned by other agents.
+
+A description with only positive scope **over-triggers** (the agent fires on topical keywords like "JWT" or "database" even when the work isn't in its territory). A description with only negative scope under-triggers. Both are required.
+
+**Per-platform pattern:**
+- **Claude** — include at least one negative `<example>` showing a query that sounds related but should NOT trigger this agent. Claude uses these to learn the boundary.
+- **Gemini / Copilot** — include an explicit "Do NOT use for:" clause naming the near-misses.
+
+**Foundation-owner skeleton:**
+
+```
+Owner of [foundation list] in [project name]. Use when:
+- modifying code in [working directories]
+- modifying code that imports from [foundations]
+- updating FOUNDATIONS.md entries for [foundations]
+- [foundation-specific triggers]
+
+Do NOT use for:
+- generic [topic] questions unrelated to this project
+- third-party SDK help
+- work in other parts of the codebase that do not import [foundations]
+- [adjacent areas owned by other agents]
+```
+
+Keep the full description under 1024 characters. Full pattern guide with examples per platform: [`references/guides/DESCRIPTION-WRITING.md`](references/guides/DESCRIPTION-WRITING.md).
+
+**Add platform-specific fields:** read `references/platforms.md` and add them. For foundation-owner agents:
+
+- **Claude** — `tools: Read, Edit, Write, Glob, Grep, Bash` plus `permissionMode: acceptEdits` (Claude enforces both — without them the agent can't edit `docs/`)
+- **Copilot** — include `editFile`, `createFile`, `terminal` in `tools` (Copilot enforces the allowlist)
+- **Gemini** — do NOT add a `tools:` field. Gemini doesn't enforce it. Scope is governed by the body's YOLO note (foundation-owner variant authorizes editing `docs/`), the description, and the agent's self-policing — not frontmatter. Adding a `tools` list creates false confidence.
+
+#### Step 2 — Build the body (once, shared across platforms)
 
 **Always include (both templates):**
 
@@ -441,6 +617,21 @@ For each agent:
 
 14. **agentkit-managed marker** — HTML comment near the top of the body: `<!-- agentkit-managed -->`. Marks the agent as agentkit-generated so sync mode knows it's safe to update without prompting; hand-authored agents (no marker) are always treated as off-limits unless the user opts in.
 
+#### Step 3 — Pre-write validation (do not skip)
+
+Before writing the file, confirm every requirement is satisfied:
+
+| Check | Required value |
+|-------|----------------|
+| Frontmatter starts with `---` and ends with `---` | yes |
+| Frontmatter contains `name:` | yes, kebab-case, matches filename |
+| Frontmatter contains `description:` | yes, includes positive scope (paths/foundations), negative scope ("Do NOT use for" or negative `<example>` on Claude), and "Use when..." triggers; under 1024 chars |
+| Frontmatter contains platform-specific required fields | per `platforms.md`: **Claude** foundation-owners need `tools` + `permissionMode: acceptEdits` (both enforced); **Copilot** foundation-owners need `editFile`/`createFile`/`terminal` in `tools` (enforced); **Gemini** does NOT enforce frontmatter tools — do NOT add a `tools` field on Gemini, scope comes from the body |
+| Body has `<!-- agentkit-managed -->` near the top | yes (agentkit-generated agents only) |
+| Body has Owned Foundations + Maintenance sections | yes (foundation-owner agents only) |
+
+**If any check fails, fix it before writing.** Do not write a file without `name` and `description` — that produces a file no platform discovers. It's worse than not generating the agent at all, because the user thinks they have an agent and don't.
+
 #### Size check — split if too large
 
 After building the body, check its size. An effective agent needs enough context to be useful but not so much that it becomes bloated or hits platform limits.
@@ -470,21 +661,21 @@ After building the body, check its size. An effective agent needs enough context
 
 The right level is **one agent per domain area**: a group of related custom code that shares conventions, directories, and framework extension points.
 
-#### Prepend platform frontmatter (per platform)
+#### Per-platform frontmatter quirks (reference)
 
-For each selected platform, prepend frontmatter per `references/platforms.md`:
+Frontmatter is built in Step 1, but the platform-specific fields differ. Crucially, **Gemini does not enforce frontmatter `tools` or any permission mode** — the body's YOLO note + description + self-policing instructions are what scope a Gemini agent. Recap of what `platforms.md` covers:
 
 **Default agents (no foundation ownership):**
-- Claude: `<example>` blocks in description, no `permissionMode` needed
-- Gemini: read-only YOLO note in body, standard tools list
-- Copilot: total size under 30,000 chars, standard tools list
+- Claude: `<example>` blocks inside the description string; no `permissionMode` needed; `tools` optional
+- Gemini: read-only YOLO note in body; **no `tools:` field** (Gemini ignores it); `model`, `temperature`, `max_turns`, `timeout_mins` are honored
+- Copilot: keep total file size under 30,000 chars; tools allowlist IS enforced
 
 **Foundation-owner agents:**
-- Claude: `tools: Read, Edit, Write, Glob, Grep, Bash` and `permissionMode: acceptEdits`
-- Gemini: foundation-owner YOLO note (authorized to edit `docs/`), expanded tools list, `max_turns: 20`
-- Copilot: include `editFile`, `createFile`, `terminal` in tools
+- Claude: `tools: Read, Edit, Write, Glob, Grep, Bash` plus `permissionMode: acceptEdits` (both enforced)
+- Gemini: foundation-owner YOLO note in body (authorized to edit `docs/`, forbidden outside it); `max_turns: 20`; **still no `tools:` field**. Scoping comes from the body, not frontmatter.
+- Copilot: include `editFile`, `createFile`, `terminal` in tools (enforced)
 
-#### Write to output location
+#### Step 4 — Write to output location
 
 | Platform | Path |
 |----------|------|
@@ -563,6 +754,55 @@ Do not create instruction files from scratch — that is `/init`'s job. Agentkit
 
 ---
 
+## Phase 6: Completion — Stop Here
+
+Once Phases 1–5 are done, **stop**. Agentkit's job is finished. The agents are tools waiting on the shelf, not a team standing by for orders.
+
+### Final summary to the user
+
+Print a short closing summary:
+
+```
+Done. Created [N] agents:
+  - <agent-1>  →  <platform paths>
+  - <agent-2>  →  <platform paths>
+
+Foundations covered: [list]
+[If any] Hand-authored agents reviewed (not modified): [list with one-line recommendation each]
+[If any] Instruction file updated: <path>
+
+The agents are ready. They activate when you (or your AI assistant) actually need them.
+```
+
+That's the end. Return control to the user.
+
+### Do NOT do any of these after generation
+
+- **Don't ask "want me to test the agents?"** — there is nothing to test until a real feature or task arrives that calls for one of them.
+- **Don't invoke an agent yourself to "verify it works."** — invoking agents costs tokens and doesn't validate anything meaningful in a vacuum. The first real feature that uses an agent IS the validation.
+- **Don't suggest example tasks the user could try.** — the user knows their own work; you don't need to invent practice problems.
+- **Don't ask "what would you like me to do next?"** — nothing is implied next. If the user has another task, they'll bring it.
+- **Don't summarize the project's architecture** — you're not a product manager.
+
+### Why agents wait
+
+Sub-agents auto-trigger when their description matches user intent during real work, or get name-called explicitly (*"ask the auth agent about..."*). Until that real work arrives, an agent that's been generated and an agent that's been generated-and-tested are functionally identical to the user. There's no "warming up" to do.
+
+The same applies to foundation-owner maintenance: the agent updates FOUNDATIONS.md *when its foundation changes in code*, not on a "let's see if it works" trial run.
+
+### What the user can do later (informational, not prompted)
+
+If the user asks what comes next, mention:
+
+- The agents will auto-trigger when their description matches a task. Nothing to do.
+- They can name-call an agent: *"have the data-layer agent look at this query"*
+- When the codebase changes meaningfully: `/dockit sync` then `/agentkit sync` — that's the maintenance loop
+- For new features: `/tikkit:tik`, `/tikkit:figtik`, `/tikkit:stitchtik` — agentkit doesn't plan features
+
+But only mention these **if asked**. Don't list them unprompted.
+
+---
+
 ## Sync Mode
 
 `/agentkit sync` reconciles existing agents with the current state of FOUNDATIONS.md and the codebase. Full logic in [`references/guides/SYNC.md`](references/guides/SYNC.md).
@@ -629,12 +869,14 @@ Each tool owns its section of the instruction file. `/init` owns the foundation,
 - **Does not hardcode framework knowledge** — discovers everything dynamically
 - **Does not create agents without approval** — always presents a plan first
 - **Does not create user-level agents** — all agents go in project directories
-- **Does not auto-overwrite existing agents** — hand-authored agents are flagged for the user; agentkit-generated agents are reconciled via sync, never silently replaced
+- **Does not modify hand-authored agents** — agents without the `agentkit-managed` marker are read-only to agentkit. They get a structured review (scope, foundation overlap, gaps, recommendation) but are never edited, overwritten, deleted, or stamped with the marker. Even on user request to "regenerate everything," agentkit asks before touching them.
+- **Does not auto-overwrite agentkit-generated agents** — those are reconciled via sync against FOUNDATIONS.md, never silently replaced
 - **Does not create agents for native framework features** — only for custom/extended code or foundations
 - **Does not modify project source code** — only reads source code; writes agent files and (with foundation-owner permissions) doc files under `docs/`
 - **Does not create instruction files** — that is `/init`'s job; agentkit only enriches them
 - **Does not run dockit's foundation detection** — agentkit reads FOUNDATIONS.md but never re-scores foundations. If detection seems stale, recommend `/dockit sync`.
 - **Does not write tickets** — `tikkit:foundationtik` writes maintenance tickets; agentkit surfaces drift and recommends
+- **Does not invoke or test the generated agents** — after Phase 5, agentkit stops. Agents activate during real feature work, not during a post-generation "verification" step. There's nothing to demo.
 
 ## Audience
 

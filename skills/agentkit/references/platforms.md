@@ -26,7 +26,7 @@ Copilot also supports organization-level agents at `{org}/.github/agents/` or `{
 | Field | Claude | Gemini | Copilot |
 |-------|--------|--------|---------|
 | `model` | `haiku`, `sonnet`, `opus`, `inherit` | Gemini model ID (e.g., `gemini-2.5-pro`) | model string |
-| `tools` | comma-separated string | YAML list | YAML list or string |
+| `tools` | comma-separated string (enforced) | YAML list (**parsed but NOT enforced — agent inherits parent CLI's tools**) | YAML list or string (enforced) |
 | `maxTurns` / `max_turns` | `maxTurns` (integer) | `max_turns` (integer, default 15) | — |
 | `temperature` | — | 0.0–2.0 (float) | — |
 | `timeout_mins` | — | integer (default 5) | — |
@@ -76,18 +76,14 @@ assistant: \"Assistant reasoning\"
 ---
 name: agent-name
 description: 'Expert description with area of expertise and when to use.'
-tools:
-  - read_file
-  - edit_file
-  - grep_search
-  - list_directory
-  - web_search
 model: gemini-2.5-pro
 temperature: 0.2
 max_turns: 15
 timeout_mins: 5
 ---
 ```
+
+> **Gemini does NOT enforce a `tools` frontmatter list.** Gemini agents inherit the parent CLI's tools and have no per-agent restriction or permission mode. Don't include `tools:` under the impression it scopes the agent — it doesn't. Behavior is governed by the body's YOLO note, the description, and the agent's self-policing instructions. See the foundation-owner section below for details.
 
 **Copilot:**
 ```yaml
@@ -145,18 +141,17 @@ All platforms use the description to decide when to auto-trigger an agent. Keep 
 - **Gemini:** Plain text with scenario descriptions (no XML tags)
 - **Copilot:** Plain text, concise — shown as placeholder text in chat
 
-## Gemini Tools Reference
+## Gemini Tools — Important Note
 
-Common tools to include in Gemini agent frontmatter:
+Gemini agents **do not honor a frontmatter `tools` allowlist**. The agent inherits the parent CLI's tool access; there's no per-agent restriction. Listing `tools:` in the frontmatter is a no-op — agentkit does not include it in generated Gemini agents.
 
-| Tool | Use |
-|------|-----|
-| `read_file` | Read source files |
-| `edit_file` | Modify files |
-| `grep_search` | Search code |
-| `list_directory` | Explore structure |
-| `web_search` | Research framework docs |
-| `run_command` | Execute shell commands |
+What controls a Gemini agent's tool usage:
+
+- **Parent CLI session settings** — whatever tools the user has enabled for `gemini` in their `.gemini/settings.json` are available to every agent
+- **The body's YOLO note** — instructs the agent which kinds of work it should and shouldn't do (read-only by default, or authorized to edit `docs/` for foundation-owners)
+- **The agent's own instructions** — explicit `Working Directories`, `Maintenance`, and `What This Agent Does NOT Do` sections in the body are how the agent self-polices
+
+This is policy, not enforcement. A Gemini agent technically *can* edit any file the parent CLI can; the body's instructions are what keep it scoped.
 
 ## Body Structure
 
@@ -168,9 +163,9 @@ Two templates ship with agentkit:
 | `references/templates/foundation-agent.template.md` | When the agent owns ≥1 row in `docs/FOUNDATIONS.md` (adds Owned Foundations + Maintenance sections) |
 
 Per-platform modifications:
-- **Claude:** Use template as-is. For foundation-owner agents, also set `permissionMode: acceptEdits` in frontmatter so doc edits don't prompt.
-- **Gemini:** Insert YOLO note (see below) after the role statement. **Inverted note for foundation-owners** — they ARE authorized to edit `docs/`.
-- **Copilot:** Monitor total file size, trim if over 30,000 characters. Foundation-owners need `editFile` in the tools list.
+- **Claude:** Use template as-is. For foundation-owner agents, set `tools: Read, Edit, Write, Glob, Grep, Bash` and `permissionMode: acceptEdits` in frontmatter — these ARE enforced by Claude.
+- **Gemini:** Insert YOLO note (see below) after the role statement. Foundation-owner variant inverts the note to explicitly authorize editing `docs/`. **Do NOT include a `tools:` list** — Gemini doesn't enforce it. Behavior is controlled by the YOLO note, the description, and the agent's own self-policing.
+- **Copilot:** Monitor total file size, trim if over 30,000 characters. Foundation-owners need `editFile` in the tools list (Copilot DOES enforce its tools allowlist).
 
 ---
 
@@ -199,20 +194,22 @@ permissionMode: acceptEdits
 ---
 name: agent-name
 description: '...'
-tools:
-  - read_file
-  - edit_file
-  - write_file
-  - grep_search
-  - list_directory
-  - run_command
-  - web_search
 model: gemini-2.5-pro
 temperature: 0.2
 max_turns: 20
 timeout_mins: 10
 ---
 ```
+
+**Important: Gemini agents do not honor a frontmatter `tools` allowlist or any permission mode.** The agent inherits the parent CLI session's tool access — there's no per-agent restriction. Don't include a `tools:` list under the impression it scopes the agent; it doesn't.
+
+What governs a Gemini foundation-owner agent's behavior:
+
+1. **The YOLO note in the body** — see "Gemini YOLO Note" below; the foundation-owner variant explicitly authorizes editing `docs/` and forbids editing source code outside `docs/`
+2. **The description** — positive scope (owned dirs/foundations) and negative scope (`Do NOT use for:` clause) keep the host CLI from delegating to this agent on unrelated work
+3. **The body's Maintenance section** — explicit instructions about what files the agent edits and the protocols it follows
+
+This is policy, not enforcement — a Gemini agent technically can write anywhere, but it's instructed not to. Treat the YOLO note, description, and Maintenance section as the load-bearing mechanism.
 
 `max_turns` is bumped to 20 because cross-doc maintenance often needs multiple grep + edit cycles.
 
