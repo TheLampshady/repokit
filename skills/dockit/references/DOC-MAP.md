@@ -22,8 +22,8 @@ Complete reference for dockit documentation structure, topics, and scaling.
 | Size | Docs Generated |
 |------|----------------|
 | **Small** (≤20 files) | README, ARCHITECTURE, ENVIRONMENTS |
-| **Medium** (20-50 files) | + PRINCIPLES, TROUBLESHOOTING, CLOUD |
-| **Large** (>50 files) | + CONTRIBUTING, sub-docs |
+| **Medium** (20-50 files) | + PRINCIPLES, FOUNDATIONS, TROUBLESHOOTING, CLOUD |
+| **Large** (>50 files) | + CONTRIBUTING, sub-docs (incl. `architecture/foundations/`) |
 
 For detection logic, see: [SIZE-SMALL.md](guides/SIZE-SMALL.md) | [SIZE-MEDIUM.md](guides/SIZE-MEDIUM.md) | [SIZE-LARGE.md](guides/SIZE-LARGE.md)
 
@@ -109,6 +109,25 @@ For detection logic, see: [SIZE-SMALL.md](guides/SIZE-SMALL.md) | [SIZE-MEDIUM.m
 
 ---
 
+### FOUNDATIONS.md (Medium+)
+
+**Purpose:** Catalog of shared/foundational code with invariants, consumers, and refactor triggers. Source of truth for `agentkit` (per-foundation subagents), `feedback-loop` (invariant validation), and `foundationtik` (maintenance tickets in tikkit).
+
+| Section | Content |
+|---------|---------|
+| Catalog | Table of all foundations: name, type, path, owner, status, health, consumers, last reviewed |
+| Per-foundation entries | Purpose, public API, invariants, consumers, dependencies, test coverage, refactor triggers, change checklist |
+| Findings | Hotspots (high churn), hidden foundations (high fan-in outside `core/`), pretenders (in `core/` but unused) |
+| Maintenance | Review schedule (90-day cadence), trigger→action table |
+
+**Detection methodology:** files are scored by `log(fan_in) × log(distinct_features) × stability_factor`. Convention dirs (`core/`, `shared/`, `lib/`) get a 1.2× boost but are not required. See [`guides/FOUNDATIONS-DETECTION.md`](guides/FOUNDATIONS-DETECTION.md) for the full method.
+
+**Sync behaviour:** `dockit sync` refreshes the table, consumers, and findings — manual edits to invariants, refactor triggers, and change checklists are preserved.
+
+**Large projects:** When >5 foundations are detected, each gets a sub-doc under `architecture/foundations/[name].md`; the top-level FOUNDATIONS.md becomes an overview + table.
+
+---
+
 ### CLOUD.md (Medium+)
 
 **Purpose:** Infrastructure and deployment
@@ -162,6 +181,7 @@ When complexity triggers are met, break out to sub-docs.
 | Trigger | Creates |
 |---------|---------|
 | >10 API endpoints | `architecture/API.md` |
+| >5 foundations detected | `architecture/foundations/[name].md` (one per foundation) |
 | Production deployment + on-call | `cloud/RUNBOOK.md` |
 | >5 multi-step procedures | `docs/HOW-TO.md` |
 
@@ -205,6 +225,7 @@ Where different content types belong (medium/large projects). Small projects kee
 | Architecture, data flow | ARCHITECTURE.md | Link in TOC |
 | API endpoints, auth | ARCHITECTURE.md (or API.md) | Link in TOC |
 | Coding standards | PRINCIPLES.md | Link in TOC |
+| Shared/foundational code, invariants | FOUNDATIONS.md (or `architecture/foundations/`) | Link in TOC |
 | Deployment, CI/CD | CLOUD.md | Link in TOC |
 | Common issues | TROUBLESHOOTING.md | Link in TOC |
 | PR process, workflow | CONTRIBUTING.md | Link in TOC |
@@ -242,6 +263,7 @@ project/
 ├── README.md
 └── docs/
     ├── ARCHITECTURE.md
+    ├── FOUNDATIONS.md
     ├── ENVIRONMENTS.md
     ├── PRINCIPLES.md
     ├── CLOUD.md
@@ -254,6 +276,7 @@ project/
 ├── README.md
 └── docs/
     ├── ARCHITECTURE.md
+    ├── FOUNDATIONS.md            # Catalog overview + table
     ├── ENVIRONMENTS.md
     ├── PRINCIPLES.md
     ├── CLOUD.md
@@ -262,7 +285,11 @@ project/
     ├── architecture/
     │   ├── API.md
     │   ├── DATA-MODELS.md
-    │   └── SERVICES.md
+    │   ├── SERVICES.md
+    │   └── foundations/          # One file per foundation when >5
+    │       ├── core-database.md
+    │       ├── core-auth.md
+    │       └── core-cache.md
     └── cloud/
         └── RUNBOOK.md
 ```

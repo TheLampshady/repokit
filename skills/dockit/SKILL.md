@@ -12,7 +12,7 @@ Generate and maintain project documentation for humans and AI agents.
 
 **Frameworks:** Wagtail (dedicated module), others use `_default.md` (auto-detected)
 
-**Generates:** README, ARCHITECTURE, PRINCIPLES, ENVIRONMENTS, CLOUD, TROUBLESHOOTING, CONTRIBUTING
+**Generates:** README, ARCHITECTURE, PRINCIPLES, FOUNDATIONS, ENVIRONMENTS, CLOUD, TROUBLESHOOTING, CONTRIBUTING
 
 **Scales:** Small (3 docs) → Medium (6 docs) → Large (7+ with sub-docs)
 
@@ -52,6 +52,21 @@ When sync detects that a feature, module, command, env var, or service has been 
 - **DO NOT** append to MIGRATION-NOTES.md from sync. Migration notes are for one-time restructures, not for routine code changes.
 - **REPORT** removals in the chat completion summary (see Phase 6) so the user can confirm. The conversation is the right place for "I removed X" — the docs are not.
 - **ASK FIRST** before deleting a section with substantial human-authored prose (multi-paragraph narrative, design notes, lessons-learned). Code-derived sections (command tables, env var lists, API endpoints) can be removed without prompting; prose-heavy sections may contain intentional context worth preserving even after the code is gone.
+
+#### Foundation cross-doc consistency
+
+When a foundation changes status during sync — `active → pretender`, `active → sunset`, or removed entirely — references to it in other docs become stale. Sync must check:
+
+- `PRINCIPLES.md` — search for the foundation's path (`app/core/notifications`) and module name (`core.notifications`). Hits are likely "use this foundation" patterns that may now be invalid.
+- `ARCHITECTURE.md` — same search. Hits are likely component-table rows or diagram nodes.
+- Any sub-doc under `architecture/`, `principles/`, or `architecture/foundations/`.
+
+For each hit, **ASK** the user:
+> *"`core.notifications` was demoted to a pretender. Found a reference in `PRINCIPLES.md` line 47 ('Always publish via core.notifications'). Update, remove, or leave with `[TODO: review]`?"*
+
+Don't auto-remove — these are usually principle-level claims with prose around them. Surface and prompt.
+
+See [FOUNDATIONS-DETECTION.md](./references/guides/FOUNDATIONS-DETECTION.md) § "Cross-doc consistency check" for the grep recipes.
 
 ---
 
@@ -106,6 +121,7 @@ Auto-detects what to do based on project state.
 7. Extract commands from package.json, Makefile, pyproject.toml
 8. **Discover environment variables** (see below)
 9. Check for constitution at `.specify/memory/constitution.md`
+10. **Scan for foundations** (medium/large only) — see [FOUNDATIONS-DETECTION.md](./references/guides/FOUNDATIONS-DETECTION.md). Score every source file by fan-in × cross-feature × stability; categorise as foundation / hotspot / hidden / pretender. Skipped on small projects.
 
 #### Environment Variable Discovery
 
@@ -189,11 +205,11 @@ Core docs scaled by project size. See Project Scaling below.
 
 Detect project size and adjust documentation accordingly.
 
-| Size | Docs | Guide |
-|------|------|-------|
-| **Small** (≤20 files, single service) | README + 2 docs | [SIZE-SMALL.md](./references/guides/SIZE-SMALL.md) |
-| **Medium** (20-50 files, framework + DB) | README + 5 docs | [SIZE-MEDIUM.md](./references/guides/SIZE-MEDIUM.md) |
-| **Large** (>50 files, monorepo, teams) | README + 7+ docs + sub-docs | [SIZE-LARGE.md](./references/guides/SIZE-LARGE.md) |
+| Size | Docs | Foundations? | Guide |
+|------|------|--------------|-------|
+| **Small** (≤20 files, single service) | README + 2 docs | No — foundations are obvious at this size | [SIZE-SMALL.md](./references/guides/SIZE-SMALL.md) |
+| **Medium** (20-50 files, framework + DB) | README + 5 docs + FOUNDATIONS | Yes — flat catalog | [SIZE-MEDIUM.md](./references/guides/SIZE-MEDIUM.md) |
+| **Large** (>50 files, monorepo, teams) | README + 7+ docs + sub-docs + FOUNDATIONS | Yes — catalog + per-foundation sub-docs under `architecture/foundations/` | [SIZE-LARGE.md](./references/guides/SIZE-LARGE.md) |
 
 See guides for detection logic and document structure details.
 
@@ -209,6 +225,7 @@ See guides for detection logic and document structure details.
 | [WRITING-GUIDE.md](./references/guides/WRITING-GUIDE.md) | How to write explanatory documentation |
 | [DIAGRAMS.md](./references/guides/DIAGRAMS.md) | Mermaid diagram standards |
 | [AUDIT.md](./references/guides/AUDIT.md) | Doc accuracy verification against codebase |
+| [FOUNDATIONS-DETECTION.md](./references/guides/FOUNDATIONS-DETECTION.md) | How to find foundational code via fan-in, cross-feature usage, and git stability |
 | [GIT-HOOKS.md](./references/guides/GIT-HOOKS.md) | CI/pre-commit integration |
 
 ---
@@ -251,6 +268,7 @@ CHANGED=$(git diff --name-only $LAST_SYNC HEAD)
 |---------------|--------|
 | package.json, pyproject.toml | README.md |
 | src/, lib/, app/ | ARCHITECTURE.md + diagrams |
+| src/core/, src/shared/, src/lib/, packages/*/src/ | FOUNDATIONS.md (re-score; refresh table, consumers, findings) |
 | .env*, config/ | ENVIRONMENTS.md |
 | infra/, .github/ | CLOUD.md |
 | .specify/memory/constitution.md | PRINCIPLES.md |

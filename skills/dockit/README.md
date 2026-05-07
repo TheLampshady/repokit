@@ -70,15 +70,16 @@ dockit/
 
 **Always generated** (from `templates/core/`):
 
-| File | Purpose                                       |
-|------|-----------------------------------------------|
-| `README.md` | Human overview, setup, quick start            |
-| `docs/PRINCIPLES.md` | Tech decisions, conventions, Code Foundations |
-| `docs/ARCHITECTURE.md` | Services, packages, data flow                 |
-| `docs/ENVIRONMENTS.md` | Local, staging, production configs            |
-| `docs/CLOUD.md` | Infrastructure, deployment                    |
-| `docs/TROUBLESHOOTING.md` | Common issues and solutions                   |
-| `docs/CONTRIBUTING.md` | Development workflow by role                  |
+| File | Purpose                                       | Sizes |
+|------|-----------------------------------------------|-------|
+| `README.md` | Human overview, setup, quick start            | All |
+| `docs/PRINCIPLES.md` | Tech decisions, patterns, conventions          | Medium+ |
+| `docs/ARCHITECTURE.md` | Services, packages, data flow                 | All |
+| `docs/FOUNDATIONS.md` | Catalog of shared/foundational code — detected by fan-in × cross-feature × stability scoring (see [FOUNDATIONS-DETECTION.md](./references/guides/FOUNDATIONS-DETECTION.md)) | Medium+ |
+| `docs/ENVIRONMENTS.md` | Local, staging, production configs            | All |
+| `docs/CLOUD.md` | Infrastructure, deployment                    | Medium+ |
+| `docs/TROUBLESHOOTING.md` | Common issues and solutions                   | Medium+ |
+| `docs/CONTRIBUTING.md` | Development workflow by role                  | Large |
 
 **Framework-specific** (from `templates/[framework]/`):
 - Defined in each framework module

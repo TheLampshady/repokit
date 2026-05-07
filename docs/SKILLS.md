@@ -4,9 +4,9 @@ Repokit ships four cross-platform skills. Each lives in `skills/<name>/SKILL.md`
 
 | Skill | Command | Role | Summary | Details |
 |-------|---------|------|---------|---------|
-| **dockit** | `/dockit` | Foundation | Scan the codebase and generate/sync living documentation. Auto-detects frameworks and scales by project size. | [skills/dockit/SKILL.md](../skills/dockit/SKILL.md) |
+| **dockit** | `/dockit` | Foundation | Scan the codebase and generate/sync living documentation — including a `FOUNDATIONS.md` catalog of shared/foundational code (detected by fan-in × cross-feature × stability scoring). Auto-detects frameworks and scales by project size. | [skills/dockit/SKILL.md](../skills/dockit/SKILL.md) |
 | **onboard** | `/onboard` | Consumer | Personalized onboarding plans for new team members, grounded in real docs. | [skills/onboard/SKILL.md](../skills/onboard/SKILL.md) |
-| **agentkit** | `/agentkit` | Consumer | Generate project-level AI subagents tailored to your codebase's custom code, conventions, and foundations. Reads docs as context. | [skills/agentkit/SKILL.md](../skills/agentkit/SKILL.md) |
+| **agentkit** | `/agentkit` | Consumer | Generate project-level AI subagents tailored to your codebase's custom code, conventions, and foundations. Uses `FOUNDATIONS.md` (when present) and other dockit docs as context. | [skills/agentkit/SKILL.md](../skills/agentkit/SKILL.md) |
 | **repokit** | `/repokit` | Hub | Status dashboard, post-change sync, project bootstrap. Orchestrates the loop. | [skills/repokit/SKILL.md](../skills/repokit/SKILL.md) |
 
 The `feedback-loop` agent (in `agents/`) is the third consumer of synced docs — auto-triggered at completion checkpoints.

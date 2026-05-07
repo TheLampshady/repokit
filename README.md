@@ -243,7 +243,7 @@ graph TD
 graph LR
     Codebase["Codebase"]
     Dockit["/dockit init"]
-    Output["README<br/>ARCHITECTURE<br/>ENVIRONMENTS"]
+    Output["README · ARCHITECTURE<br/>FOUNDATIONS · PRINCIPLES<br/>ENVIRONMENTS · ..."]
 
     Codebase -->|"scans"| Dockit -->|"generates"| Output
 
@@ -254,7 +254,7 @@ graph LR
     style Codebase fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
 ```
 
-> Scans the codebase and generates docs from what's there. Run once to bootstrap, then `/dockit sync` to keep them current.
+> Scans the codebase and generates docs from what's there — including a `FOUNDATIONS.md` catalog of shared/foundational code, detected by fan-in × cross-feature × stability scoring. Run once to bootstrap, then `/dockit sync` to keep everything current.
 
 #### Onboarding a New Developer
 
@@ -281,7 +281,7 @@ graph LR
 graph LR
     Codebase["Codebase"]
     Dockit["/dockit init"]
-    Docs["README<br/>ARCHITECTURE"]
+    Docs["README · ARCHITECTURE<br/>FOUNDATIONS"]
     Agentkit["/agentkit"]
     Agents["SME Agents<br/>per custom area"]
 
@@ -298,7 +298,7 @@ graph LR
     style Codebase fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
 ```
 
-> Recommended flow: `/dockit init` first to generate project docs, then `/agentkit` uses those docs as architecture context when building agents. Agents are scaled to project size and generated for Claude/Gemini/Copilot.
+> Recommended flow: `/dockit init` first to generate project docs (including `FOUNDATIONS.md` — the catalog of shared/foundational code), then `/agentkit` uses those docs as architecture context when building agents. Agents are scaled to project size and generated for Claude/Gemini/Copilot.
 
 #### Feedback at Completion
 

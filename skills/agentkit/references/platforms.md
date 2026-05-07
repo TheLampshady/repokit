@@ -160,7 +160,91 @@ Common tools to include in Gemini agent frontmatter:
 
 ## Body Structure
 
-All platforms use the unified body template from `references/templates/agent.template.md`. The only per-platform modifications are:
-- **Claude:** Use template as-is
-- **Gemini:** Insert YOLO mode safety note after role statement
-- **Copilot:** Monitor total file size, trim if over 30,000 characters
+Two templates ship with agentkit:
+
+| Template | When to use |
+|----------|-------------|
+| `references/templates/agent.template.md` | Default — domain-expert agents that don't own any FOUNDATIONS.md row |
+| `references/templates/foundation-agent.template.md` | When the agent owns ≥1 row in `docs/FOUNDATIONS.md` (adds Owned Foundations + Maintenance sections) |
+
+Per-platform modifications:
+- **Claude:** Use template as-is. For foundation-owner agents, also set `permissionMode: acceptEdits` in frontmatter so doc edits don't prompt.
+- **Gemini:** Insert YOLO note (see below) after the role statement. **Inverted note for foundation-owners** — they ARE authorized to edit `docs/`.
+- **Copilot:** Monitor total file size, trim if over 30,000 characters. Foundation-owners need `editFile` in the tools list.
+
+---
+
+## Foundation-Owner Frontmatter
+
+When generating an agent that owns a FOUNDATIONS.md row, the frontmatter changes per platform.
+
+### Claude (foundation-owner)
+
+```yaml
+---
+name: agent-name
+description: "..."
+tools: Read, Edit, Write, Glob, Grep, Bash
+permissionMode: acceptEdits
+---
+```
+
+`acceptEdits` means doc edits inside `docs/` go through without per-step confirmation. The agent still has to follow the Invariant Change Protocol (which requires explicit user approval for invariant changes) — `acceptEdits` doesn't bypass that, it just removes the file-write prompt for routine updates.
+
+`Bash` is included so the agent can run `git log` for last-touched checks and `grep -rn` for cross-doc consistency.
+
+### Gemini (foundation-owner)
+
+```yaml
+---
+name: agent-name
+description: '...'
+tools:
+  - read_file
+  - edit_file
+  - write_file
+  - grep_search
+  - list_directory
+  - run_command
+  - web_search
+model: gemini-2.5-pro
+temperature: 0.2
+max_turns: 20
+timeout_mins: 10
+---
+```
+
+`max_turns` is bumped to 20 because cross-doc maintenance often needs multiple grep + edit cycles.
+
+### Copilot (foundation-owner)
+
+```yaml
+---
+name: Agent Display Name
+description: '...'
+tools:
+  - readFile
+  - editFile
+  - createFile
+  - search
+  - terminal
+---
+```
+
+Copilot doesn't have a permission-mode equivalent; the tools allowlist controls what's allowed. Including `terminal` enables grep / git via shell.
+
+---
+
+## Gemini YOLO Note (Two Variants)
+
+Gemini agents run without per-step confirmation. The body must include a safety note immediately after the role statement. **Use the right variant for the agent type:**
+
+### Default (read-only domain expert)
+
+> **IMPORTANT:** This agent runs without per-step confirmation. Do NOT modify files unless explicitly asked. Default to read-only analysis and recommendations.
+
+### Foundation-owner (authorized to edit docs)
+
+> **IMPORTANT:** This agent runs without per-step confirmation. You ARE authorized to edit `docs/FOUNDATIONS.md`, `docs/architecture/foundations/<slug>.md`, and the agent's own file when invoked for maintenance. Follow the Invariant Change Protocol — invariant changes require explicit user confirmation BEFORE editing. Do NOT modify source code outside `docs/`.
+
+Pick based on whether the agent template is `agent.template.md` (default note) or `foundation-agent.template.md` (foundation-owner note).

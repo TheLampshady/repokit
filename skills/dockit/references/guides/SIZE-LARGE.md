@@ -42,7 +42,11 @@ project/
     │   ├── DATA-MODELS.md           # If multiple DBs or complex schema
     │   ├── SERVICES.md              # If multiple services
     │   ├── API.md                   # If API with >10 endpoints
-    │   └── INTEGRATIONS.md          # If >5 external integrations
+    │   ├── INTEGRATIONS.md          # If >5 external integrations
+    │   └── foundations/             # If >5 foundations detected (one file per row in FOUNDATIONS.md)
+    │       └── [foundation-slug].md # Per-foundation deep entry — invariants, refactor triggers, change checklist
+    │
+    ├── FOUNDATIONS.md               # Catalog overview + table; links to architecture/foundations/ entries
     │
     ├── ENVIRONMENTS.md              # Overview + links to environments/
     ├── environments/                # Created when multiple envs
@@ -92,6 +96,7 @@ Dockit **automatically** creates sub-docs when these triggers are detected:
 | Multiple services | >2 service directories | `architecture/SERVICES.md` |
 | Complex API | >10 endpoints, multiple auth methods | `architecture/API.md` |
 | Many integrations | >5 external API clients | `architecture/INTEGRATIONS.md` |
+| Many foundations | >5 rows in FOUNDATIONS.md | `architecture/foundations/[name].md` |
 | Multiple environments | >2 env configs, terraform workspaces | `environments/[ENV].md` |
 | Complex CI/CD | >3 workflow files, multiple stages | `cloud/DEPLOYMENT.md` |
 | Monitoring setup | Alert configs, dashboard definitions | `cloud/MONITORING.md` |

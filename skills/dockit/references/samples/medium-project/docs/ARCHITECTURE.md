@@ -22,6 +22,12 @@ flowchart TD
         Services[Service Layer]
         Repos[Repositories]
         WS[WebSocket Hub]
+
+        %% Foundations — shared code from FOUNDATIONS.md
+        F_DB[core.database]:::foundation
+        F_Auth[core.auth]:::foundation
+        F_Cache[core.cache]:::foundation
+        F_Notif[core.notifications]:::foundation
     end
 
     subgraph External
@@ -37,13 +43,21 @@ flowchart TD
     Mobile --> Routes
     Web --> WS
     Mobile --> WS
-    Routes --> Auth
+    Routes --> F_Auth
+    F_Auth --> Auth
     Routes --> Services
     Services --> Repos
-    Repos --> DB
-    Services --> Cache
-    WS --> Cache
+    Repos --> F_DB
+    F_DB --> DB
+    Services --> F_Cache
+    F_Cache --> Cache
+    WS --> F_Notif
+    F_Notif --> F_Cache
+
+    classDef foundation fill:#0ea5e9,stroke:#0284c7,color:#fff
 ```
+
+> Boxes styled blue are **foundations** — shared, reusable code catalogued in [FOUNDATIONS.md](./FOUNDATIONS.md). Same convention used across all dockit-generated diagrams.
 
 ---
 
@@ -121,12 +135,14 @@ erDiagram
 
 ### Core (`app/core/`)
 
+`app/core/` is the **foundation layer** — shared, reusable code with high fan-in across features. The full catalog (with per-foundation API, invariants, consumers, and refactor triggers) lives in [FOUNDATIONS.md](./FOUNDATIONS.md).
+
+System-level breakdown:
+
 | Module | Purpose |
 |--------|---------|
-| `config.py` | Settings from environment variables |
-| `database.py` | Async SQLAlchemy session factory |
-| `auth.py` | Firebase token validation, user dependency |
-| `cache.py` | Redis client wrapper |
+| `config.py` | Settings from environment variables (configuration, not a foundation) |
+| Foundations (database, auth, cache, notifications) | See [FOUNDATIONS.md](./FOUNDATIONS.md) |
 
 ### Services (`app/services/`)
 

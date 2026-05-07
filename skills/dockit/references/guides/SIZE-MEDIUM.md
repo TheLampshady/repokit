@@ -38,6 +38,7 @@ project/
 ├── README.md                    # Overview, Getting Started, Usage, TOC, links to docs
 └── docs/
     ├── ARCHITECTURE.md          # System design, diagrams, data models, modules
+    ├── FOUNDATIONS.md           # Catalog of shared/foundational code (auto-detected; see FOUNDATIONS-DETECTION)
     ├── ENVIRONMENTS.md          # Local setup, env vars, secrets, per-environment config
     ├── CLOUD.md                 # Cloud services, infrastructure, deployment
     ├── TROUBLESHOOTING.md       # Common issues by category

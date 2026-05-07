@@ -6,63 +6,26 @@ Project patterns, architectural decisions, and guidelines for consistent develop
 
 ## Service Patterns
 
-Use abstraction layers instead of direct library imports. This enables testing and configuration flexibility.
-
-### Database Access
-
-Always use the async session factory from `core.database`:
+**Rule: use the project's foundations instead of importing libraries directly.** Foundations exist for cross-cutting concerns (database access, authentication, caching, real-time fan-out) so consumers get consistent lifecycle, configuration, and test behaviour.
 
 ```python
-# YES - uses configured session with proper lifecycle
+# YES — go through the foundation
 from app.core.database import get_db
-
-async def get_tasks(db: AsyncSession = Depends(get_db)):
-    return await db.execute(select(Task))
-
-# NO - creates unmanaged connections
-from sqlalchemy import create_engine
-engine = create_engine(DATABASE_URL)
-```
-
-**Why:** The session factory handles connection pooling, transaction management, and test isolation.
-
-### Firebase Auth
-
-Always use the auth dependency from `core.auth`:
-
-```python
-# YES - validates token and extracts user
 from app.core.auth import get_current_user
 
-@router.get("/tasks")
-async def list_tasks(user: User = Depends(get_current_user)):
-    ...
+async def list_tasks(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+): ...
 
-# NO - manual token validation
+# NO — bypass it
+from sqlalchemy import create_engine
 import firebase_admin
-firebase_admin.auth.verify_id_token(token)
 ```
 
-**Why:** The auth dependency handles token validation, user lookup, and error responses consistently.
+**Why:** Foundations encapsulate the patterns this project depends on (connection pooling, token validation, cache fallback). Bypassing them creates parallel implementations that drift apart over time and break testability.
 
-### Redis/Cache
-
-Always use the cache service from `core.cache`:
-
-```python
-# YES - uses configured Redis with serialization
-from app.core.cache import cache
-
-await cache.set("key", data, ttl=300)
-result = await cache.get("key")
-
-# NO - direct Redis calls
-import redis
-r = redis.Redis()
-r.set("key", json.dumps(data))
-```
-
-**Why:** The cache service handles serialization, connection management, and graceful fallback.
+**The catalog of foundations — with each one's public API, invariants, and refactor triggers — lives in [FOUNDATIONS.md](./FOUNDATIONS.md).** That document is the source of truth for what to import, what contract to honour, and when to refactor. This section states the rule; FOUNDATIONS.md owns the list.
 
 ---
 
@@ -186,7 +149,7 @@ async def create_task(
 
 ## Non-Negotiables
 
-> These rules are mandatory. Violations should block PRs.
+> These rules are mandatory. Violations should block PRs. Per-foundation invariants (e.g. "`Hub` is internal," "all DB access goes through `get_db()`") live in the foundation entries in [FOUNDATIONS.md](./FOUNDATIONS.md). The list below is for project-wide rules that span foundations.
 
 - [ ] All database operations must be async
 - [ ] All API routes must require authentication (except health check)
@@ -200,4 +163,5 @@ async def create_task(
 
 - [README.md](../README.md) - Project overview and quick start
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - System design and diagrams
+- [FOUNDATIONS.md](./FOUNDATIONS.md) - Catalog of shared/foundational code (the *what* behind the patterns above)
 - [CONTRIBUTING.md](./CONTRIBUTING.md) - Development workflow

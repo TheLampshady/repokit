@@ -20,11 +20,18 @@ Shows system components and data flow.
 ```mermaid
 flowchart TD
     FE[Frontend - React] --> API[API - FastAPI]
-    API --> DB[(PostgreSQL)]
-    API --> Cache[(Redis)]
+    API --> F_Auth[core.auth]:::foundation
+    API --> F_DB[core.database]:::foundation
+    F_DB --> DB[(PostgreSQL)]
+    API --> F_Cache[core.cache]:::foundation
+    F_Cache --> Cache[(Redis)]
+
+    classDef foundation fill:#0ea5e9,stroke:#0284c7,color:#fff
 ```
 
 **Include:** frontend, backend, database, external services, data flow
+
+**Foundation styling:** when a node represents a row in `FOUNDATIONS.md`, mark it with `:::foundation` and add a `classDef foundation fill:#0ea5e9,stroke:#0284c7,color:#fff` line at the bottom of the diagram. This makes the diagram self-document which boxes are catalogued reusable building blocks. See [Foundation Annotation](#foundation-annotation) below.
 
 ### 2. Data Model ERD
 
@@ -134,6 +141,57 @@ architecture-beta supports Iconify integration (200k+ icons):
 4. **Use architecture-beta for infrastructure** - In CLOUD.md
 5. **Use flowchart/sequence/ERD for applications** - In ARCHITECTURE.md
 6. **Edge directions** - L (left), R (right), T (top), B (bottom)
+7. **Annotate foundations** - Nodes that represent a row in `FOUNDATIONS.md` use the `foundation` class (see below)
+
+---
+
+## Foundation Annotation
+
+When a flowchart node represents a foundation catalogued in `FOUNDATIONS.md`, mark it visually so the diagram self-documents which boxes are reusable building blocks.
+
+### Convention
+
+Use a single `classDef` (consistent across every dockit-generated diagram) plus the `:::foundation` shorthand on each foundation node:
+
+```mermaid
+flowchart TD
+    Routes[Route Handlers] --> F_Auth[core.auth]:::foundation
+    F_Auth --> Firebase[Firebase Auth]
+    Routes --> F_DB[core.database]:::foundation
+    F_DB --> DB[(PostgreSQL)]
+
+    classDef foundation fill:#0ea5e9,stroke:#0284c7,color:#fff
+```
+
+| Style property | Value | Why |
+|----------------|-------|-----|
+| `fill` | `#0ea5e9` (sky-500) | Distinct from the default fill so foundations are immediately visible |
+| `stroke` | `#0284c7` (sky-600) | Slightly darker shade of the same hue for outline |
+| `color` | `#fff` | White text for contrast on the saturated fill |
+
+This is the same palette repokit's own component diagram uses for `S_dockit` (the foundation skill) — keep it consistent.
+
+### When to annotate
+
+- **Always** when a node directly represents a foundation row (e.g. `core.database`, `core.auth`).
+- **Don't** annotate consumers, external services, datastores, or non-foundation services. The whole point is to make foundations stand out.
+- **Don't** annotate foundations in ERD or sequence diagrams — these diagram types don't take well to per-node styling. Flowcharts only.
+
+### Naming nodes
+
+Prefix foundation node IDs with `F_` so they're easy to find when editing or re-styling later:
+
+```
+F_DB[core.database]:::foundation
+F_Auth[core.auth]:::foundation
+F_Cache[core.cache]:::foundation
+```
+
+The label inside the brackets matches the foundation's `name` field in the catalog.
+
+### Sync behaviour
+
+When `dockit sync` regenerates diagrams (`/dockit diagrams` or sync detecting architecture changes), it re-emits the `classDef` and re-applies `:::foundation` to any node whose label matches a current `FOUNDATIONS.md` row name. Demoted foundations (now pretenders) lose the annotation; new foundations gain it.
 
 ---
 

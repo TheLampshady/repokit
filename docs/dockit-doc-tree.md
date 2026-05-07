@@ -15,7 +15,11 @@ README.md                          ← Entry point: what, why, get started
   |     |
   |     +-- ARCHITECTURE.md        ← Structure: system design, components, data flow
   |     |     |
-  |     |     +-- architecture/    ← Breakouts: API, data models, services
+  |     |     +-- architecture/    ← Breakouts: API, data models, services, foundations/
+  |     |
+  |     +-- FOUNDATIONS.md         ← Registry: shared code, invariants, refactor triggers
+  |     |     |
+  |     |     +-- architecture/foundations/   ← Per-foundation deep entries (large only)
   |     |
   |     +-- ENVIRONMENTS.md        ← Setup: prerequisites, config, local dev
   |     |     |
@@ -65,13 +69,14 @@ project/
 ├── README.md                # Hub — quick start + links to docs/
 └── docs/
     ├── ARCHITECTURE.md      # System design, components, data flow
+    ├── FOUNDATIONS.md       # Catalog of shared/foundational code (auto-detected)
     ├── ENVIRONMENTS.md      # Setup, env vars, local config
     ├── PRINCIPLES.md        # Coding patterns, testing, conventions
     ├── CLOUD.md             # Infrastructure, deployment, monitoring
     └── TROUBLESHOOTING.md   # Common issues by category
 ```
 
-**6 docs total.** README becomes a hub with links. Each concern gets its own file. Content that was inline in README migrates to the right doc.
+**7 docs total.** README becomes a hub with links. Each concern gets its own file. FOUNDATIONS.md is detected automatically (see [FOUNDATIONS-DETECTION.md](../skills/dockit/references/guides/FOUNDATIONS-DETECTION.md)) — it powers agentkit's per-foundation subagents and feedback-loop's invariant validation.
 
 ### Large (>50 source files)
 
@@ -85,7 +90,11 @@ project/
     ├── architecture/
     │   ├── API.md                # Full API reference (if >10 endpoints)
     │   ├── DATA-MODELS.md        # Schema + relationships (if multiple DBs)
-    │   └── SERVICES.md           # Service catalog (if >2 services)
+    │   ├── SERVICES.md           # Service catalog (if >2 services)
+    │   └── foundations/          # Per-foundation deep entries (if >5 foundations)
+    │       └── [name].md         # Invariants, refactor triggers, change checklist
+    │
+    ├── FOUNDATIONS.md            # Catalog overview + table linking to architecture/foundations/
     │
     ├── ENVIRONMENTS.md           # Setup overview
     ├── environments/
@@ -126,6 +135,7 @@ Sub-docs are created on demand, not by default. Each trigger maps to a detection
 | Complex API | >10 endpoints | `architecture/API.md` |
 | Multiple databases | >1 DB connection | `architecture/DATA-MODELS.md` |
 | Multiple services | >2 service dirs | `architecture/SERVICES.md` |
+| Many foundations | >5 rows in FOUNDATIONS.md | `architecture/foundations/[name].md` |
 | Multiple environments | >2 env configs | `environments/<ENV>.md` |
 | Complex CI/CD | >3 workflow files | `cloud/DEPLOYMENT.md` |
 | IaC present | Terraform/Pulumi detected | `cloud/INFRASTRUCTURE.md` |
@@ -146,6 +156,7 @@ Where different types of content land at each tier:
 | System architecture | README | ARCHITECTURE.md | ARCHITECTURE.md (overview) |
 | API reference | README | ARCHITECTURE.md | architecture/API.md |
 | Data models | README | ARCHITECTURE.md | architecture/DATA-MODELS.md |
+| Foundational/shared code | (inline) | FOUNDATIONS.md | FOUNDATIONS.md + architecture/foundations/ |
 | Setup / config | README | ENVIRONMENTS.md | ENVIRONMENTS.md + environments/ |
 | Coding standards | README | PRINCIPLES.md | PRINCIPLES.md + principles/ |
 | Testing approach | README | PRINCIPLES.md | principles/TESTING.md |
@@ -168,6 +179,7 @@ Quick reference for what belongs in each doc:
 | **README.md** | Get running in 3 steps | Philosophy, Quick Start, Usage, TOC |
 | **PRINCIPLES.md** | How we write code here | Code style, naming, patterns (YES/NO examples), testing |
 | **ARCHITECTURE.md** | How the system is designed | Overview, diagram, components, data flow, decisions |
+| **FOUNDATIONS.md** | What shared/foundational code exists and how to maintain it | Catalog table, per-foundation invariants, refactor triggers, hotspot/hidden/pretender findings |
 | **ENVIRONMENTS.md** | How to set up locally | Prerequisites, setup steps, env vars, database, team-specific config |
 | **CLOUD.md** | How we deploy and operate | Provider, infra diagram, services, deployment, monitoring |
 | **CONTRIBUTING.md** | How to contribute | Workflow, code guidelines, testing, release process |
