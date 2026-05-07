@@ -1,6 +1,6 @@
 ---
 name: agentkit
-description: 'Generate project-level AI subagents tailored to your codebase. Analyzes custom code patterns, extensions, and team conventions then creates agents that help AI assistants understand and follow your project patterns instead of using framework defaults. Use when asked to: create agents for this project, generate AI helpers, set up subagents, help AI understand my custom code, create coding assistants, generate project agents. Supports Claude, Gemini, and Copilot.'
+description: 'Generate project-level AI subagents tailored to your codebase. Reads project docs (run dockit first if missing) and analyzes custom code patterns, extensions, foundations, and team conventions, then creates agents that help AI assistants understand and follow your project patterns instead of using framework defaults. Use when asked to: create agents for this project, generate AI helpers, set up subagents, help AI understand my custom code, create coding assistants, generate project agents. Supports Claude, Gemini, and Copilot.'
 user-invocable: true
 argument-hint: "[claude|gemini|copilot|all]"
 ---

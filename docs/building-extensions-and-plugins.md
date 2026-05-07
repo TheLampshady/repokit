@@ -701,15 +701,13 @@ repokit/
 ├── gemini-extension.json   # Gemini manifest, contextFileName: "GEMINI.md"
 ├── GEMINI.md               # Tool docs loaded by Gemini in any project
 ├── skills/                 # Cross-platform skills (Claude auto-discovers here)
+│   ├── agentkit/SKILL.md
 │   ├── dockit/SKILL.md
-│   ├── modernizer/SKILL.md
 │   ├── onboard/SKILL.md
 │   └── repokit/SKILL.md
 ├── .agents/skills -> ../skills  # Symlink — Gemini cross-compatibility
 ├── agents/                 # Distributed agents (no color field)
-│   ├── sanity-checker.agent.md
-│   └── auditor.agent.md
-├── hooks/hooks.json        # SessionStart backlog count
+│   └── feedback-loop.agent.md
 ├── policies/policies.toml  # Safety guardrails
 └── Makefile                # Dev workflow (make setup, make check)
 ```

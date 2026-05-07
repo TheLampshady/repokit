@@ -1,6 +1,8 @@
 # repokit Extension
 
-You have access to the **repokit** codebase maintenance toolkit. Use these tools to help maintain, document, and improve this project.
+**Keep your project's context in sync, then put it to work.** `dockit` scans this codebase and keeps documentation aligned with the code. That synced context powers three consumers: `onboard` for new developers, `feedback-loop` for validating completed work, and `agentkit` for generating project-specific AI agents.
+
+> Ticket creation (`/tik`, `/figtik`, `/stitchtik`, `/modernizer`) lives in the sibling [tikkit](https://github.com/TheLampshady/tikkit) extension. Install both for the full toolkit.
 
 ---
 
@@ -12,21 +14,19 @@ Invoke with `/skill-name`. Gemini auto-detects them based on your request.
 |-------|--------|-------------|
 | **agentkit** | `/agentkit` | Asked to create project agents, generate AI helpers, set up subagents, or help AI understand custom code |
 | **dockit** | `/dockit` | Asked to generate docs, update README, sync docs with code, check doc freshness, or explain doc structure |
-| **modernizer** | `/modernizer` | Asked to audit the codebase, modernize tooling, find missing tests/hooks/CI, or check if dependencies are outdated |
 | **onboard** | `/onboard` | A new team member needs to get started, or someone asks how to contribute |
-| **repokit** | `/repokit` | Maintenance hub — check repo health (`status`), sync after changes (`sync`), deep audit (`audit`), or bootstrap a new project (`init`). Also shows the full tool menu. |
-| **tik** | `/tik` | Asked to create a ticket, write a task, draft a feature request, or turn a request into a ticket (no Figma/Stitch context) |
-| **figtik** | `/figtik` | User mentions Figma (URL, file key, or the word "figma") AND wants a ticket or wants to update an existing ticket with Figma data |
-| **stitchtik** | `/stitchtik` | User mentions Stitch, references a `stitch/` directory, or asks about UI mockups when Stitch exports exist |
+| **repokit** | `/repokit` | Maintenance hub — check repo health (`status`), sync after changes (`sync`), or bootstrap a new project (`init`). Also shows the full tool menu. |
 
 ---
 
 ## Ticket System
 
-When tools find work to be done, they write to a shared backlog:
+When tools find work, they write to a shared backlog:
 
-- `specs/backlog.md` — master checklist, items tagged by source (`[tik]`, `[figtik]`, `[stitchtik]`, `[modernizer]`, `[auditor]`, `[dockit]`)
+- `specs/backlog.md` — master checklist, items tagged by source
 - `specs/tickets/` — individual ticket files with full context
+
+Tags from repokit: `[feedback-loop]`. If tikkit is installed, it adds `[tik]`, `[figtik]`, `[stitchtik]`, `[modernizer]` to the same file.
 
 Check `specs/backlog.md` before creating any ticket to avoid duplicates.
 
@@ -36,8 +36,7 @@ Check `specs/backlog.md` before creating any ticket to avoid duplicates.
 
 | Agent | Triggers when... |
 |-------|-----------------|
-| **sanity-checker** | Asked to verify code quality, before committing, after fixing a bug |
-| **auditor** | Asked to review doc health, find stale content, or audit automation gaps |
+| **feedback-loop** | A feature is finished or a major plan section is complete — verify it's correctly implemented |
 
 To enable subagents, see setup instructions in the [repokit README](https://github.com/TheLampshady/repokit).
 

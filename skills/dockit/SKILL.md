@@ -20,23 +20,38 @@ Generate and maintain project documentation for humans and AI agents.
 
 ---
 
-## Core Principle: Never Destroy Content
+## Core Principle: Docs Describe What *Is*
 
-**Structure can be rewritten. Information must NEVER be destroyed.**
+Documentation reflects the **current state** of the code. It is not a changelog, not a tombstone, not a memory of what used to exist. Git history and release notes serve those purposes — duplicating them in docs adds clutter that developers skim past.
 
-When restructuring docs:
+This breaks into two distinct rules depending on what's happening:
+
+### Restructuring (init / migrate): Never destroy information
+
+When reshuffling existing docs across files, **information must not be lost** — only relocated.
+
 - **MIGRATE** team-specific content (VMs, corporate auth, security configs) to appropriate docs
-- **KEEP** all specifics even if they seem sensitive - most repos have restricted access
+- **KEEP** specifics even if they seem sensitive — most repos have restricted access
 - **WARN** users about potentially sensitive content, but don't remove it
 - **PRESERVE** the team's way of doing things (ENVIRONMENTS.md can have many approaches)
 
-If existing README has:
-- VM setup instructions → Move to ENVIRONMENTS.md
-- Corporate SSO/VPN auth → Move to ENVIRONMENTS.md
-- Security configurations → Move to ENVIRONMENTS.md or CLOUD.md
-- Team-specific workflows → Move to CONTRIBUTING.md or PRINCIPLES.md
+Routing examples:
+- VM setup instructions → ENVIRONMENTS.md
+- Corporate SSO/VPN auth → ENVIRONMENTS.md
+- Security configurations → ENVIRONMENTS.md or CLOUD.md
+- Team-specific workflows → CONTRIBUTING.md or PRINCIPLES.md
 
-**Always create `docs/MIGRATION-NOTES.md`** showing where content moved.
+For one-time restructures, create `docs/MIGRATION-NOTES.md` showing where content moved (this is a transient hand-off doc, not a permanent log).
+
+### Syncing (sync): Remove docs for removed code
+
+When sync detects that a feature, module, command, env var, or service has been removed from the codebase:
+
+- **DELETE** the corresponding doc section. The feature is gone; documenting its absence is noise.
+- **DO NOT** leave tombstones like "*X was removed in v2*", "*deprecated*", or "*no longer supported*". That belongs in the changelog/git history.
+- **DO NOT** append to MIGRATION-NOTES.md from sync. Migration notes are for one-time restructures, not for routine code changes.
+- **REPORT** removals in the chat completion summary (see Phase 6) so the user can confirm. The conversation is the right place for "I removed X" — the docs are not.
+- **ASK FIRST** before deleting a section with substantial human-authored prose (multi-paragraph narrative, design notes, lessons-learned). Code-derived sections (command tables, env var lists, API endpoints) can be removed without prompting; prose-heavy sections may contain intentional context worth preserving even after the code is gone.
 
 ---
 
@@ -64,14 +79,17 @@ Auto-detects what to do based on project state.
 | Mode | Action | Prompts? | Destructive? |
 |------|--------|----------|--------------|
 | `init` | Full doc generation | Yes | Can restructure |
-| `sync` | Update stale sections | No | Never - adds only |
+| `sync` | Update stale sections; remove docs for removed code | Only for prose-heavy deletions | Removes code-derived sections for removed features |
 | `check` | CI mode - exit codes only | No | Read-only |
 | `audit` | Verify doc claims against code | No | Read-only |
 | `migrate` | Restructure legacy docs | Yes | Can restructure |
 | `diagrams` | Generate mermaid diagrams only | No | Updates diagrams only |
 
-**Safe modes** (no prompts, non-destructive): `sync`, `check`, `audit`, `diagrams`
+**Read-only modes:** `check`, `audit`
+**Auto-write modes** (no prompts for routine changes): `sync`, `diagrams`
 **Interactive modes** (prompts, can restructure): `init`, `migrate`
+
+> Sync removes doc sections when the underlying code is gone — see "Syncing: Remove docs for removed code" above. Removals are reported in the chat summary, not left as tombstones in the docs.
 
 ---
 
@@ -157,7 +175,13 @@ Core docs scaled by project size. See Project Scaling below.
 1. Cross-link all docs
 2. Validate markdown syntax
 3. List remaining `[TODO:]` markers
-4. Show completion report with next steps
+4. **List removals in chat** (not in docs) — for sync runs that deleted sections, surface what was removed and why so the user can confirm. Format:
+   ```
+   Removed:
+     - ARCHITECTURE.md → "LDAP Auth" section (module deleted: src/auth/ldap.py)
+     - README.md → `--legacy-mode` flag (removed from CLI)
+   ```
+5. Show completion report with next steps
 
 ---
 

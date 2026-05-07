@@ -1,16 +1,18 @@
 ---
 name: repokit
-description: 'Codebase maintenance hub — check repo health, sync docs and tickets after changes, run deep audits, or bootstrap a new project. Use when asked to: see repo status, check repo health, sync after changes, audit the codebase, run maintenance, bootstrap repokit, what needs attention, show open tickets, or list repokit tools. Modes: status, sync, audit, init.'
+description: 'Hub for the context-in-sync toolkit. Check repo health, sync docs after changes, or bootstrap the foundation+consumers loop on a new project. Use when asked to: see repo status, check repo health, sync after changes, run maintenance, bootstrap repokit, what needs attention, or list repokit tools. Modes: status, sync, init.'
 user-invocable: true
 ---
 
 # repokit
 
-Codebase maintenance hub. Orchestrates repokit's skills and agents into coherent workflows.
+Hub for repokit's context-in-sync architecture: dockit keeps docs aligned with the code; onboard, agentkit, and feedback-loop consume that synced context.
 
-**Modes:** `status` | `sync` | `audit` | `init` | _(bare — tool menu)_
+**Modes:** `status` | `sync` | `init` | _(bare — tool menu)_
 
-> **Core principle:** repokit orchestrates, never duplicates. Each mode delegates to existing skills and agents rather than reimplementing their logic.
+> **Core principle:** repokit orchestrates, never duplicates. Each mode delegates to dockit and the three consumers rather than reimplementing their logic.
+
+> **Sibling plugin:** ticket creation lives in [tikkit](https://github.com/TheLampshady/tikkit) (`/tik`, `/figtik`, `/stitchtik`, `/modernizer`). Both plugins write to the same `specs/backlog.md` if installed together.
 
 ---
 
@@ -50,20 +52,29 @@ git rev-list --count $(git log -1 --format=%H -- docs/ README.md 2>/dev/null || 
 ### Menu Format
 
 ```
-## repokit — Codebase Maintenance Toolkit
+## repokit — Keep your project's context in sync, then put it to work
 
-| Tool | Type | When to Use |
-|------|------|-------------|
-| `/repokit status` | Mode | Dashboard — see repo health, open tickets, doc freshness |
-| `/repokit sync` | Mode | After code changes — refresh docs, clean up tickets |
-| `/repokit audit` | Mode | Deep review — full codebase analysis with findings report |
-| `/repokit init` | Mode | First-time setup — bootstrap docs, quality checks, tickets |
-| `/repokit:dockit` | Skill | Generate or sync project documentation |
-| `/repokit:modernizer` | Skill | Audit tooling and generate modernization tickets |
-| `/repokit:onboard` | Skill | Onboard a new team member |
-| `/repokit:agentkit` | Skill | Generate project-level AI agents |
-| `sanity-checker` | Agent | Lint, format, typecheck, test (auto-triggers after code changes) |
-| `auditor` | Agent | Find outdated code and stale practices (auto-triggers for reviews) |
+**Foundation (synced context):**
+| Tool | Invoke | Purpose |
+|------|--------|---------|
+| `dockit` | `/repokit:dockit` | Scan codebase and generate/sync living docs |
+
+**Consumers (put context to work):**
+| Tool | Invoke | Purpose |
+|------|--------|---------|
+| `onboard` | `/repokit:onboard` | Personalized ramp-up plans for new team members |
+| `agentkit` | `/repokit:agentkit` | Generate AI agents that understand custom code |
+| `feedback-loop` | (agent — auto-triggered) | Validate completed work at feature/plan checkpoints |
+
+**Hub modes:**
+| Mode | Invoke | Purpose |
+|------|--------|---------|
+| `status` | `/repokit status` | Dashboard — repo health, open tickets, doc freshness |
+| `sync` | `/repokit sync` | After code changes — refresh docs |
+| `init` | `/repokit init` | First-time setup — bootstrap the loop |
+
+### Sibling plugin: tikkit
+Install [tikkit](https://github.com/TheLampshady/tikkit) for ticket creation: `/tik`, `/figtik`, `/stitchtik`, `/modernizer`.
 
 [If status counts available:]
 📋 **Open items:** [N] in backlog | [M] pending tickets
@@ -97,6 +108,8 @@ grep -c '^\- \[x\]' specs/backlog.md 2>/dev/null  # done
 # Pending ticket files
 ls specs/tickets/*.md 2>/dev/null
 ```
+
+Tags from repokit: `[feedback-loop]`. Tags from tikkit (if installed): `[tik]`, `[figtik]`, `[stitchtik]`, `[modernizer]`.
 
 #### 2. Documentation Freshness
 
@@ -135,10 +148,7 @@ ls .github/workflows/*.yml 2>/dev/null
 #### 4. Last Tool Runs
 
 ```bash
-# When was modernizer last run? (proxy: last specs/ change)
-git log -1 --format="%cr" -- specs/ 2>/dev/null || echo "never"
-
-# When was dockit last run? (proxy: last docs/ change with dockit patterns)
+# When was dockit last run? (proxy: last docs/ change)
 git log -1 --format="%cr" -- docs/ 2>/dev/null || echo "never"
 ```
 
@@ -149,23 +159,21 @@ git log -1 --format="%cr" -- docs/ 2>/dev/null || echo "never"
 
 | Area | Status | Details |
 |------|--------|---------|
-| Backlog | 🟡 3 open | 1 modernizer, 1 auditor, 1 manual |
+| Backlog | 🟡 3 open | 1 feedback-loop, 2 tikkit tags |
 | Tickets | 📋 2 pending | specs/tickets/ |
 | Docs | 🟢 Fresh | Last updated 2 days ago (14 code commits since) |
 | Pre-commit | 🟢 Installed | .pre-commit-config.yaml present |
 | Linting | 🟢 Configured | ruff |
 | Type checking | 🔴 Missing | No mypy/pyright config found |
 | CI | 🟢 Present | 2 workflows |
-| Last audit | 🟡 3 weeks ago | Consider running `/repokit audit` |
 
 ### Open Backlog Items
-- [ ] Add type checking [modernizer] → tickets/type-checking.md
-- [ ] Update ARCHITECTURE.md [dockit] → tickets/arch-docs.md
-- [ ] Fix flaky auth test [manual]
+- [ ] Fix flaky auth test [feedback-loop] → tickets/flaky-auth-test.md
+- [ ] Add type checking [modernizer] → tickets/type-checking.md  ← from tikkit
 
 ### Suggested Next Steps
 1. Run `/repokit sync` — docs are 14 commits behind
-2. Address P1 ticket: type-checking.md
+2. Address the open backlog items in order
 ```
 
 Use 🟢 for healthy, 🟡 for needs attention, 🔴 for missing/broken. Adapt the checks to whatever project structure exists — not all projects will have all of these.
@@ -175,7 +183,7 @@ Use 🟢 for healthy, 🟡 for needs attention, 🔴 for missing/broken. Adapt t
 ## Mode: `sync`
 
 **Trigger:** `/repokit sync`
-**Purpose:** Post-change refresh. Bring docs and tickets up to date after code changes.
+**Purpose:** Post-change refresh. Bring docs up to date after code changes.
 
 This mode is non-destructive and requires minimal interaction. It runs the lightweight maintenance tasks that should happen after any significant code change.
 
@@ -187,10 +195,6 @@ This mode is non-destructive and requires minimal interaction. It runs the light
 # What changed since last doc sync?
 LAST_DOC=$(git log -1 --format=%H -- docs/ README.md 2>/dev/null)
 git diff --name-only "$LAST_DOC"..HEAD 2>/dev/null | head -30
-
-# What changed since last spec update?
-LAST_SPEC=$(git log -1 --format=%H -- specs/ 2>/dev/null)
-git diff --name-only "$LAST_SPEC"..HEAD 2>/dev/null | head -30
 ```
 
 #### Step 2: Sync docs (delegate to dockit)
@@ -201,18 +205,7 @@ Tell the user: "Running dockit sync to update documentation..."
 
 Follow the dockit skill's `sync` mode — it handles git diff detection, section updates, and diagram regeneration.
 
-#### Step 3: Refresh tickets (delegate to modernizer)
-
-If `specs/tickets/` exists, invoke `modernizer status`. This:
-- Checks if pending tickets have been resolved by recent code changes
-- Cleans up completed tickets
-- Updates `specs/CHECKLIST.md`
-
-Tell the user: "Running modernizer status to refresh tickets..."
-
-Follow the modernizer skill's `status` mode logic.
-
-#### Step 4: Summary
+#### Step 3: Summary
 
 Report what changed:
 
@@ -222,7 +215,6 @@ Report what changed:
 | Action | Result |
 |--------|--------|
 | Docs | Updated ARCHITECTURE.md (new service added) |
-| Tickets | 2 completed and cleaned up, 3 remaining |
 | Diagrams | Regenerated component diagram |
 
 No further action needed.
@@ -230,94 +222,16 @@ No further action needed.
 
 If nothing needs syncing, say so: "Everything is up to date — no sync needed."
 
----
-
-## Mode: `audit`
-
-**Trigger:** `/repokit audit`
-**Purpose:** Deep review of the entire codebase. Combines documentation audit, code quality analysis, and practice review into a single comprehensive report.
-
-This is the "big review" mode — it takes longer and may prompt for preferences. Use for periodic health checks, onboarding review, or after major refactors.
-
-### Execution Flow
-
-#### Step 1: Scope
-
-Ask the user what they want to audit (or run everything):
-
-```
-What would you like to audit?
-1. **Everything** — full docs + code + tooling review
-2. **Docs only** — documentation accuracy and freshness
-3. **Code quality only** — tooling, testing, linting, patterns
-4. **Tooling only** — dependency versions, outdated practices
-```
-
-Default to "everything" if the user doesn't specify.
-
-#### Step 2: Run audits (delegate to specialized tools)
-
-Based on scope, orchestrate the appropriate tools:
-
-**Documentation audit:**
-- Invoke `dockit audit` — verifies doc claims against codebase (file paths, commands, configs)
-- Invoke `dockit check` — detects drift between docs and code
-
-**Code quality & tooling audit:**
-- Invoke `modernizer analyze` — full codebase analysis with scoring and ticket generation
-- This internally handles: package management, testing, linting, code patterns, doc health
-
-**Practice & staleness audit:**
-- Trigger the `auditor` agent — reviews for outdated code, stale practices, deprecated patterns, automation gaps
-- The auditor uses context7 and web search to verify against current best practices
-
-Run these in parallel where possible. The auditor agent runs in its own context window, so it can work alongside modernizer.
-
-#### Step 3: Aggregate findings
-
-Combine outputs from all tools into a unified report. Don't just concatenate — synthesize:
-
-```
-## Audit Report
-
-### Overall Health: 7/10
-
-| Area | Score | Tool | Key Finding |
-|------|-------|------|-------------|
-| Documentation | 8/10 | dockit | 2 stale sections, 1 broken file reference |
-| Package Management | 9/10 | modernizer | Modern tooling, lockfile present |
-| Testing | 5/10 | modernizer | 60% coverage, no integration tests |
-| Code Quality | 7/10 | modernizer | Linter configured, no type checking |
-| Practices | 6/10 | auditor | 3 deprecated patterns found |
-
-### Critical Findings (act now)
-[From auditor 🔴 Critical tier + modernizer P1 items]
-
-### Recommended Improvements
-[From auditor 🟡 Recommended tier + modernizer P2 items]
-
-### Informational
-[From auditor 🔵 FYI tier + modernizer P3 items]
-
-### Tickets Created
-[List any new tickets written to specs/tickets/ by modernizer]
-
-### Next Steps
-1. [Most impactful action]
-2. [Second priority]
-3. Run `/repokit sync` after addressing findings
-```
-
-Deduplicate findings across tools — if both modernizer and auditor flag the same issue, merge them into one finding with both sources cited.
+> **Note:** Ticket maintenance (refreshing modernizer/tik/figtik/stitchtik tickets) lives in tikkit. If tikkit is installed, the user can run `/modernizer status` separately.
 
 ---
 
 ## Mode: `init`
 
 **Trigger:** `/repokit init`
-**Purpose:** Bootstrap repokit for a new project. Walks through first-time setup of docs, quality infrastructure, and maintenance workflows.
+**Purpose:** Bootstrap repokit for a new project. Walks through first-time setup of docs and maintenance workflows.
 
-This is different from `audit` — init is about setting things up, not reviewing what exists. Use when adopting repokit on a project for the first time.
+Use when adopting repokit on a project for the first time.
 
 ### Execution Flow
 
@@ -333,7 +247,7 @@ ls README.md docs/ 2>/dev/null
 ls .pre-commit-config.yaml Makefile 2>/dev/null
 ls .ruff.toml eslint.config.js biome.json 2>/dev/null
 
-# Existing repokit artifacts
+# Existing repokit/tikkit artifacts
 ls specs/backlog.md specs/tickets/ 2>/dev/null
 
 # AI instruction files
@@ -345,6 +259,8 @@ ls package.json pyproject.toml Cargo.toml go.mod 2>/dev/null
 
 #### Step 2: Recommend a setup plan
 
+Repokit's architecture is **foundation + consumers**: dockit produces synced context; onboard, agentkit, and feedback-loop put it to work. Init proposes them in that order — the foundation must exist before the consumers add value.
+
 Based on what's missing, propose a phased plan:
 
 ```
@@ -352,31 +268,42 @@ Based on what's missing, propose a phased plan:
 
 Based on your project, here's what I recommend:
 
-### Phase 1: Documentation (dockit)
+### Foundation: Synced Context (dockit) — required
 [x] README.md exists
 [ ] Architecture docs → run `/repokit:dockit init`
 [ ] Environment docs
 
-### Phase 2: Code Quality (modernizer)
-[ ] Linter setup
-[ ] Pre-commit hooks
-[x] Tests exist
-[ ] Type checking → run `/repokit:modernizer`
+This is the foundation everything else builds on. Run dockit first.
 
-### Phase 3: Maintenance Workflow
-[ ] specs/ directory for tickets
-[ ] Backlog tracking
+### Consumers (pick the ones you want):
 
-Run all phases now, or pick one to start with?
+#### Onboarding (onboard)
+[ ] Personalized ramp-up plans for new devs — run `/repokit:onboard` anytime
+    No setup required. Uses the docs from Phase 1.
+
+#### Project AI Agents (agentkit)
+[ ] Project-specific AI agents → run `/repokit:agentkit`
+    Reads your docs and analyzes custom code to generate SME agents.
+
+#### Validation at Completion (feedback-loop)
+[x] Auto-triggers when features/plan sections complete
+    No setup required. Already shipped as an agent.
+
+### Optional: Install tikkit for ticket creation
+For text/Figma/Stitch designs and code-quality audits as tickets,
+install the [tikkit](https://github.com/TheLampshady/tikkit) sibling plugin.
+
+Run the foundation now, or pick a different starting point?
 ```
 
 #### Step 3: Execute chosen phases
 
 For each phase the user approves:
 
-- **Phase 1:** Invoke `dockit init` — handles all doc generation with its own question/plan/confirm flow
-- **Phase 2:** Invoke `modernizer analyze` — audits tooling and generates tickets for improvements
-- **Phase 3:** Create `specs/` directory and `specs/backlog.md` if they don't exist. Any tickets from Phase 2 will already be there.
+- **Foundation (dockit):** Invoke `dockit init` — handles all doc generation with its own question/plan/confirm flow. This must complete before agentkit can use the docs as context.
+- **agentkit:** Invoke `agentkit` — analyzes custom code and generates project-level agents using the docs from the foundation
+- **onboard:** No init action — it runs on demand when a new dev joins
+- **feedback-loop:** No init action — it auto-triggers at completion checkpoints
 
 Let each skill handle its own interaction (questions, confirmations). Repokit just sequences them and provides transitions.
 
@@ -385,16 +312,19 @@ Let each skill handle its own interaction (questions, confirmations). Repokit ju
 ```
 ## Setup Complete
 
-### What was created
+### Foundation
 - docs/README.md, docs/ARCHITECTURE.md, docs/ENVIRONMENTS.md (via dockit)
-- specs/backlog.md with 4 items (via modernizer)
-- specs/tickets/ with 4 ticket files
+
+### Consumers ready to use
+- /onboard — when a new team member joins
+- /agentkit — generated [N] project-level agents (if run)
+- feedback-loop — auto-triggers when you finish a feature
 
 ### What's next
 - Review generated docs and fill [TODO] markers
-- Address P1 tickets first (top of backlog)
 - Run `/repokit status` anytime to check progress
-- Run `/repokit sync` after making changes
+- Run `/repokit sync` after code changes — keeps the foundation current
+- For ticket creation, install [tikkit](https://github.com/TheLampshady/tikkit)
 ```
 
 ---
@@ -403,17 +333,14 @@ Let each skill handle its own interaction (questions, confirmations). Repokit ju
 
 ### Ticket Deduplication
 
-Before any mode creates or delegates ticket creation, check `specs/backlog.md` for existing items. Pass this context to modernizer so it doesn't create duplicates.
+Before suggesting any ticket creation, check `specs/backlog.md` for existing items. Tikkit (if installed) does this internally for its own ticket-writing skills.
 
 ### Missing Infrastructure
 
 If a mode needs something that doesn't exist:
-- `status` with no `specs/`: suggest `init` or `audit`
+- `status` with no `specs/`: suggest `init`
 - `sync` with no docs: suggest `init`
-- `audit` on a fresh project: suggest `init` instead
 
 ### Agent Availability
 
-Not all environments have subagent support. If the auditor agent can't be spawned:
-- In `audit` mode: skip the practice review section, note it in the report
-- Suggest the user run the auditor separately if needed
+Not all environments have subagent support. The `feedback-loop` agent auto-triggers at completion checkpoints when supported. If subagents aren't available, suggest the user run quality checks manually at the end of features.

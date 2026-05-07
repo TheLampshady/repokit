@@ -16,11 +16,10 @@ body:
       multiple: true
       options:
         - "Skill: dockit"
-        - "Skill: modernizer"
         - "Skill: onboard"
-        - "Skill: repokit (tool menu)"
-        - "Agent: sanity-checker"
-        - "Agent: auditor"
+        - "Skill: agentkit"
+        - "Skill: repokit (hub)"
+        - "Agent: feedback-loop"
         - Other / General
     validations:
       required: true

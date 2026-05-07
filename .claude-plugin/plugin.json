@@ -1,7 +1,7 @@
 {
   "name": "repokit",
-  "description": "Codebase maintenance toolkit. Provides skills for documentation generation (dockit), stack modernization (modernizer), and developer onboarding, plus agents for code quality checks (sanity-checker) and documentation auditing (auditor).",
-  "version": "1.0.5",
+  "description": "Keep your project's context in sync, then put it to work. dockit scans the codebase and generates living docs; onboard ramps up new developers from those docs; feedback-loop validates completed work against project conventions; agentkit generates project-specific AI agents that understand your custom code. The /repokit hub orchestrates the loop. Ticket creation lives in the sibling tikkit plugin.",
+  "version": "2.0.0",
   "author": {
     "name": "Lampshady",
     "email": "lampshady24@gmail.com"

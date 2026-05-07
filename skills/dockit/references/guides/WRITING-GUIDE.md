@@ -172,9 +172,12 @@ This principle applies to ALL generated documentation:
 
 ## Content Preservation
 
-**CRITICAL**: Never delete existing content. Always merge or migrate.
+Docs describe the **current** state of the code. Preservation rules differ by mode:
 
-### Merge Strategy
+- **Restructuring (init / migrate):** never lose information — relocate it.
+- **Syncing (sync):** when the code is gone, the doc section goes too. Removals are reported in chat, not memorialized in the docs.
+
+### Merge Strategy (init / migrate)
 
 When destination file exists:
 1. Parse existing content into sections
@@ -182,6 +185,15 @@ When destination file exists:
 3. **MERGE**: Add new sections, preserve existing custom sections
 4. Mark conflicts for user review
 5. Report what was added vs preserved
+
+### Removal Strategy (sync)
+
+When sync detects a removed feature, module, command, or env var:
+1. Locate the corresponding doc section(s)
+2. **Code-derived sections** (command tables, env var lists, API endpoints, generated diagrams): delete without prompting
+3. **Prose-heavy sections** (multi-paragraph narrative, design notes, custom workflows): ask the user before deleting — they may contain intentional context worth keeping
+4. **Never** leave tombstones — no "*deprecated*", "*removed in v2*", or "*no longer supported*" markers. Git history and changelogs serve that purpose.
+5. Report each removal in the chat completion summary so the user can confirm
 
 ### Content Routing
 
@@ -198,7 +210,9 @@ When destination file exists:
 
 ## Migration Notes
 
-Always create `docs/MIGRATION-NOTES.md` when content moves:
+`docs/MIGRATION-NOTES.md` is a **one-time hand-off doc** created during init/migrate when content gets relocated across files. It exists so the team can find content that moved during a restructure.
+
+It is **not** a removal log. Sync must not append to it. Routine "X was removed" entries belong in chat output and git history, not in the docs.
 
 ```markdown
 # Migration Notes
@@ -217,3 +231,5 @@ The following custom content was preserved in destination files:
 - ENVIRONMENTS.md: "Local Development Setup" section
 - ARCHITECTURE.md: Custom diagrams
 ```
+
+Once the team has reviewed the migration, this file can be deleted — its job is done.

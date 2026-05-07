@@ -67,27 +67,6 @@ md-to-toml: ## Convert commands/*.md → *.toml (Gemini format)
 	uv run python bin/md_to_toml.py commands/
 	@echo "✓ Markdown commands converted to TOML"
 
-# ── Sync ─────────────────────────────────────────────────────────────────────
-# Single sources in src/ are copied into each skill that uses them.
-# Edit in src/, then run `make sync` before committing.
-# Note: stitchtik is NOT a sync target — its template has Stitch-specific
-# customizations (Component Inventory, Design References, Responsive Requirements)
-# baked into the base structure. Update it manually when the canonical template changes.
-
-TICKET_TEMPLATE := src/ticket-template.md
-TICKET_TARGETS := \
-	skills/tik/references/ticket-template.md \
-	skills/figtik/references/ticket-template.md \
-	skills/modernizer/references/templates/ticket-template.md
-
-.PHONY: sync
-sync: $(TICKET_TARGETS) ## Sync src/ templates into skill directories
-	@echo "✓ Shared templates synced"
-
-$(TICKET_TARGETS): $(TICKET_TEMPLATE)
-	@mkdir -p $(dir $@)
-	cp $< $@
-
 # ── Cross-Platform ───────────────────────────────────────────────────────────
 
 .PHONY: cursorrules
@@ -128,9 +107,9 @@ check-yaml: ## Validate all YAML files (pre-commit config, frontmatter)
 status: ## Show open backlog items and installed extension status
 	@echo ""
 	@echo "── Backlog ──────────────────────────────────────────────"
-	@open=$$(grep -c '\- \[ \]' spec/backlog.md 2>/dev/null || echo 0); \
+	@open=$$(grep -c '\- \[ \]' specs/backlog.md 2>/dev/null || echo 0); \
 		[ "$$open" -gt 0 ] \
-		&& grep '\- \[ \]' spec/backlog.md \
+		&& grep '\- \[ \]' specs/backlog.md \
 		|| echo "  No open items"
 	@echo ""
 	@echo "── Gemini Extension ─────────────────────────────────────"

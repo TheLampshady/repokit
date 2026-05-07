@@ -1,6 +1,16 @@
 # repokit
 
-A codebase maintenance toolkit for AI agents. Works with **Claude Code**, **Gemini CLI**, and **GitHub Copilot CLI**. Provides skills, agents, hooks, and policies that help development teams maintain documentation, modernize tooling, onboard developers, and track technical debt.
+**Keep your project's context in sync, then put it to work.**
+
+Repokit treats your codebase's documentation as living context. `dockit` scans the project and keeps docs aligned with the code as it changes. That synced context then powers three consumers:
+
+- **`onboard`** — ramps up new developers with plans grounded in the project's actual structure and conventions
+- **`feedback-loop`** — validates that completed work is correctly implemented against the project's real patterns
+- **`agentkit`** — generates project-specific AI agents that understand your custom code and foundations
+
+The `/repokit` hub orchestrates the loop. Works with **Claude Code**, **Gemini CLI**, and **GitHub Copilot CLI**.
+
+> **Sibling plugin:** ticket creation lives in [tikkit](https://github.com/TheLampshady/tikkit) — `/tik`, `/figtik`, `/stitchtik`, `/modernizer`. Both plugins write to the same `specs/backlog.md` and can be installed together.
 
 ## Install
 
@@ -67,19 +77,14 @@ copilot plugin uninstall https://github.com/TheLampshady/repokit
 |-------|---------|---------|--------|
 | **agentkit** | `/agentkit` | Generate project-level AI agents tailored to your codebase's custom code patterns. Supports Claude, Gemini, and Copilot. | WIP |
 | **dockit** | `/dockit` | Generate, sync, check, and migrate project documentation. Scales by project size, auto-detects frameworks. | Ready |
-| **figtik** | `/figtik` | Turn Figma designs into structured implementation tickets. Fetches design data via API, compares against codebase. | Ready |
-| **modernizer** | `/modernizer` | Audit the codebase for outdated tooling, missing tests, and packaging gaps. Creates tickets in `specs/`. | In Review |
 | **onboard** | `/onboard` | Create personalized onboarding plans for new team members based on role or feature focus. | Ready |
-| **repokit** | `/repokit` | Show the full tool menu and get guided to the right tool. | In Review |
-| **stitchtik** | `/stitchtik` | Turn Google Stitch UI exports into structured implementation tickets. Compares mockups against codebase. | Ready |
-| **tik** | `/tik` | Default ticket creation — turn text requests into structured, well-written tickets. | Ready |
+| **repokit** | `/repokit` | Show the full tool menu and get guided to the right tool. | Ready |
 
 ### Agents
 
 | Agent | Use when... | Platform |
 |-------|------------|----------|
-| **sanity-checker** | Verifying code quality, before committing, after fixing a bug | Claude |
-| **auditor** | Reviewing the codebase for outdated code, stale practices, or automation gaps | Claude |
+| **feedback-loop** | A feature is finished or a major plan section is complete, and you want to verify it's correctly implemented | Claude |
 
 > **Gemini users:** See [Enabling Gemini Subagents](#gemini-subagents) to use agents on Gemini.
 
@@ -87,7 +92,7 @@ copilot plugin uninstall https://github.com/TheLampshady/repokit
 
 ## Ticket System
 
-All tools write work items to a shared backlog under `specs/`:
+Repokit consumes (and contributes to) a shared backlog under `specs/`:
 
 ```
 specs/
@@ -97,7 +102,7 @@ specs/
     └── stale-setup-docs.md
 ```
 
-Tags in `backlog.md` show which tool created each item: `[tik]`, `[figtik]`, `[stitchtik]`, `[modernizer]`, `[sanity-checker]`, `[manual]`. (The auditor does not write tickets directly — its findings flow through modernizer.)
+Tags from repokit: `[feedback-loop]`. If [tikkit](https://github.com/TheLampshady/tikkit) is also installed, it adds `[tik]`, `[figtik]`, `[stitchtik]`, `[modernizer]` to the same file. Format is identical across both plugins.
 
 ---
 
@@ -174,51 +179,41 @@ graph TD
     subgraph repokit["The Repokit"]
         direction TB
 
-        subgraph foundation["Foundation"]
-            S_repokit["repokit<br/>Tool menu & navigation"]
-            S_dockit["dockit<br/>Generate & sync project docs"]
+        subgraph hub["Hub"]
+            S_repokit["repokit<br/>Status · sync · init · menu"]
         end
 
-        subgraph accelerators["Accelerators"]
-            S_modernizer["modernizer<br/>Audit tooling & create tickets"]
-            S_agentkit["agentkit<br/>Generate project-level AI agents"]
-            S_onboard["onboard<br/>Personalized plans for new devs"]
+        subgraph foundation["Foundation: Synced Context"]
+            S_dockit["dockit<br/>Scan codebase &<br/>generate living docs"]
         end
 
-        subgraph ticketing["Ticket Creation"]
-            S_tik["tik<br/>Text → tickets"]
-            S_figtik["figtik<br/>Figma → tickets"]
-            S_stitchtik["stitchtik<br/>Stitch → tickets"]
-        end
-
-        subgraph agents_box["Quality Gates"]
-            A_auditor["auditor<br/>Find outdated code & practices"]
-            A_sanity["sanity-checker<br/>Lint, format, typecheck & test"]
+        subgraph consumers["Consumers"]
+            S_onboard["onboard<br/>Ramp up new devs<br/>using real docs"]
+            A_feedback["feedback-loop<br/>Validate completed work<br/>against project patterns"]
+            S_agentkit["agentkit<br/>Generate AI agents that<br/>understand custom code"]
         end
     end
 
     subgraph client_repo["Client Repo"]
         direction TB
-        SME["SME Agents<br/>Custom code experts<br/>generated per-project"]
+        Docs[("docs/<br/>README · ARCHITECTURE")]
+        SME["SME Agents<br/>Custom-code experts<br/>generated per-project"]
         Spec[("specs/<br/>backlog.md · tickets/")]
     end
 
     CA["Code Assist<br/>Claude · Gemini · Copilot"]
 
-    CA -->|"invokes"| foundation
-    CA -->|"invokes"| accelerators
-    CA -->|"invokes"| ticketing
-    CA -->|"delegates to"| SME
-    CA -->|"triggers"| agents_box
+    CA -->|"invokes"| hub
+    hub -->|"orchestrates"| foundation
+    hub -->|"orchestrates"| consumers
 
-    foundation -.->|"required by"| accelerators
-    S_modernizer -.->|"invokes"| A_auditor
+    S_dockit -->|"writes"| Docs
+    Docs -->|"feeds"| S_onboard
+    Docs -->|"feeds"| S_agentkit
+    Docs -.->|"reference patterns"| A_feedback
 
     S_agentkit -->|"generates"| SME
-    S_modernizer -->|"writes tickets"| Spec
-    S_tik -->|"writes tickets"| Spec
-    S_figtik -->|"writes tickets"| Spec
-    S_stitchtik -->|"writes tickets"| Spec
+    A_feedback -.->|"writes tickets"| Spec
 
     classDef skill   fill:#3b82f6,stroke:#1d4ed8,color:#fff
     classDef agent   fill:#8b5cf6,stroke:#6d28d9,color:#fff
@@ -226,16 +221,17 @@ graph TD
     classDef ai      fill:#7c3aed,stroke:#5b21b6,color:#fff
     classDef found   fill:#0ea5e9,stroke:#0284c7,color:#fff
     classDef sme     fill:#10b981,stroke:#059669,color:#fff
-    classDef client  fill:#1e293b,stroke:#475569,color:#94a3b8
 
-    class S_repokit,S_dockit found
-    class S_modernizer,S_onboard,S_agentkit skill
-    class S_tik,S_figtik,S_stitchtik skill
-    class A_sanity,A_auditor agent
-    class Spec storage
+    class S_repokit found
+    class S_onboard,S_agentkit skill
+    class A_feedback agent
+    class Docs,Spec storage
     class CA ai
     class SME sme
+    class S_dockit found
 ```
+
+> The architecture is one foundation feeding three consumers. dockit produces synced context; onboard, feedback-loop, and agentkit each put that context to work in different ways.
 
 > **Claude Code:** skills invoked as `/repokit:skill-name` · **Gemini CLI / Copilot CLI:** invoked as `/skill-name`, agents require [opt-in setup](#gemini-subagents)
 
@@ -304,69 +300,24 @@ graph LR
 
 > Recommended flow: `/dockit init` first to generate project docs, then `/agentkit` uses those docs as architecture context when building agents. Agents are scaled to project size and generated for Claude/Gemini/Copilot.
 
-#### Quality Gates
+#### Feedback at Completion
 
 ```mermaid
 graph LR
-    Code["Code Changes"]
-    Sanity["sanity-checker"]
-    Result["Clean Commit"]
+    Done["Feature finished /<br/>plan section complete"]
+    FeedbackLoop["feedback-loop"]
+    Result["Verified done<br/>or issues to fix"]
 
-    Code -->|"invoke"| Sanity -->|"fixes & reports"| Result
+    Done -->|"auto-triggers"| FeedbackLoop -->|"lint · format · typecheck · test"| Result
 
     classDef agent fill:#8b5cf6,stroke:#6d28d9,color:#fff
     classDef output fill:#86efac,stroke:#16a34a,color:#000
-    class Sanity agent
+    class FeedbackLoop agent
     class Result output
-    style Code fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
+    style Done fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
 ```
 
-> Lint, format, typecheck, test — catches issues before they hit CI.
-
-#### Stack Modernization
-
-```mermaid
-graph LR
-    Modernizer["/modernizer"]
-    Auditor["auditor"]
-    Spec["specs/backlog.md"]
-
-    Modernizer -->|"invokes"| Auditor
-    Auditor -->|"findings"| Modernizer
-    Modernizer -->|"writes tickets"| Spec
-
-    classDef skill fill:#3b82f6,stroke:#1d4ed8,color:#fff
-    classDef agent fill:#8b5cf6,stroke:#6d28d9,color:#fff
-    classDef storage fill:#f59e0b,stroke:#b45309,color:#000
-    class Modernizer skill
-    class Auditor agent
-    class Spec storage
-```
-
-> Audits tooling, finds outdated code and practices, writes prioritized tickets to a shared backlog.
-
-#### Design-to-Ticket Pipeline
-
-```mermaid
-graph LR
-    Input["Design Input"]
-    Tik["/tik"]
-    Figtik["/figtik"]
-    Stitchtik["/stitchtik"]
-    Spec["specs/backlog.md"]
-
-    Input -->|"text request"| Tik -->|"writes"| Spec
-    Input -->|"Figma URL"| Figtik -->|"writes"| Spec
-    Input -->|"Stitch export"| Stitchtik -->|"writes"| Spec
-
-    classDef skill fill:#3b82f6,stroke:#1d4ed8,color:#fff
-    classDef storage fill:#f59e0b,stroke:#b45309,color:#000
-    class Tik,Figtik,Stitchtik skill
-    class Spec storage
-    style Input fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
-```
-
-> Three paths to the same backlog. `tik` for text requests, `figtik` for Figma designs, `stitchtik` for Google Stitch exports. All compare against the existing codebase before writing tickets.
+> When a feature or major plan section wraps up, the agent runs the project's lint/format/typecheck/test commands to confirm the work is correctly implemented before it's declared done.
 
 ---
 
@@ -377,21 +328,13 @@ repokit/
 ├── skills/                  ← cross-platform skills (Claude + Gemini + Copilot)
 │   ├── agentkit/
 │   ├── dockit/
-│   ├── figtik/
-│   ├── modernizer/
 │   ├── onboard/
-│   ├── repokit/
-│   ├── stitchtik/
-│   └── tik/
+│   └── repokit/
 ├── .agents/skills → skills/  ← symlink for Gemini (git clone resolves it)
-├── agents/                  ← distributed agents (sanity-checker, auditor)
+├── agents/                  ← distributed agents (feedback-loop)
 ├── .claude/agents/          ← internal dev tools (component-reviewer)
 ├── .claude-plugin/          ← Claude plugin + marketplace metadata
-├── hooks/                   ← session lifecycle hooks
 ├── policies/                ← Gemini policy engine rules
-├── specs/                    ← ticket system
-│   ├── backlog.md
-│   └── tickets/
 ├── CLAUDE.md                ← Claude context
 ├── GEMINI.md                ← Gemini context + subagent setup
 └── gemini-extension.json    ← Gemini extension manifest

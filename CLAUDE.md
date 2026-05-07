@@ -4,31 +4,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Repo Is
 
-Repokit is a codebase maintenance toolkit for AI agents. It provides:
-- **Skills** — cross-platform, invoked via slash commands, work on Claude, Gemini, and Copilot
+Repokit's premise: **a project's documentation is living context that AI agents and humans both consume**. Keep it in sync and you can do meaningful work on top of it.
+
+The architecture is:
+
+- **Foundation:** `dockit` scans the codebase and generates/syncs documentation. This is the context layer.
+- **Three consumers** of that context:
+  - `onboard` — humans ramping up; plans are personalized using real docs
+  - `feedback-loop` agent — validates completed work against the project's actual patterns
+  - `agentkit` — generates project-level subject-matter-expert agents that understand custom code and foundations
+- **Hub:** `/repokit` orchestrates the loop with `status`, `sync`, and `init` modes.
+
+This repo distributes that toolkit as a Claude plugin, a Gemini extension, and a Copilot plugin. Components:
+- **Skills** — cross-platform, invoked via slash commands
 - **Agents** — Claude-specific subagents that auto-trigger based on task context
-- **Hooks & policies** — session lifecycle and security rules
+- **Policies** — Gemini security rules
 
 There is no build system or compiled code. Everything is Markdown, TOML, and JSON.
+
+> **Sibling plugin:** ticket creation (tik, figtik, stitchtik, modernizer + auditor agent) lives in [tikkit](https://github.com/TheLampshady/tikkit). Both plugins write to the same `specs/backlog.md` if installed together.
 
 ## Directory Map
 
 | Path | Purpose |
 |------|---------|
 | `skills/dockit/` | Documentation generation skill (init, sync, check, migrate, diagrams) |
-| `skills/modernizer/` | Stack modernization skill — audits tooling, writes tickets to `specs/` |
 | `skills/onboard/` | Onboarding skill — creates phased plans for new devs |
 | `skills/agentkit/` | Agent generator skill — analyzes custom code, creates project-level agents for Claude/Gemini/Copilot |
-| `skills/repokit/` | Maintenance hub — repo health dashboard, post-change sync, deep audits, project bootstrap (status, sync, audit, init) |
-| `skills/tik/` | Default ticket creation skill — turns text requests into structured tickets in `specs/tickets/` |
-| `skills/figtik/` | Figma-to-ticket skill — fetches Figma designs via API, creates implementation tickets |
-| `skills/stitchtik/` | Stitch-to-ticket skill — analyzes Google Stitch UI exports against codebase, creates implementation tickets |
+| `skills/repokit/` | Maintenance hub — repo health dashboard, post-change sync, project bootstrap (status, sync, init) |
 | `.agents/skills/` | Symlink to `skills/` for Gemini cross-compatibility |
-| `agents/` | Distributed agents bundled with the plugin (sanity-checker, auditor) |
+| `agents/` | Distributed agents bundled with the plugin (feedback-loop) |
 | `.claude/agents/` | Internal dev-only agents — NOT distributed (component-reviewer only) |
 | `.claude-plugin/` | Claude plugin metadata (`plugin.json`) and marketplace catalog (`marketplace.json`) |
 | `.mcp.json` | Bundled MCP servers (context7 for library documentation) |
-| `hooks/` | Session lifecycle hooks |
 | `policies/` | Gemini CLI policy engine rules |
 | `specs/` | Ticket system — created at runtime by agents, gitignored in this repo |
 | `GEMINI.md` | Gemini extension context (tool docs, not project context) |
@@ -43,13 +51,9 @@ Skills have YAML frontmatter (`name`, `description`, `user-invocable: true`) and
 | Skill | Modes | Key Behavior |
 |-------|-------|-------------|
 | `dockit` | init, sync, check, migrate, diagrams | Scales docs by project size; detects frameworks; never destroys content |
-| `modernizer` | analyze, status | Plans only, never executes; writes tickets to `specs/tickets/`, appends to `specs/backlog.md` with `[modernizer]` tag |
 | `onboard` | (single mode) | Reads existing docs first; asks for role before proceeding; chat-only, creates no files |
 | `agentkit` | (single mode) | Analyzes custom code; generates project-level agents for Claude, Gemini, Copilot; scales by project size |
-| `repokit` | status, sync, audit, init | Maintenance hub — orchestrates other tools; repo health dashboard, post-change sync, deep audits, project bootstrap |
-| `tik` | (single mode) | Default ticket skill — turns text requests into structured tickets in `specs/tickets/` |
-| `figtik` | create, update | Fetches Figma design data via API; compares against codebase; writes tickets to `specs/tickets/` with `[figtik]` tag |
-| `stitchtik` | (single mode) | Analyzes Google Stitch UI exports (`screen.png`, `code.html`, `DESIGN.md`) against codebase; writes tickets to `specs/tickets/` with `[stitchtik]` tag |
+| `repokit` | status, sync, init | Maintenance hub — orchestrates other tools; repo health dashboard, post-change sync, project bootstrap |
 
 ### Agents (`agents/`, distributed with plugin)
 
@@ -57,8 +61,7 @@ Agents auto-trigger based on their description. They run in isolated context win
 
 | Agent | Auto-triggers | Output |
 |-------|-------------|--------|
-| `sanity-checker` | Before commit, after code changes, quality verification | lint → format → typecheck → test; fixes what it can; creates tickets for unfixable issues |
-| `auditor` | Reviews codebase for outdated code, stale practices, automation gaps | Returns findings report; does not write tickets (modernizer writes tickets from findings) |
+| `feedback-loop` | Feature completion, end of major plan section, completion checkpoints | lint → format → typecheck → test; fixes what it can; creates tickets for unfixable issues |
 
 ### Internal Dev Agent (`.claude/agents/`, NOT distributed)
 
@@ -68,22 +71,29 @@ Agents auto-trigger based on their description. They run in isolated context win
 
 ### Ticket System (`specs/`)
 
-All skills and agents that find work write to a shared location:
+Repokit consumes (and contributes to) a shared `specs/` directory in the consuming project:
 - `specs/backlog.md` — master checklist, one line per item, tagged by source
 - `specs/tickets/<slug>.md` or `specs/tickets/<slug>/ticket.md` — individual tickets with full context
 
 Format in `backlog.md` — position in the list IS the priority/dependency order:
 ```
-- [ ] Design system tokens [stitchtik] → tickets/design-system-tokens/ticket.md
-- [ ] Bottom nav bar [stitchtik] → tickets/bottom-nav-bar/ticket.md
-- [ ] Add dark mode support [tik] → tickets/dark-mode-support.md
-- [ ] Hero section redesign [figtik] → tickets/hero-section-redesign/ticket.md
-- [ ] Testing setup [modernizer] → tickets/testing-setup.md
+- [ ] Fix flaky auth test [feedback-loop] → tickets/flaky-auth-test.md
 ```
 
 All skills use plain kebab-case slugs — no numeric prefixes. Dependencies are expressed via position in the backlog and references inside each ticket.
 
 Always check `specs/backlog.md` before creating a ticket to avoid duplicates.
+
+### Cross-plugin contract with tikkit
+
+If [tikkit](https://github.com/TheLampshady/tikkit) is installed in the same project, both plugins share `specs/backlog.md`. Tag ownership:
+
+| Tag | Owner |
+|-----|-------|
+| `[feedback-loop]` | repokit |
+| `[tik]`, `[figtik]`, `[stitchtik]`, `[modernizer]` | tikkit |
+
+Format is identical — neither plugin imports the other.
 
 ### Plugin Structure
 
@@ -98,7 +108,7 @@ The `plugins/` subdirectory no longer exists — the root is the plugin.
 
 | Location | Who Gets It | Use For |
 |----------|------------|---------|
-| `agents/` | Plugin users (distributed) | sanity-checker, auditor |
+| `agents/` | Plugin users (distributed) | feedback-loop |
 | `.claude/agents/` | This repo's developers only | component-reviewer (internal tooling) |
 
 ## Adding a New Framework to dockit
@@ -107,15 +117,6 @@ The `plugins/` subdirectory no longer exists — the root is the plugin.
 2. Create `skills/dockit/frameworks/[name].md` (use `_default.md` as template)
 3. Create `skills/dockit/references/templates/[name]/` with framework-specific templates
 4. Add a sample to `skills/dockit/references/samples/[name]-project/`
-
-## Hooks
-
-`hooks/hooks.json` runs on session lifecycle events (Gemini; Claude uses `.claude/settings.json`):
-
-| Event | Behavior |
-|-------|----------|
-| `SessionStart` | Shows count of open items in `specs/backlog.md` if any exist |
-| `Stop` | Reminds user to run sanity-checker if code was modified |
 
 ## Policies
 

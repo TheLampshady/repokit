@@ -1,30 +1,44 @@
 # Skills
 
-Repokit ships five cross-platform skills. Each lives in `skills/<name>/SKILL.md` and is invoked via slash command on Claude, Gemini, or Copilot.
+Repokit ships four cross-platform skills. Each lives in `skills/<name>/SKILL.md` and is invoked via slash command on Claude, Gemini, or Copilot.
 
-| Skill | Command | Summary | Details |
-|-------|---------|---------|---------|
-| **dockit** | `/dockit` | Generate, sync, and maintain project documentation. Auto-detects frameworks and scales by project size. | [skills/dockit/SKILL.md](../skills/dockit/SKILL.md) |
-| **agentkit** | `/agentkit` | Generate project-level AI subagents tailored to your codebase's custom code patterns. Supports Claude, Gemini, and Copilot. | [skills/agentkit/SKILL.md](../skills/agentkit/SKILL.md) |
-| **modernizer** | `/modernizer` | Audit the codebase for outdated tooling, missing quality infrastructure, and AI-readiness gaps. Writes tickets to `specs/`. | [skills/modernizer/SKILL.md](../skills/modernizer/SKILL.md) |
-| **onboard** | `/onboard` | Create personalized onboarding plans for new team members based on role or feature focus. | [skills/onboard/SKILL.md](../skills/onboard/SKILL.md) |
-| **repokit** | `/repokit` | Show the full tool menu and guide the user to the right tool. | [skills/repokit/SKILL.md](../skills/repokit/SKILL.md) |
+| Skill | Command | Role | Summary | Details |
+|-------|---------|------|---------|---------|
+| **dockit** | `/dockit` | Foundation | Scan the codebase and generate/sync living documentation. Auto-detects frameworks and scales by project size. | [skills/dockit/SKILL.md](../skills/dockit/SKILL.md) |
+| **onboard** | `/onboard` | Consumer | Personalized onboarding plans for new team members, grounded in real docs. | [skills/onboard/SKILL.md](../skills/onboard/SKILL.md) |
+| **agentkit** | `/agentkit` | Consumer | Generate project-level AI subagents tailored to your codebase's custom code, conventions, and foundations. Reads docs as context. | [skills/agentkit/SKILL.md](../skills/agentkit/SKILL.md) |
+| **repokit** | `/repokit` | Hub | Status dashboard, post-change sync, project bootstrap. Orchestrates the loop. | [skills/repokit/SKILL.md](../skills/repokit/SKILL.md) |
+
+The `feedback-loop` agent (in `agents/`) is the third consumer of synced docs — auto-triggered at completion checkpoints.
+
+For ticket creation (`/tik`, `/figtik`, `/stitchtik`, `/modernizer`), install the [tikkit](https://github.com/TheLampshady/tikkit) sibling plugin.
 
 ---
 
 ## Recommended Flow
 
+The architecture is **one foundation feeding three consumers**:
+
 ```
-/dockit init  -->  /agentkit  -->  /modernizer analyze
-   |                  |                  |
-   v                  v                  v
- docs/           SME agents        specs/tickets/
+                   ┌─────────────────────┐
+                   │   dockit (foundation)│
+                   │   scans & syncs docs │
+                   └──────────┬──────────┘
+                              │
+                       docs/ (context)
+                              │
+              ┌───────────────┼───────────────┐
+              ▼               ▼               ▼
+       /onboard         /agentkit        feedback-loop
+       (humans)         (AI agents)      (validation)
 ```
 
-1. **dockit** first — bootstrap project documentation
-2. **agentkit** next — uses docs as context to build project-specific agents
-3. **modernizer** — audit tooling and generate improvement tickets
-4. **onboard** — anytime a new team member joins, create a ramp-up plan
+1. **dockit first** — `/dockit init` bootstraps the context layer; `/dockit sync` keeps it current
+2. **agentkit** — uses synced docs to generate project-specific AI agents
+3. **onboard** — anytime a new team member joins, plans use the real docs
+4. **feedback-loop** — auto-triggers at feature/plan completion to validate the work
+
+For tooling audits and modernization tickets, install [tikkit](https://github.com/TheLampshady/tikkit) and run `/modernizer analyze`.
 
 ---
 
