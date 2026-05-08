@@ -1,6 +1,6 @@
 ---
 name: repokit
-description: 'Hub for the context-in-sync toolkit. Check repo health, sync docs after changes, or bootstrap the foundation+consumers loop on a new project. Use when asked to: see repo status, check repo health, sync after changes, run maintenance, bootstrap repokit, what needs attention, or list repokit tools. Modes: status, sync, init.'
+description: 'Hub for the context-in-sync toolkit. Check repo health, sync docs and project agents after changes, or bootstrap the foundation+consumers loop on a new project. Use when asked to: see repo status, check repo health, sync after changes, refresh docs and agents, check for drift, run maintenance, bootstrap repokit, what needs attention, or list repokit tools. Modes: status, sync, init.'
 user-invocable: true
 ---
 
@@ -12,7 +12,7 @@ Hub for repokit's context-in-sync architecture: dockit keeps docs aligned with t
 
 > **Core principle:** repokit orchestrates, never duplicates. Each mode delegates to dockit and the three consumers rather than reimplementing their logic.
 
-> **Sibling plugin:** ticket creation lives in [tikkit](https://github.com/TheLampshady/tikkit) (`/tik`, `/figtik`, `/stitchtik`, `/modernizer`). Both plugins write to the same `specs/backlog.md` if installed together.
+> **Sibling plugin:** ticket creation lives in [tikkit](https://github.com/TheLampshady/tikkit) (`/tik`, `/figtik`, `/stitchtik`, `/modernizer`). Both plugins write to the same `.backlog/backlog.md` if installed together.
 
 ---
 
@@ -22,8 +22,8 @@ When invoked bare (`/repokit` with no mode), detect what the user likely needs:
 
 | Condition | Suggest |
 |-----------|---------|
-| No `docs/` or `README.md` and no `specs/` | → `init` |
-| `specs/backlog.md` has open items | → `status` (show what needs attention) |
+| No `docs/` or `README.md` and no `.backlog/` | → `init` |
+| `.backlog/backlog.md` has open items | → `status` (show what needs attention) |
 | Git changes since last doc sync | → `sync` |
 | User asks "what can repokit do" | → show tool menu |
 | Otherwise | → show tool menu with live status summary |
@@ -34,16 +34,16 @@ Always show the tool menu as a fallback, but lead with a recommendation when the
 
 ## Tool Menu (bare invocation or when guiding)
 
-When showing the menu, enhance it with live status if `specs/` or `docs/` exist.
+When showing the menu, enhance it with live status if `.backlog/` or `docs/` exist.
 
 ### Gather Status Counts
 
 ```bash
 # Open backlog items
-grep -c '^\- \[ \]' specs/backlog.md 2>/dev/null || echo "0"
+grep -c '^\- \[ \]' .backlog/backlog.md 2>/dev/null || echo "0"
 
 # Pending tickets
-ls specs/tickets/*.md 2>/dev/null | wc -l
+ls .backlog/tickets/*.md 2>/dev/null | wc -l
 
 # Doc staleness (commits since last doc touch)
 git rev-list --count $(git log -1 --format=%H -- docs/ README.md 2>/dev/null || echo HEAD)..HEAD 2>/dev/null || echo "?"
@@ -96,22 +96,24 @@ Run these checks and present a unified dashboard:
 
 ```bash
 # Read backlog
-cat specs/backlog.md 2>/dev/null
+cat .backlog/backlog.md 2>/dev/null
 
 # Count by tag
-grep -o '\[.*\]' specs/backlog.md 2>/dev/null | sort | uniq -c
+grep -o '\[.*\]' .backlog/backlog.md 2>/dev/null | sort | uniq -c
 
 # Count open vs completed
-grep -c '^\- \[ \]' specs/backlog.md 2>/dev/null  # open
-grep -c '^\- \[x\]' specs/backlog.md 2>/dev/null  # done
+grep -c '^\- \[ \]' .backlog/backlog.md 2>/dev/null  # open
+grep -c '^\- \[x\]' .backlog/backlog.md 2>/dev/null  # done
 
 # Pending ticket files
-ls specs/tickets/*.md 2>/dev/null
+ls .backlog/tickets/*.md 2>/dev/null
 ```
 
 Tags from repokit: `[feedback-loop]`. Tags from tikkit (if installed): `[tik]`, `[figtik]`, `[stitchtik]`, `[modernizer]`.
 
 #### 2. Documentation Freshness
+
+For human-readable context in the dashboard, capture timestamps:
 
 ```bash
 # Last doc change
@@ -119,11 +121,18 @@ git log -1 --format="%cr (%h)" -- docs/ README.md 2>/dev/null
 
 # Last code change
 git log -1 --format="%cr (%h)" -- src/ lib/ app/ *.py *.ts *.js *.go *.rs 2>/dev/null
-
-# Files changed since last doc sync
-LAST_DOC=$(git log -1 --format=%H -- docs/ README.md 2>/dev/null)
-git diff --stat "$LAST_DOC"..HEAD -- src/ lib/ app/ 2>/dev/null | tail -1
 ```
+
+For the actual drift verdict, delegate to **`dockit check`** — that's its purpose-built read-only drift detection. Don't reinvent it inline with a "commits since" proxy; that tells you something happened, not what's wrong.
+
+Map the result into the dashboard:
+
+| `dockit check` exit | Dashboard row |
+|---------------------|---------------|
+| 0 (current) | 🟢 Fresh |
+| 1 (stale) | 🟡 Stale — run `/repokit sync` |
+
+For a deeper inspection (broken refs, missing files referenced in docs, stale claims), point the user at `/dockit audit` separately — it's slower and more thorough than `check`.
 
 #### 3. Code Quality Infrastructure
 
@@ -150,7 +159,30 @@ ls .github/workflows/*.yml 2>/dev/null
 ```bash
 # When was dockit last run? (proxy: last docs/ change)
 git log -1 --format="%cr" -- docs/ 2>/dev/null || echo "never"
+
+# When was agentkit last run? (proxy: last .claude/agents or .gemini/agents change)
+git log -1 --format="%cr" -- .claude/agents/ .gemini/agents/ .github/agents/ 2>/dev/null || echo "never"
 ```
+
+#### 5. Agent-to-Doc Drift
+
+If agentkit has been initialized on this project, the agents reference foundation names, file paths, and component names from the docs. When dockit changes any of those (foundation demoted, file moved, component renamed), the agents become stale — and unlike doc drift, this is invisible until someone reads a wrong agent.
+
+Check whether agentkit agents exist:
+
+```bash
+ls .claude/agents/*.md .gemini/agents/*.md .github/agents/*.md 2>/dev/null
+```
+
+If any exist, delegate to **`agentkit status`** for the actual drift check — it knows the exact shape of agentkit's outputs and how they reference FOUNDATIONS.md. Don't re-implement the comparison here; that violates "orchestrate, never duplicate."
+
+Map the result into the dashboard:
+
+| `agentkit status` finding | Dashboard row |
+|---------------------------|---------------|
+| All agents in sync | 🟢 In sync |
+| Drift detected | 🟡 Drifted — run `/repokit sync` (or `/agentkit sync` directly) |
+| No agents found | Skip the row, or note "Not adopted" |
 
 ### Output Format
 
@@ -160,8 +192,9 @@ git log -1 --format="%cr" -- docs/ 2>/dev/null || echo "never"
 | Area | Status | Details |
 |------|--------|---------|
 | Backlog | 🟡 3 open | 1 feedback-loop, 2 tikkit tags |
-| Tickets | 📋 2 pending | specs/tickets/ |
-| Docs | 🟢 Fresh | Last updated 2 days ago (14 code commits since) |
+| Tickets | 📋 2 pending | .backlog/tickets/ |
+| Docs | 🟡 Stale | `dockit check` reports drift; last updated 2 days ago |
+| Agents | 🟡 Drifted | 2 of 5 agents reference renamed foundations |
 | Pre-commit | 🟢 Installed | .pre-commit-config.yaml present |
 | Linting | 🟢 Configured | ruff |
 | Type checking | 🔴 Missing | No mypy/pyright config found |
@@ -172,7 +205,7 @@ git log -1 --format="%cr" -- docs/ 2>/dev/null || echo "never"
 - [ ] Add type checking [modernizer] → tickets/type-checking.md  ← from tikkit
 
 ### Suggested Next Steps
-1. Run `/repokit sync` — docs are 14 commits behind
+1. Run `/repokit sync` — refreshes docs and reconciles drifted agents in one pass
 2. Address the open backlog items in order
 ```
 
@@ -197,7 +230,7 @@ LAST_DOC=$(git log -1 --format=%H -- docs/ README.md 2>/dev/null)
 git diff --name-only "$LAST_DOC"..HEAD 2>/dev/null | head -30
 ```
 
-#### Step 2: Sync docs (delegate to dockit)
+#### Step 2: Sync the foundation (dockit)
 
 If code has changed since the last doc update, invoke `dockit sync`. This updates stale doc sections without prompting or restructuring.
 
@@ -205,9 +238,25 @@ Tell the user: "Running dockit sync to update documentation..."
 
 Follow the dockit skill's `sync` mode — it handles git diff detection, section updates, and diagram regeneration.
 
-#### Step 3: Summary
+#### Step 3: Sync the consumers (agentkit)
 
-Report what changed:
+dockit may have just changed foundation names, file paths, or component names that the project's agents reference. Without refreshing the agents, they end up pointing at stale facts — which defeats the whole "context in sync" point.
+
+Check whether agentkit has been initialized on this project:
+
+```bash
+ls .claude/agents/*.md .gemini/agents/*.md .github/agents/*.md 2>/dev/null
+```
+
+If any agent files exist, invoke `agentkit sync`. It reconciles each agent against the now-current docs, surfaces drift, and lets the user pick what to update — it doesn't auto-overwrite.
+
+Tell the user: "Running agentkit sync to update project agents against the new docs..."
+
+If no agentkit agents exist, skip this step — agentkit hasn't been adopted on this project yet.
+
+#### Step 4: Summary
+
+Report what changed across both halves:
 
 ```
 ## Sync Complete
@@ -216,6 +265,7 @@ Report what changed:
 |--------|--------|
 | Docs | Updated ARCHITECTURE.md (new service added) |
 | Diagrams | Regenerated component diagram |
+| Agents | 2 agents reconciled against renamed foundations |
 
 No further action needed.
 ```
@@ -248,7 +298,7 @@ ls .pre-commit-config.yaml Makefile 2>/dev/null
 ls .ruff.toml eslint.config.js biome.json 2>/dev/null
 
 # Existing repokit/tikkit artifacts
-ls specs/backlog.md specs/tickets/ 2>/dev/null
+ls .backlog/backlog.md .backlog/tickets/ 2>/dev/null
 
 # AI instruction files
 ls CLAUDE.md GEMINI.md .github/copilot-instructions.md 2>/dev/null
@@ -333,12 +383,12 @@ Let each skill handle its own interaction (questions, confirmations). Repokit ju
 
 ### Ticket Deduplication
 
-Before suggesting any ticket creation, check `specs/backlog.md` for existing items. Tikkit (if installed) does this internally for its own ticket-writing skills.
+Before suggesting any ticket creation, check `.backlog/backlog.md` for existing items. Tikkit (if installed) does this internally for its own ticket-writing skills.
 
 ### Missing Infrastructure
 
 If a mode needs something that doesn't exist:
-- `status` with no `specs/`: suggest `init`
+- `status` with no `.backlog/`: suggest `init`
 - `sync` with no docs: suggest `init`
 
 ### Agent Availability

@@ -60,16 +60,16 @@ un-claude: ## Uninstall the local Claude plugin
 .PHONY: cursorrules
 cursorrules: ## Generate .cursorrules from SKILL.md descriptions
 	@echo "# Repokit — Codebase Maintenance Toolkit" > .cursorrules
-	@echo "# Auto-generated from .agents/skills/*/SKILL.md" >> .cursorrules
+	@echo "# Auto-generated from skills/*/SKILL.md" >> .cursorrules
 	@echo "" >> .cursorrules
-	@for skill in .agents/skills/*/SKILL.md; do \
+	@for skill in skills/*/SKILL.md; do \
 		name=$$(grep '^name:' "$$skill" | head -1 | sed "s/name: *'\\{0,1\\}//;s/'$$//"); \
 		desc=$$(grep '^description:' "$$skill" | head -1 | sed "s/description: *'\\{0,1\\}//;s/'$$//"); \
 		echo "## $$name"; \
 		echo "$$desc"; \
 		echo ""; \
 	done >> .cursorrules
-	@echo "✓ .cursorrules generated from $$(ls .agents/skills/*/SKILL.md | wc -l) skills"
+	@echo "✓ .cursorrules generated from $$(ls skills/*/SKILL.md | wc -l) skills"
 
 # ── Validation ────────────────────────────────────────────────────────────────
 
@@ -95,9 +95,9 @@ check-yaml: ## Validate all YAML files (pre-commit config, frontmatter)
 status: ## Show open backlog items and installed extension status
 	@echo ""
 	@echo "── Backlog ──────────────────────────────────────────────"
-	@open=$$(grep -c '\- \[ \]' specs/backlog.md 2>/dev/null || echo 0); \
+	@open=$$(grep -c '\- \[ \]' .backlog/backlog.md 2>/dev/null || echo 0); \
 		[ "$$open" -gt 0 ] \
-		&& grep '\- \[ \]' specs/backlog.md \
+		&& grep '\- \[ \]' .backlog/backlog.md \
 		|| echo "  No open items"
 	@echo ""
 	@echo "── Gemini Extension ─────────────────────────────────────"

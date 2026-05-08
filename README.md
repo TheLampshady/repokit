@@ -10,7 +10,7 @@ Repokit treats your codebase's documentation as living context. `dockit` scans t
 
 The `/repokit` hub orchestrates the loop. Works with **Claude Code**, **Gemini CLI**, and **GitHub Copilot CLI**.
 
-> **Sibling plugin:** ticket creation lives in [tikkit](https://github.com/TheLampshady/tikkit) — `/tik`, `/figtik`, `/stitchtik`, `/modernizer`. Both plugins write to the same `specs/backlog.md` and can be installed together.
+> **Sibling plugin:** ticket creation lives in [tikkit](https://github.com/TheLampshady/tikkit) — `/tik`, `/figtik`, `/stitchtik`, `/modernizer`. Both plugins write to the same `.backlog/backlog.md` and can be installed together.
 
 ## Install
 
@@ -76,7 +76,7 @@ copilot plugin uninstall https://github.com/TheLampshady/repokit
 | Skill | Command | Purpose | Status |
 |-------|---------|---------|--------|
 | **agentkit** | `/agentkit` | Generate project-level AI agents tailored to your codebase's custom code patterns. Supports Claude, Gemini, and Copilot. | WIP |
-| **dockit** | `/dockit` | Generate, sync, check, and migrate project documentation. Scales by project size, auto-detects frameworks. | Ready |
+| **dockit** | `/dockit` | Generate, sync, check, audit, migrate, and refresh diagrams in project documentation. Scales by project size, auto-detects frameworks. | Ready |
 | **onboard** | `/onboard` | Create personalized onboarding plans for new team members based on role or feature focus. | Ready |
 | **repokit** | `/repokit` | Show the full tool menu and get guided to the right tool. | Ready |
 
@@ -92,10 +92,10 @@ copilot plugin uninstall https://github.com/TheLampshady/repokit
 
 ## Ticket System
 
-Repokit consumes (and contributes to) a shared backlog under `specs/`:
+Repokit consumes (and contributes to) a shared backlog under `.backlog/`:
 
 ```
-specs/
+.backlog/
 ├── backlog.md       ← master checklist, items tagged by source
 └── tickets/
     ├── add-tests.md
@@ -198,7 +198,7 @@ graph TD
         direction TB
         Docs[("docs/<br/>README · ARCHITECTURE")]
         SME["SME Agents<br/>Custom-code experts<br/>generated per-project"]
-        Spec[("specs/<br/>backlog.md · tickets/")]
+        Spec[(".backlog/<br/>backlog.md · tickets/")]
     end
 
     CA["Code Assist<br/>Claude · Gemini · Copilot"]
@@ -330,7 +330,6 @@ repokit/
 │   ├── dockit/
 │   ├── onboard/
 │   └── repokit/
-├── .agents/skills → skills/  ← symlink for Gemini (git clone resolves it)
 ├── agents/                  ← distributed agents (feedback-loop)
 ├── .claude/agents/          ← internal dev tools (component-reviewer)
 ├── .claude-plugin/          ← Claude plugin + marketplace metadata

@@ -403,27 +403,49 @@ Variable substitution in the manifest:
 
 ### Context File: `GEMINI.md`
 
-The `contextFileName` field points to a Markdown file loaded at the start of every Gemini CLI session where this extension is active. Use it to:
-- Describe what tools are available
-- Explain how to invoke skills and commands
-- Set up any persistent instructions
+The `contextFileName` field points to a Markdown file Gemini loads when the extension activates and concatenates into every prompt during that session ([docs](https://geminicli.com/docs/cli/gemini-md/)). The cost is paid per turn, in every project where your extension is installed — so this file's contents should be the *minimum* an agent needs to behave correctly with your tools, not a feature pitch.
 
 > **Important**: Write `GEMINI.md` as tool documentation, not as project-specific notes. The same file is loaded in every project where the extension is installed — avoid project-specific references.
 
-Example:
+#### What's worth the token cost
+
+| Worth it | Skip it |
+|----------|---------|
+| Conventions the agent must follow but can't auto-discover (where to write tickets, naming rules, shared file locations) | Lists of available skills — Gemini auto-discovers them from their descriptions |
+| Cross-plugin contracts (e.g., "if tikkit is also installed, both write to `.backlog/`") | Lists of distributed agents — they auto-trigger from their own descriptions |
+| Architectural framing (one or two sentences) so the agent knows what your toolkit is for | Lists of active policies — `policies.toml` enforces them regardless of agent awareness |
+| | Anything already in `README.md` for human users |
+| | Self-evident facts derivable from project shape |
+
+The pattern across real Gemini extensions is sparse. [`gemini-cli-extensions/looker-conversational-analytics`](https://github.com/gemini-cli-extensions/looker-conversational-analytics) is ~40 lines and references tools by name without listing them inline. Some extensions ship no `contextFileName` at all (e.g., [`upstash/context7`](https://github.com/upstash/context7/blob/master/gemini-extension.json)).
+
+#### Size guidance
+
+- Aim for **~12–50 lines / under 500 tokens** — every line is paid every turn.
+- Multiple guides converge on "under 300 lines, ideally under 100." See [GitHub's analysis of 2,500+ AGENTS.md files](https://github.blog/ai-and-ml/github-copilot/how-to-write-a-great-agents-md-lessons-from-over-2500-repositories/).
+- Codex CLI silently truncates past 64 KiB.
+
+#### Known issue
+
+There's an open [bug (#15519)](https://github.com/google-gemini/gemini-cli/issues/15519) where an extension's `GEMINI.md` can be loaded twice due to a conflict between auto-discovery and the extension loader. Worth being aware of when budgeting tokens.
+
+#### Example (lean)
 
 ```markdown
 # My Toolkit
 
-You have access to the following tools from the my-extension extension:
+**Brief tagline.** One sentence on what the toolkit does.
 
-## Available Skills
-- `/review` — Review code for quality, security, and performance issues
-- `/docs` — Generate or update documentation for the current file
+> Sibling extension: [other-tool](url) — both write to the same shared backlog if installed together.
 
-## Usage
-Invoke any skill using the slash command. Skills work with the current file context.
+## Shared Conventions
+
+Tickets go to `.backlog/backlog.md`. Tag yours with `[my-toolkit]` to distinguish from sibling tools.
+
+Check `.backlog/backlog.md` before creating a ticket — avoid duplicates.
 ```
+
+Skills, agents, and policies all auto-discover or auto-enforce — listing them in `GEMINI.md` is paid token cost without behavioral payoff.
 
 ### Custom Commands (`commands/*.toml`)
 
@@ -530,6 +552,22 @@ ln -s ../skills skills
 | Agent `model` values | Aliases: `sonnet`, `opus`, `haiku`, `inherit` | Model IDs: `gemini-2.5-pro` |
 | Agent turn limit field | `maxTurns` (camelCase) | `max_turns` (snake_case) |
 | Agent confirmation | Per-step | YOLO mode (no confirmation) |
+
+### AGENTS.md: Emerging Cross-Tool Standard
+
+[AGENTS.md](https://agents.md/) is a vendor-neutral context-file standard declared in 2025. It's recognized by **Codex CLI, Copilot CLI, Gemini CLI, Cursor, and Claude Code** — 20,000+ public repos use it. The recommended pattern:
+
+- **`AGENTS.md`** at repo root — single source of truth for "context an agent needs in this project"
+- **`CLAUDE.md`, `GEMINI.md`, `.cursorrules`** — thin pointers to `AGENTS.md`, or omitted entirely
+
+This avoids the "three drifting copies" problem where each tool's context file falls out of sync with the others.
+
+**Important distinction for extension/plugin authors:** the two roles serve different audiences. `AGENTS.md` at your repo root briefs *developers working on your extension*. Gemini's `contextFileName` (when it's distributed via `gemini-extension.json`) briefs *users who installed your extension* — concatenated into their sessions in their own projects. They can be the same file if the audiences align, but they often don't, and conflating them by default produces context bloat for whichever audience didn't need the other half.
+
+See:
+- [agents.md spec](https://agents.md/)
+- [How to write a great AGENTS.md — GitHub blog](https://github.blog/ai-and-ml/github-copilot/how-to-write-a-great-agents-md-lessons-from-over-2500-repositories/)
+- [AI Coding Config Files Guide — DeployHQ](https://www.deployhq.com/blog/ai-coding-config-files-guide)
 
 ---
 

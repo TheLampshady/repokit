@@ -234,7 +234,7 @@ This is not yet implemented; the current AGENT-SIZING heuristic uses inferred si
 - **Thresholds.** LOC, method-count, Ca/Ce thresholds are language- and project-dependent. Where do defaults live — modernizer's language reference files, or a per-project `foundations.config`?
 - **Detection without metrics tooling.** Many projects don't have SonarQube. How much can the auditor do with `git`, `grep`, and language-native tools alone?
 - **Lifecycle states.** Backstage uses `experimental | production | deprecated`. Do we need a fourth state for "under refactor"?
-- **Cross-plugin contract.** Auditor (repokit) emits signals; modernizer (tikkit) consumes them. What's the on-disk format — a JSON file in `specs/`? Backlog entries with a structured suffix?
+- **Cross-plugin contract.** Auditor (repokit) emits signals; modernizer (tikkit) consumes them. What's the on-disk format — a JSON file in `.backlog/`? Backlog entries with a structured suffix?
 - **Cluster field in FOUNDATIONS.md.** Section 6 implies an optional `cluster: <name>` field per row would let teams override agentkit's grouping deterministically. Should dockit's template add it? When does the inferred-grouping path stop being good enough?
 - **Change-coupling computation cost.** The git-log analysis in § 6 is the strongest grouping signal but the most expensive. Is there a lightweight pre-computed form (e.g., a `.dockit/coupling.json` cache refreshed during `/dockit sync`) that agentkit could read instead of recomputing during planning?
 

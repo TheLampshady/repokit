@@ -270,10 +270,10 @@ bundle exec rspec 2>/dev/null || bundle exec rake test
 
 If any check produced issues that could not be auto-fixed and require significant manual effort, create tickets for them.
 
-1. Check if `specs/backlog.md` exists — create `specs/` directory if needed
+1. Check if `.backlog/backlog.md` exists — create `.backlog/` directory if needed
 2. For each unfixable issue:
-   - Create `specs/tickets/<slug>.md` with the issue details, error output, and suggested fix approach
-   - Append to `specs/backlog.md`: `- [ ] Description [feedback-loop] → tickets/<slug>.md`
+   - Create `.backlog/tickets/<slug>.md` with the issue details, error output, and suggested fix approach
+   - Append to `.backlog/backlog.md`: `- [ ] Description [feedback-loop] → tickets/<slug>.md`
 3. Check existing backlog entries first to avoid duplicates
 
 **Only create tickets for:**

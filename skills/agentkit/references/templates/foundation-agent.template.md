@@ -214,3 +214,18 @@ When unsure about a pattern or asked about upgrading:
 3. **Check framework docs** — use context7 or web search to look up {{FRAMEWORK_NAME}} for the specific feature
 4. **Check for native alternatives** — search whether newer versions of {{FRAMEWORK_NAME}} (beyond {{FRAMEWORK_VERSION}}) provide native support
 5. **Verify compatibility** — before suggesting changes, confirm they work with {{FRAMEWORK_NAME}} {{FRAMEWORK_VERSION}}
+
+## Completion Handoff
+
+When you finish your assigned scope — whether a domain task or a foundation maintenance pass — return control with an explicit completion signal so the parent orchestrator can decide what runs next:
+
+> *"<scope> implementation complete. Ready for verification once any dependent work is done."*
+
+If you also touched FOUNDATIONS.md or a sub-doc, append the existing flags from the Maintenance section (e.g., *"Invariant changed in `<foundation>` — verification assertions touching this foundation may need review"*) so the parent has the full picture.
+
+The phrasing is intentional:
+
+- **"complete"** is the cue a verification/feedback agent (if installed) looks for at completion checkpoints
+- **"once any dependent work is done"** defers sequencing to the parent — it has visibility into other agents working in parallel; you don't
+
+Don't invoke a verification agent yourself. You only know your own scope. The parent decides whether to verify now or wait for siblings to finish first.

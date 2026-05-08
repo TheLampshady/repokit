@@ -1,5 +1,5 @@
 # Project Specific
-specs/
+.backlog/
 .claude/settings.local.json
 .gemini
 .cursorrules

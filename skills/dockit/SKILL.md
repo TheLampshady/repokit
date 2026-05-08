@@ -98,7 +98,7 @@ Explicit user intent (e.g. "audit my docs", "run sync", "migrate") always wins o
 | `init` | Questions → Plan → Confirm → Generate all docs from templates | Yes | Can restructure |
 | `sync` | Git diff → update stale sections → regenerate diagrams if needed; removes docs for removed code | Only for prose-heavy deletions | Removes code-derived sections for removed features |
 | `check` | Detect drift → exit 0 (current) or exit 1 (stale) | No | Read-only |
-| `audit` | Extract references from docs → verify against codebase → report broken refs. See [AUDIT.md](./references/guides/AUDIT.md) | No | Read-only |
+| `audit` | Extract references → verify against codebase → redundancy check (flag sections recoverable from one source file) → report. See [AUDIT.md](./references/guides/AUDIT.md) | No | Read-only |
 | `migrate` | Questions → Plan → Confirm → merge into existing files | Yes | Can restructure |
 | `diagrams` | Generate/update mermaid diagrams only | No | Updates diagrams only |
 
@@ -141,6 +141,8 @@ Show plan and offer options:
 ### Phase 4: Execute & Generate
 
 Run the per-mode flow from the [Explicit Modes](#explicit-modes) table above. Generation is scaled to project size — see [Project Scaling](#project-scaling) below for which docs each tier produces.
+
+When filling sections in `init` / `migrate` / `sync`, apply the **Earn the Heading** rule: a section's body must answer a question that requires reading multiple files or talking to a human. If the answer is recoverable from a single source file in 60 seconds, the section's body is redundant — leave the heading (the section name is a contract for downstream consumers) and write `[TODO: <question>]` underneath instead of synthesizing filler. Surface those `[TODO:]` markers in the completion report as "consider adding" prompts. See [WRITING-GUIDE.md § Earn the Heading](./references/guides/WRITING-GUIDE.md#earn-the-heading) for the full rule, examples, and the derivable-vs-non-derivable rubric.
 
 ### Phase 5: Validate & Report
 

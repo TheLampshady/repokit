@@ -16,7 +16,7 @@ Gather every markdown file that constitutes project documentation:
 - `CLAUDE.md`, `GEMINI.md`, `CONTRIBUTING.md`, `CHANGELOG.md`
 - Any `.md` files referenced by the above via links
 
-Skip files inside `node_modules/`, `.git/`, `vendor/`, `dist/`, `build/`, and `specs/tickets/`.
+Skip files inside `node_modules/`, `.git/`, `vendor/`, `dist/`, `build/`, and `.backlog/tickets/`.
 
 ### Step 2: Extract references
 
@@ -149,6 +149,51 @@ Present findings grouped by doc file, ordered by severity (broken first, then mo
 ```
 
 Adapt the report to the project's actual findings — if there are no moved references, skip that section. If everything is verified, say so and stop.
+
+---
+
+### Step 5: Redundancy check
+
+After verifying references exist, do a second pass that asks: *"Could a reader recover this section by reading one file in the repo for 60 seconds?"* This catches the failure mode where a doc section faithfully describes the codebase but adds nothing the codebase doesn't already say. A section can have zero broken references and still be redundant.
+
+This pass enforces the [Earn the Heading](./WRITING-GUIDE.md#earn-the-heading) rule from the writing guide — applied retrospectively to docs that already exist.
+
+#### What to flag
+
+For each section in each doc, classify:
+
+| Category | Heuristic | Action |
+|----------|-----------|--------|
+| **Recapitulation** | Section content can be reproduced by listing files in a directory or copying a config block | Flag as "likely redundant — replace with link to source" |
+| **Single-file paraphrase** | Section restates one source file (e.g., re-listing `package.json` scripts as a table, dumping env vars from `.env.example`) | Flag with the source file name |
+| **Cross-reference** | Section connects multiple files, explains *why* decisions were made, or encodes constraints not in code | Skip — this is non-derivable and earns its place |
+
+#### Procedure
+
+1. For each section, identify its likely "source file" — the single file in the repo that the section reads like it's describing (router for routes, `package.json` for scripts, `.env.example` for env vars, etc.).
+2. Read that source file.
+3. Ask: if the doc section were deleted and a reader were given only this file, would they reach the same understanding? If yes, flag it.
+4. Sections that span multiple files (architecture overviews, foundation tables, design decisions, principles) default to *not flagged*, since they encode relationships the source files don't.
+
+Be conservative — false positives here are worse than false negatives. Flag only when the redundancy is unmistakable, and never flag a section that explains *why* something was done.
+
+#### Report addition
+
+Add a "Redundancy" section to the audit report, after the broken/moved/unverified summary:
+
+```markdown
+### Redundancy
+
+| Doc | Section | Likely source | Recommendation |
+|-----|---------|---------------|----------------|
+| README.md | "Project Structure" | `ls src/` listing | Replace with link to ARCHITECTURE.md |
+| README.md | "Available Scripts" | `package.json` | Drop; keep one-line pointer |
+| ARCHITECTURE.md | "Application Structure" | directory tree | Drop; keep diagram only |
+```
+
+If nothing is redundant, omit the section.
+
+> **Don't auto-fix.** This pass surfaces findings; deletion is the human's call. A section that *looks* redundant may have been deliberately written so a reader doesn't have to leave the doc.
 
 ---
 

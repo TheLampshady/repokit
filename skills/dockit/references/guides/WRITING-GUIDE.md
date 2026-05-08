@@ -22,6 +22,40 @@ For each section, answer:
 
 ---
 
+## Earn the Heading
+
+A section earns its place when it answers a question that requires reading multiple files, understanding cross-feature usage, or talking to a human. If a reader could recover the content by reading one file in 60 seconds, the section is redundant with the codebase — and the docs are training the team to skim past it.
+
+This rule decides what goes *under* a heading, not whether the heading exists. Stable section names are still a contract (see [Stable Section Names](#stable-section-names)) — agentkit, feedback-loop, onboard, and `sync` look for those headings whether or not they're populated. So when source material is empty, render the heading with a `[TODO:]` body, not synthesized filler.
+
+### Derivable vs non-derivable
+
+| Derivable from one file | Non-derivable |
+|-------------------------|---------------|
+| List of files in `src/` | Why the project is split into these modules |
+| Routes copied from a router file | Which routes are stable contracts vs internal |
+| Env vars copied from `.env.example` | Which env vars must differ per environment and why |
+| Commands copied from `package.json` scripts | Which command runs in which workflow and what gates it |
+| Class members from a single definition | How this class is consumed across features |
+
+Rule of thumb: if your generated content recapitulates the file the generator just read, drop it. If it explains *why* or *how it relates to other files*, keep it.
+
+### How to apply during generation
+
+When filling a section during `init` / `migrate` / `sync`:
+
+1. Try to find content that requires reading multiple files or interviewing the human.
+2. If found, write it.
+3. If not found, leave the heading and write a `[TODO:]` line underneath that frames the question the human should answer. Examples:
+   - `[TODO: Why this stack? What was rejected?]`
+   - `[TODO: What does each environment differ on?]`
+   - `[TODO: Which integrations are critical-path vs best-effort?]`
+4. Surface the `[TODO:]` markers in the completion summary as "consider adding" prompts so the human knows what's still owed.
+
+A `[TODO:]` placeholder is more honest than a paragraph of synthesized filler — and it invites the human to contribute the part only they can write. The audit mode's redundancy check (see [AUDIT.md § Redundancy check](./AUDIT.md#step-5-redundancy-check)) is the back-stop that catches sections where this rule wasn't applied.
+
+---
+
 ## Section Lead-ins
 
 Every major section (##) should have a 1-3 sentence introduction before diving into commands, tables, or code. This orients the reader.

@@ -22,7 +22,7 @@ This repo distributes that toolkit as a Claude plugin, a Gemini extension, and a
 
 There is no build system or compiled code. Everything is Markdown, TOML, and JSON.
 
-> **Sibling plugin:** ticket creation (tik, figtik, stitchtik, modernizer + auditor agent) lives in [tikkit](https://github.com/TheLampshady/tikkit). Both plugins write to the same `specs/backlog.md` if installed together.
+> **Sibling plugin:** ticket creation (tik, figtik, stitchtik, modernizer + auditor agent) lives in [tikkit](https://github.com/TheLampshady/tikkit). Both plugins write to the same `.backlog/backlog.md` if installed together.
 
 ## Directory Map
 
@@ -32,13 +32,12 @@ There is no build system or compiled code. Everything is Markdown, TOML, and JSO
 | `skills/onboard/` | Onboarding skill — creates phased plans for new devs |
 | `skills/agentkit/` | Agent generator skill — analyzes custom code, creates project-level agents for Claude/Gemini/Copilot |
 | `skills/repokit/` | Maintenance hub — repo health dashboard, post-change sync, project bootstrap (status, sync, init) |
-| `.agents/skills/` | Symlink to `skills/` for Gemini cross-compatibility |
 | `agents/` | Distributed agents bundled with the plugin (feedback-loop) |
 | `.claude/agents/` | Internal dev-only agents — NOT distributed (component-reviewer only) |
 | `.claude-plugin/` | Claude plugin metadata (`plugin.json`) and marketplace catalog (`marketplace.json`) |
 | `.mcp.json` | Bundled MCP servers (context7 for library documentation) |
 | `policies/` | Gemini CLI policy engine rules |
-| `specs/` | Ticket system — created at runtime by agents, gitignored in this repo |
+| `.backlog/` | Ticket system — created at runtime by agents, gitignored in this repo |
 | `GEMINI.md` | Gemini extension context (tool docs, not project context) |
 | `gemini-extension.json` | Gemini extension manifest |
 
@@ -46,11 +45,11 @@ There is no build system or compiled code. Everything is Markdown, TOML, and JSO
 
 ### Skills (`skills/`, cross-platform)
 
-Skills have YAML frontmatter (`name`, `description`, `user-invocable: true`) and load on demand. Claude discovers from `skills/` at plugin root; Gemini discovers from `.agents/skills/` (symlinked to `skills/`); Copilot discovers from `skills/` via plugin install.
+Skills have YAML frontmatter (`name`, `description`, `user-invocable: true`) and load on demand. Claude, Gemini, and Copilot all discover from `skills/` at the plugin root.
 
 | Skill | Modes | Key Behavior |
 |-------|-------|-------------|
-| `dockit` | init, sync, check, migrate, diagrams | Scales docs by project size; detects frameworks; never destroys content |
+| `dockit` | init, sync, check, audit, migrate, diagrams | Scales docs by project size; detects frameworks; never destroys content |
 | `onboard` | (single mode) | Reads existing docs first; asks for role before proceeding; chat-only, creates no files |
 | `agentkit` | (single mode) | Analyzes custom code; generates project-level agents for Claude, Gemini, Copilot; scales by project size |
 | `repokit` | status, sync, init | Maintenance hub — orchestrates other tools; repo health dashboard, post-change sync, project bootstrap |
@@ -69,11 +68,11 @@ Agents auto-trigger based on their description. They run in isolated context win
 |-------|---------|
 | `component-reviewer` | Reviews skills, agents, and commands for frontmatter correctness, description quality, and cross-platform compatibility — uses Opus, internal only |
 
-### Ticket System (`specs/`)
+### Ticket System (`.backlog/`)
 
-Repokit consumes (and contributes to) a shared `specs/` directory in the consuming project:
-- `specs/backlog.md` — master checklist, one line per item, tagged by source
-- `specs/tickets/<slug>.md` or `specs/tickets/<slug>/ticket.md` — individual tickets with full context
+Repokit consumes (and contributes to) a shared `.backlog/` directory in the consuming project:
+- `.backlog/backlog.md` — master checklist, one line per item, tagged by source
+- `.backlog/tickets/<slug>.md` or `.backlog/tickets/<slug>/ticket.md` — individual tickets with full context
 
 Format in `backlog.md` — position in the list IS the priority/dependency order:
 ```
@@ -82,11 +81,11 @@ Format in `backlog.md` — position in the list IS the priority/dependency order
 
 All skills use plain kebab-case slugs — no numeric prefixes. Dependencies are expressed via position in the backlog and references inside each ticket.
 
-Always check `specs/backlog.md` before creating a ticket to avoid duplicates.
+Always check `.backlog/backlog.md` before creating a ticket to avoid duplicates.
 
 ### Cross-plugin contract with tikkit
 
-If [tikkit](https://github.com/TheLampshady/tikkit) is installed in the same project, both plugins share `specs/backlog.md`. Tag ownership:
+If [tikkit](https://github.com/TheLampshady/tikkit) is installed in the same project, both plugins share `.backlog/backlog.md`. Tag ownership:
 
 | Tag | Owner |
 |-----|-------|
@@ -124,7 +123,7 @@ The `plugins/` subdirectory no longer exists — the root is the plugin.
 
 | Category | Rules |
 |----------|-------|
-| Destructive ops | Confirm `rm -rf`, confirm deleting `specs/` or `agents/` dirs |
+| Destructive ops | Confirm `rm -rf`, confirm deleting `.backlog/` or `agents/` dirs |
 | Git | Confirm `git push` |
 | Secrets | Deny reading `.env`/`id_rsa`/`passwd`, deny writing to `.env*` |
 | Context files | Confirm before overwriting `CLAUDE.md` or `GEMINI.md` |
@@ -133,10 +132,11 @@ The `plugins/` subdirectory no longer exists — the root is the plugin.
 ## Development Commands
 
 ```bash
-make setup      # First-time setup: install pre-commit hooks + link Gemini extension
+make setup      # First-time setup: install pre-commit hooks, link Gemini extension, install Claude plugin
 make check      # Run all pre-commit validations (JSON, TOML, YAML)
-make link       # Link Gemini extension for local testing
-make status     # Show open backlog items and extension link status
+make gemini     # Link Gemini extension for local testing
+make claude     # Install Claude plugin locally for testing
+make status     # Show open backlog items and extension/plugin install status
 make help       # List all targets
 ```
 

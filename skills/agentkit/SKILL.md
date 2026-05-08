@@ -605,17 +605,19 @@ Keep the full description under 1024 characters. Full pattern guide with example
 
 9. **Research** — project docs first, framework docs via context7 second, check for native alternatives third.
 
+10. **Completion Handoff** — instructs the agent to emit a "ready for verification" signal when its scope is done, so a verification agent (if installed) triggers cleanly and the parent can sequence around dependent agents. Verbatim phrasing comes from the template — don't paraphrase, the wording is tuned to match feedback-loop's triggering cues without naming it.
+
 **Additional sections for foundation-owner agents (from foundation-agent.template.md):**
 
-10. **Owned Foundations** — table of foundations this agent owns (name, path, status, sub-doc).
+11. **Owned Foundations** — table of foundations this agent owns (name, path, status, sub-doc).
 
-11. **Invariants (hot memory)** — copied verbatim from FOUNDATIONS.md per foundation.
+12. **Invariants (hot memory)** — copied verbatim from FOUNDATIONS.md per foundation.
 
-12. **Public API (hot memory)** — code blocks pulled from FOUNDATIONS.md per foundation.
+13. **Public API (hot memory)** — code blocks pulled from FOUNDATIONS.md per foundation.
 
-13. **Maintenance** — Change Checklist (verbatim from FOUNDATIONS.md), When to Update Docs table, Invariant Change Protocol, Cross-Doc Consistency Check.
+14. **Maintenance** — Change Checklist (verbatim from FOUNDATIONS.md), When to Update Docs table, Invariant Change Protocol, Cross-Doc Consistency Check.
 
-14. **agentkit-managed marker** — HTML comment near the top of the body: `<!-- agentkit-managed -->`. Marks the agent as agentkit-generated so sync mode knows it's safe to update without prompting; hand-authored agents (no marker) are always treated as off-limits unless the user opts in.
+15. **agentkit-managed marker** — HTML comment near the top of the body: `<!-- agentkit-managed -->`. Marks the agent as agentkit-generated so sync mode knows it's safe to update without prompting; hand-authored agents (no marker) are always treated as off-limits unless the user opts in.
 
 #### Step 3 — Pre-write validation (do not skip)
 
@@ -629,6 +631,7 @@ Before writing the file, confirm every requirement is satisfied:
 | Frontmatter contains platform-specific required fields | per `platforms.md`: **Claude** foundation-owners need `tools` + `permissionMode: acceptEdits` (both enforced); **Copilot** foundation-owners need `editFile`/`createFile`/`terminal` in `tools` (enforced); **Gemini** does NOT enforce frontmatter tools — do NOT add a `tools` field on Gemini, scope comes from the body |
 | Body has `<!-- agentkit-managed -->` near the top | yes (agentkit-generated agents only) |
 | Body has Owned Foundations + Maintenance sections | yes (foundation-owner agents only) |
+| Body has Completion Handoff section with the verbatim "ready for verification" phrasing | yes (both templates) |
 
 **If any check fails, fix it before writing.** Do not write a file without `name` and `description` — that produces a file no platform discovers. It's worse than not generating the agent at all, because the user thinks they have an agent and don't.
 
