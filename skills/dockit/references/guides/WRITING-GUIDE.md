@@ -2,6 +2,10 @@
 
 How to write documentation that explains, not just instructs.
 
+## Audience
+
+These practices serve both human readers and downstream AI tools (agentkit, feedback-loop, onboard, and external agents that load the project's docs as context). The two audiences need almost the same things — terse explanations, explicit cross-links, exact strings, purpose-bearing tables — so there's one set of rules below, not two. Where they genuinely diverge (tone, phased onboarding), the right move is to layer rather than fork: keep the docs flat and complete, and let downstream tools (like onboard) build personalized views on top.
+
 ## The Core Principle
 
 **Documentation should explain, not just instruct.** Every section needs context.
@@ -167,6 +171,26 @@ This principle applies to ALL generated documentation:
 | **ENVIRONMENTS.md** | What each variable controls |
 | **CLOUD.md** | What happens during deployment |
 | **TROUBLESHOOTING.md** | Causes, not just fixes |
+
+---
+
+## Stable Section Names
+
+Downstream consumers — `agentkit`, `feedback-loop`, `onboard`, and dockit's own `sync` mode — depend on predictable structure across generated docs. They look for `## Foundations` in FOUNDATIONS.md, `## Quick Start` in README.md, env var tables under known headings. When a template author renames `## Architecture` to `## System Design`, the consumers don't break loudly — they silently miss the section, and project agents lose their context.
+
+Treat canonical section names in the core templates as a contract.
+
+**Safe changes:**
+- Add new sections — additive changes don't break consumers
+- Rephrase the body under a heading — only the heading is the contract
+- Add subsections (`### Local Setup` under `## Environment Variables`)
+
+**Breaking changes (avoid or coordinate):**
+- Renaming top-level headings in core templates
+- Moving a stable section to a different file (`FOUNDATIONS.md` content belongs in `FOUNDATIONS.md`, even if the project is small)
+- Splitting a stable section across multiple files
+
+If a rename is genuinely needed, update the consumer tools at the same time so docs and consumers stay in sync. Don't ship a renamed heading and hope nothing downstream notices.
 
 ---
 

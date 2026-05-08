@@ -1,12 +1,12 @@
 ---
 name: dockit
-description: 'Generate, update, and maintain project documentation. Use when asked to: create/write/add docs, generate/make README, setup documentation, document this project, check doc freshness, explain doc structure, sync docs with code, verify docs against code, audit docs for accuracy, or cross-reference docs with codebase. Modes: init, sync, check, audit, migrate, diagrams. Auto-detects frameworks and scales by project size.'
+description: 'Generate, update, and maintain project documentation. Use when asked to: create/write/add docs, generate/make/write a README, setup documentation, document this/my project/codebase, fill in docs, check doc freshness, explain doc structure, sync docs with code, verify docs against code, audit docs for accuracy, or cross-reference docs with codebase. Modes: init, sync, check, audit, migrate, diagrams. Auto-detects frameworks and scales by project size.'
 user-invocable: true
 ---
 
 # dockit
 
-Generate and maintain project documentation for humans and AI agents.
+Generate and maintain project documentation that humans read and that downstream AI tools (agentkit, feedback-loop, onboard) consume as their context layer.
 
 **Modes:** `init` | `sync` | `check` | `audit` | `migrate` | `diagrams`
 
@@ -80,6 +80,8 @@ Auto-detects what to do based on project state.
 
 ### Auto-Detection
 
+Explicit user intent (e.g. "audit my docs", "run sync", "migrate") always wins over the state-based rules below. Only fall through to detection when the user is non-specific.
+
 | Condition | Action |
 |-----------|--------|
 | No docs/ or README.md | → init |
@@ -91,14 +93,14 @@ Auto-detects what to do based on project state.
 
 ### Explicit Modes
 
-| Mode | Action | Prompts? | Destructive? |
-|------|--------|----------|--------------|
-| `init` | Full doc generation | Yes | Can restructure |
-| `sync` | Update stale sections; remove docs for removed code | Only for prose-heavy deletions | Removes code-derived sections for removed features |
-| `check` | CI mode - exit codes only | No | Read-only |
-| `audit` | Verify doc claims against code | No | Read-only |
-| `migrate` | Restructure legacy docs | Yes | Can restructure |
-| `diagrams` | Generate mermaid diagrams only | No | Updates diagrams only |
+| Mode | Flow | Prompts? | Destructive? |
+|------|------|----------|--------------|
+| `init` | Questions → Plan → Confirm → Generate all docs from templates | Yes | Can restructure |
+| `sync` | Git diff → update stale sections → regenerate diagrams if needed; removes docs for removed code | Only for prose-heavy deletions | Removes code-derived sections for removed features |
+| `check` | Detect drift → exit 0 (current) or exit 1 (stale) | No | Read-only |
+| `audit` | Extract references from docs → verify against codebase → report broken refs. See [AUDIT.md](./references/guides/AUDIT.md) | No | Read-only |
+| `migrate` | Questions → Plan → Confirm → merge into existing files | Yes | Can restructure |
+| `diagrams` | Generate/update mermaid diagrams only | No | Updates diagrams only |
 
 **Read-only modes:** `check`, `audit`
 **Auto-write modes** (no prompts for routine changes): `sync`, `diagrams`
@@ -114,55 +116,20 @@ Auto-detects what to do based on project state.
 
 1. Auto-detect mode from project state
 2. Detect framework (see `frameworks/_index.md`)
-3. Detect project size (see Project Scaling)
-4. **Detect project name and description** (see below)
+3. Detect project size (see [Project Scaling](#project-scaling))
+4. Detect project name and description — see [DETECTION.md](./references/guides/DETECTION.md)
 5. Check for custom templates (`.dockit/templates/`)
 6. Load framework module or `_default.md`
 7. Extract commands from package.json, Makefile, pyproject.toml
-8. **Discover environment variables** (see below)
+8. Discover environment variables — see [DETECTION.md](./references/guides/DETECTION.md)
 9. Check for constitution at `.specify/memory/constitution.md`
-10. **Scan for foundations** (medium/large only) — see [FOUNDATIONS-DETECTION.md](./references/guides/FOUNDATIONS-DETECTION.md). Score every source file by fan-in × cross-feature × stability; categorise as foundation / hotspot / hidden / pretender. Skipped on small projects.
-
-#### Environment Variable Discovery
-
-**NEVER assume env var names from framework conventions.** Always discover what the project actually uses.
-
-Check these sources in order, accumulating all vars found:
-
-| Source | What to look for |
-|--------|-----------------|
-| `.env.example`, `.env.sample`, `.env.template`, `.env.dist` | All `KEY=` definitions |
-| `Makefile` | `$(VAR)`, `export VAR`, `env VAR=` references |
-| `docker-compose.yml`, `docker-compose.*.yml` | `environment:` and `env_file:` sections |
-| `.github/workflows/*.yml`, `*.gitlab-ci.yml` | `env:` blocks |
-| `settings.py`, `config.py`, `env.py`, `*settings*.py` | `os.environ.get(`, `os.getenv(`, `env(` calls |
-| `manage.py`, `wsgi.py`, `asgi.py` | `os.environ.setdefault(` |
-| Existing docs (`README.md`, `docs/ENVIRONMENTS.md`) | Already-documented vars |
-
-Collect the actual variable names used. If no sources mention `DATABASE_URL` — do not use `DATABASE_URL`. If the project uses `DB_HOST`, `DB_NAME`, `DB_USER` — document those instead.
-
-Only fall back to framework defaults (e.g., `DATABASE_URL`, `SECRET_KEY`) if **no env var sources exist at all** in the project, and mark them as `[TODO: verify var name]`.
-
-#### Project Name & Description Detection
-
-**NEVER ask for project name or description.** Auto-detect from these sources (in priority order):
-
-| Source | Name Field | Description Field |
-|--------|------------|-------------------|
-| `package.json` | `name` | `description` |
-| `pyproject.toml` | `[project] name` | `[project] description` |
-| `Cargo.toml` | `[package] name` | `[package] description` |
-| `setup.py` | `name=` | `description=` |
-| Existing `README.md` | First `# heading` | First paragraph after heading |
-| Directory name | Folder name | (skip) |
-
-If description not found, infer from: file structure, framework detected, or leave as `[TODO: Add project description]`.
+10. Scan for foundations (medium/large only) — see [FOUNDATIONS-DETECTION.md](./references/guides/FOUNDATIONS-DETECTION.md). Score every source file by fan-in × cross-feature × stability; categorise as foundation / hotspot / hidden / pretender. Skipped on small projects.
 
 ### Phase 2: Questions
 
 Ask clarifying questions BEFORE showing plan (max 3-5). Only ask what can't be auto-detected. Skip if confident.
 
-**NEVER ask for:** Project name, project description, framework (auto-detected), project size (auto-detected).
+**Don't ask for** project name, project description, framework, or project size. Each of these is reliably auto-detectable from package manifests, file extensions, and project shape (see Phase 1). Asking the user wastes a turn and signals the skill isn't pulling its weight — they invoked dockit *because* they don't want to spell out what's already in their `package.json`.
 
 ### Phase 3: Plan & Confirm
 
@@ -171,22 +138,11 @@ Show plan and offer options:
 - **Option 2**: Preserve existing doc structure, only add missing sections/files
 - **Option 3**: Exit without changes
 
-### Phase 4: Execute
+### Phase 4: Execute & Generate
 
-| Mode | Behavior |
-|------|----------|
-| **init** | Questions → Plan → Confirm → Generate all docs from templates |
-| **sync** | Git diff → Update stale sections → Regenerate diagrams if needed |
-| **check** | Detect drift → Exit 0 (current) or Exit 1 (stale) |
-| **audit** | Extract references from docs → Verify against codebase → Report broken refs. See [AUDIT.md](./references/guides/AUDIT.md) |
-| **migrate** | Questions → Plan → Confirm → Merge into existing files |
-| **diagrams** | Generate/update mermaid diagrams only |
+Run the per-mode flow from the [Explicit Modes](#explicit-modes) table above. Generation is scaled to project size — see [Project Scaling](#project-scaling) below for which docs each tier produces.
 
-### Phase 5: Generate
-
-Core docs scaled by project size. See Project Scaling below.
-
-### Phase 6: Validate & Report
+### Phase 5: Validate & Report
 
 1. Cross-link all docs
 2. Validate markdown syntax
@@ -225,6 +181,7 @@ See guides for detection logic and document structure details.
 | [WRITING-GUIDE.md](./references/guides/WRITING-GUIDE.md) | How to write explanatory documentation |
 | [DIAGRAMS.md](./references/guides/DIAGRAMS.md) | Mermaid diagram standards |
 | [AUDIT.md](./references/guides/AUDIT.md) | Doc accuracy verification against codebase |
+| [DETECTION.md](./references/guides/DETECTION.md) | Project name, description, and env var discovery |
 | [FOUNDATIONS-DETECTION.md](./references/guides/FOUNDATIONS-DETECTION.md) | How to find foundational code via fan-in, cross-feature usage, and git stability |
 | [GIT-HOOKS.md](./references/guides/GIT-HOOKS.md) | CI/pre-commit integration |
 
@@ -247,9 +204,9 @@ Projects can override default templates.
 
 ### Priority
 
-1. `.dockit/templates/[file]` (project custom)
-2. `templates/[framework]/[file]` (framework specific)
-3. `templates/core/[file]` (default)
+1. `.dockit/templates/[file]` — project custom (highest priority)
+2. `references/templates/[framework]/[file]` — framework-specific
+3. `references/templates/core/[file]` — default fallback
 
 ---
 
@@ -272,16 +229,6 @@ CHANGED=$(git diff --name-only $LAST_SYNC HEAD)
 | .env*, config/ | ENVIRONMENTS.md |
 | infra/, .github/ | CLOUD.md |
 | .specify/memory/constitution.md | PRINCIPLES.md |
-
----
-
-## Templates
-
-| Location | Purpose |
-|----------|---------|
-| `.dockit/templates/` | Project overrides (highest priority) |
-| `references/templates/[framework]/` | Framework-specific |
-| `references/templates/core/` | Default fallback |
 
 ---
 

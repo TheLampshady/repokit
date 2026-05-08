@@ -135,7 +135,7 @@ architecture-beta supports Iconify integration (200k+ icons):
 
 ## Diagram Rules
 
-1. **No parentheses in mermaid node labels** - Use square brackets
+1. **No literal `(` or `)` inside node label text** — they break the parser. Mermaid uses brackets to *define* node shape (`[Square]`, `(Round)`, `{Diamond}`), but the label text inside must stay free of literal parens. Write `API[FastAPI server]` not `API[FastAPI (server)]`.
 2. **Keep focused and readable** - Don't overcrowd
 3. **Label components clearly** - Use descriptive names
 4. **Use architecture-beta for infrastructure** - In CLOUD.md
