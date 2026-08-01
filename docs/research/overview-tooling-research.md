@@ -1,0 +1,110 @@
+# Overview Tooling — Research
+
+**Date:** 2026-08-01
+**Original request:** Research when overview tooling for coding agents is actually useful — and when it is cost without benefit — across both delivery modes: **push** (static, checked-in artifacts: generated summaries, repo maps, wikis) and **pull** (queryable machinery: symbol servers/LSP, code graphs, semantic indexes, RAG stacks).
+**Goal:** Give repokit's init/sync a defensible rule for which overview mechanisms to recommend, withhold, or never ship, per detected project.
+**Constraints:** Anything recommended must be open source and free. Evidence bar: practitioner consensus, upgraded by benchmarks and skeptical reports wherever they exist.
+**Provenance:** This document stands alone — it references no other document in this repository. External claims cite primary sources inline. Positions marked **(repokit hypothesis)** originated in project working discussions, not the literature; they are hypotheses repokit intends to validate by experiment, and evidence cited near them is supporting context, not proof.
+
+**Definition.** *Overview* content describes what code is and where it lives — structure, symbols, summaries, navigation. It is derivable by reading the code, which is exactly why its value is contested: a capable agent can reconstruct it with grep/glob/read at task time. Overview tooling is any mechanism that pre-pays or accelerates that derivation.
+
+---
+
+## Executive summary
+
+**What to do:** never ship or recommend static overview artifacts (checked-in repo maps, generated summaries, knowledge graphs, packers) — they fail everywhere measured; instead, make repokit's detection *recommend or withhold* pull tooling per repo using scale and task-type thresholds, and keep generation only as a gap-filler for doc-barren repos.
+
+- **Static artifacts fail everywhere they've been measured:** the one controlled study found checked-in repository overviews don't improve agent success and raise cost >20%, with LLM-generated ones often mildly hurting ([ETH Zurich](https://arxiv.org/abs/2602.11988)); checked-in repo maps have zero published efficacy evidence and drop the per-turn relevance ranking that makes aider's live map plausible.
+- **Pull tooling wins narrowly and scale-dependently:** Serena won an independent benchmark on large-codebase multi-file refactoring but costs ~4x on lookups ([ManoMano](https://medium.com/manomano-tech/project-aegis-benchmarking-ai-agents-and-why-serena-is-our-new-must-have-311673db35dd)); semantic search's measured value starts around 1,000+ files ([Cursor](https://cursor.com/blog/semsearch)); RAG's cost curve never crosses grep's for small/mid repos ([HarrisonSec](https://harrisonsec.com/blog/agent-retrieval-cost-curve-claude-code-grep-vs-rag/)).
+- **The central claim** **(repokit hypothesis)** — a derivation-cost crossover model: overview tooling earns its keep only when derivation-at-task-time costs the agent more than the tooling's own overhead (schema tokens, setup, staleness, maintenance), and that crossover is a function of repo scale and task type. Small repo + lookup: agentic search wins outright. Large typed repo + structural refactor: symbol tooling wins. Mega-monorepo + conceptual queries: live semantic indexes win. No measured configuration favors static artifacts.
+- **Operational consequence:** repokit's project-size detection should drive recommend-or-withhold decisions in init/sync rather than installing anything by default — the scale-gate rule detailed below.
+
+## Key findings
+
+### Push: static overview artifacts
+
+- **Generated repository overviews measurably don't help — the closest thing to a controlled test of the whole category, and it's negative.** Four agents × 138 tasks × 12 repos: LLM-generated context files reduced success in 5 of 8 settings, added 2.5–3.9 steps per task, raised inference cost 20–23%; repository overviews specifically were unhelpful because agents rediscover that information themselves ([ETH Zurich / LogicStar, arXiv 2602.11988](https://arxiv.org/abs/2602.11988), Feb 2026). Caveats: Python-only, 12 repos, files at repo root.
+- **The gap-filler exception:** with all other documentation removed, generated files *did* help (same study). Static overview generation is defensible on doc-barren repos, net-negative on documented ones.
+- **Checked-in repo maps drop the step that makes the live original plausible.** Aider's repo map is tree-sitter symbol extraction + PageRank-family graph ranking packed into a token budget — but it is **recomputed every turn and personalized to the conversation** ([aider](https://aider.chat/2023/10/22/repomap.html), 2023). Even for the live version, no published ablation isolates the map's contribution (absence claim — confirmed by searching, uncitable by nature); known issues include unrespected token budgets ([issue #752](https://github.com/Aider-AI/aider/issues/752)), multi-minute hangs on large repos ([issue #506](https://github.com/paul-gauthier/aider/issues/506)), and hallucinated external APIs from excluded dependencies ([issue #3603](https://github.com/Aider-AI/aider/issues/3603)). A cottage industry of *static* generators exists — [ariadoss/repomap](https://github.com/ariadoss/repomap) emits a checked-in REPOMAP.md with a ~30ms update hook; [RepoMapper](https://github.com/pdavis68/RepoMapper) extracts aider's logic — and **none has published efficacy evidence**.
+- **Auto-generated wikis are evaluated for human doc quality, never for agent task success.** The CodeWiki paper measures human preference vs DeepWiki (7/9 assessments), not whether agents solving tasks benefit from consuming either ([arXiv 2510.24428](https://arxiv.org/pdf/2510.24428), Oct 2025). Combined with the ETH overview result, the prior for agent-facing wikis should be skeptical.
+- **Staleness is the tax every static artifact pays.** Field audits document agents obeying outdated context with full compliance — "we use Jest" surviving a Vitest migration, dead paths poisoning sessions ([Packmind](https://packmind.com/evaluate-context-ai-coding-agent/), Feb 2026); a linter exists specifically because checked-in agent context rots ([agents-lint](https://github.com/giacomo/agents-lint)). A static overview is this failure mode at maximum surface area: many claims, all derivable, all decaying.
+- **Repo packers/flatteners are the category's extreme case** — paying full token price for 100% derivable content, against measured evidence that stuffed context degrades performance (see context rot below).
+
+### Pull: queryable overview tooling
+
+- **LSP/symbol tooling (Serena): a real win, narrowly scoped.** [Serena](https://github.com/oraios/serena) (MIT, 27.3k stars, actively maintained as of Jul 2026) exposes LSP-backed symbol retrieval and symbolic editing over MCP. The best independent benchmark ([ManoMano, Mar 2026](https://medium.com/manomano-tech/project-aegis-benchmarking-ai-agents-and-why-serena-is-our-new-must-have-311673db35dd) — one 36k-LOC Java service, single run): on a multi-file refactor, Serena was the only configuration to pass all tests (45 min, $27.30) where vanilla Claude failed to build and Claude Code's native LSP left 9 tests failing and hallucinated methods; on simple lookups Serena cost ~4x more and took 60% longer. Practitioner threshold: worth it above ~20k LOC of statically-analyzable code doing write-heavy structural work ([andrew.ooo](https://andrew.ooo/posts/serena-mcp-coding-agent-ide-review/), May 2026 — folklore-grade, not measured).
+- **Pull tooling's overheads are structural, not incidental.** Serena's 29 tool schemas cost ~24k context tokens before any work ([serena-slim](https://github.com/mcpslim/serena-slim) exists to halve it); per-language server setup is fiddly (~30 min/project, ~25% first-try success per one review — [andrew.ooo](https://andrew.ooo/posts/serena-mcp-coding-agent-ide-review/)); and agents *forget the tools exist* after context compaction and grep anyway ([Serena issue #802](https://github.com/oraios/serena/issues/802)) — the documented pull-side failure mode. Claude Code's native LSP (v2.0.74, Dec 2025) absorbed the read-side use case, though not the symbolic-edit win per the ManoMano data.
+- **Semantic search: the strongest pro-index data, and it's scale-gated.** Cursor's ablation: +12.5% average accuracy on their internal codebase-question bench, but the online A/B shows +0.3% code retention overall, rising to +2.6% only on 1,000+-file repos; they recommend semantic **plus** grep, never replacement ([cursor.com/blog/semsearch](https://cursor.com/blog/semsearch), Nov 2025 — vendor-run, private benchmark). Crucially this defends *live, continuously re-indexed* embeddings infrastructure, not anything shippable as files.
+- **Agentic search is the evidence-cheap default the alternatives must beat.** Claude Code ran embeddings + a vector DB internally and dropped it (~May 2025); its creator claims agentic search "outperformed everything. By a lot" — never published ([vadim.blog summary](https://vadim.blog/claude-code-no-indexing/); [Anthropic context engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)). Cline and Sourcegraph independently dropped embeddings for coding assistants, citing chunking tearing logic apart, stale-index divergence on every merge, and ops/privacy costs ([Cline](https://cline.bot/blog/why-cline-doesnt-index-your-codebase-and-why-thats-a-good-thing), May 2025; [Sourcegraph](https://sourcegraph.com/blog/how-cody-understands-your-codebase), Feb 2024) — arguments, not measurements, but convergent ones.
+- **Academic results agree on the shape:** RAG helps weak models on simple tasks and struggles on repo-level tasks ([CodeRAG-Bench, NAACL 2025](https://arxiv.org/abs/2406.14497)); AST-aware chunking fixes a real failure mode for single-digit gains ([cAST, EMNLP 2025](https://arxiv.org/abs/2506.15655)); off-the-shelf embeddings are miscalibrated for agent-style queries ([CORE-Bench](https://arxiv.org/abs/2606.11864), Jun 2026).
+- **The cost-curve analysis puts numbers on the crossover:** total cost = build + maintenance×time + per-query×queries. Grep wins under ~1M LOC with daily churn; RAG amortizes only at mega-monorepo scale with dedicated index teams — "for most small-to-mid-size repos the crossover is never reached" ([HarrisonSec](https://harrisonsec.com/blog/agent-retrieval-cost-curve-claude-code-grep-vs-rag/), May 2026 — analytical, not empirical).
+- **Code knowledge graphs are live infrastructure with no independent efficacy evidence.** Potpie needs Neo4j plus a parsing pipeline; Sourcegraph SCIP (open governance since Mar 2026) is compiler-grade but is CI infrastructure feeding a server ([Sourcegraph](https://sourcegraph.com/blog/what-it-actually-takes-to-run-code-intelligence-in-house)). Zero independent benchmarks show graphs beating agentic search on coding tasks (absence claim — confirmed by searching).
+- **The frontier is retrieval-as-learned-policy, not embeddings.** Cognition's SWE-grep: an RL-trained small model doing parallel retrieval, ~20x faster than model-driven agentic search at equal SWE-bench task completion, tuned for *precision* because "context pollution" hurt more than missed results ([cognition.com/blog/swe-grep](https://cognition.com/blog/swe-grep), Oct 2025 — vendor benchmark).
+
+### Cross-cutting limits
+
+- **Long context does not rescue "just read everything."** Eighteen frontier models all degrade non-uniformly as input grows; serious degradation is possible by 50k tokens in a 200k window ([Chroma, Context Rot](https://www.trychroma.com/research/context-rot), Jul 2025). This caps both index-dumps and noisy grep-loop stuffing: minimal, precise, just-in-time context wins regardless of retrieval mechanism.
+- **One level of on-demand disclosure is optimal; deeper nesting never helps and sometimes breaks accuracy** ([He et al., arXiv 2607.17598](https://arxiv.org/abs/2607.17598), Jul 2026) — and disclosure's benefit is large only when the harness navigates poorly, near-zero when it retrieves well. "Progressive disclosure buys context, not intelligence." Relevant to any overview tooling that structures itself as index-then-drill-down.
+
+## How this applies to repokit
+
+### The scale-gate rule **(repokit hypothesis — this paper's central claim)**
+
+Repokit's position: project detection should not just scale documentation output but *recommend or withhold overview tooling* per repo. The evidence supplies the thresholds; the recommend-don't-install behavior is repokit's design bet. Concretely, in init/sync:
+
+- **< ~20k LOC:** recommend nothing. Agentic search wins outright at this scale; Serena and semantic search are net-negative here ([andrew.ooo](https://andrew.ooo/posts/serena-mcp-coding-agent-ide-review/); [Cursor A/B](https://cursor.com/blog/semsearch); [HarrisonSec](https://harrisonsec.com/blog/agent-retrieval-cost-curve-claude-code-grep-vs-rag/)).
+- **> ~20k LOC, statically-typed, refactor-heavy:** surface Serena (MIT; the free tier is the LSP backend) as an *optional* recommendation with honest caveats: ~24k-token schema overhead ([serena-slim](https://github.com/mcpslim/serena-slim)), setup friction, compaction-forgetting ([issue #802](https://github.com/oraios/serena/issues/802)), and a win that is specific to write-heavy structural work, not lookups ([ManoMano](https://medium.com/manomano-tech/project-aegis-benchmarking-ai-agents-and-why-serena-is-our-new-must-have-311673db35dd)).
+- **1,000+ files:** note that semantic search has measured value at this scale ([Cursor](https://cursor.com/blog/semsearch): +2.6% retention), but the only evidenced form is live re-indexed infrastructure — an honest "consider your editor's built-in indexing" note beats building or shipping anything.
+- **Never recommend:** checked-in repo maps, code knowledge graphs, local RAG stacks for small/mid repos, repo packers. All fail the evidence bar; the static ones also pay the staleness tax at maximum surface area.
+
+### Secondary implications
+
+- **Static overview generation only as gap-filler.** The one setting where generated overview content measurably helped was doc-barren repos ([ETH Zurich](https://arxiv.org/abs/2602.11988)). Generation on an undocumented codebase is defensible; "enriching" a documented repo's agent context with overview prose is where the evidence turns negative. Encode the asymmetry.
+- **If repokit ever emits navigational content, the tolerable form is the pointer, not the map** — one line of existence + location, not structure prose. Per-line admission test ([Anthropic best practices](https://code.claude.com/docs/en/best-practices)): would removing this line cause an agent to make a mistake? Overview prose fails it by construction in documented repos.
+- **Any drill-down structure repokit generates should be exactly one level deep** ([He et al.](https://arxiv.org/abs/2607.17598)).
+
+## Hypotheses to implement
+
+The actionable roll-up of everything marked **(repokit hypothesis)** — each with the concrete change or experiment that would test it:
+
+1. **The derivation-cost crossover model** — encode the scale/task thresholds as repokit's recommendation logic; test by running identical tasks on repos either side of a threshold (e.g., a refactor at 10k vs 50k LOC, with and without Serena) and comparing cost + success against the model's prediction.
+2. **The scale-gate rule (recommend, don't install)** — implement in init/sync: nothing below ~20k LOC, optional Serena for large typed refactor-heavy repos, an editor-indexing note at 1,000+ files, never static maps/graphs/RAG; test by validating recommendations across a sample of real projects and tracking whether users accept or override them (overrides are signal the thresholds are wrong).
+3. **Workload classification** — extend detection beyond size to task type (refactor-heavy vs lookup-heavy), since the ManoMano data suggests task type may dominate scale; test by classifying a repo's recent git history and checking whether the classification predicts where Serena-style tooling pays off.
+
+## Sources
+
+| Source | Type | Why it matters |
+|--------|------|----------------|
+| [arXiv 2602.11988 — Evaluating AGENTS.md (ETH Zurich/LogicStar)](https://arxiv.org/abs/2602.11988) | Controlled study | The category's only controlled test: static overviews don't help, cost >20%; gap-filler exception |
+| [ManoMano Serena benchmark](https://medium.com/manomano-tech/project-aegis-benchmarking-ai-agents-and-why-serena-is-our-new-must-have-311673db35dd) | Independent benchmark (n=1 repo) | Pull tooling's clearest win: large-repo refactoring; 4x lookup penalty |
+| [Cursor semantic search ablation](https://cursor.com/blog/semsearch) | Vendor ablation + A/B | Strongest pro-index data; value concentrates at 1,000+ files |
+| [HarrisonSec — agent retrieval cost curve](https://harrisonsec.com/blog/agent-retrieval-cost-curve-claude-code-grep-vs-rag/) | Analytical blog | The crossover math; small/mid repos never reach it |
+| [Chroma — Context Rot](https://www.trychroma.com/research/context-rot) | Technical report, 18 models | Caps "just read everything"; precision beats volume |
+| [He et al., arXiv 2607.17598 — progressive disclosure](https://arxiv.org/abs/2607.17598) | Controlled study | One disclosure level optimal; deeper nesting backfires |
+| [aider — repository map](https://aider.chat/2023/10/22/repomap.html) | Official docs (2023) | The live per-turn ranking that static clones drop; never ablated |
+| [Serena (oraios)](https://github.com/oraios/serena) + [issue #802](https://github.com/oraios/serena/issues/802) | Official repo + issue | Tool status; the compaction-forgetting pull failure |
+| [serena-slim](https://github.com/mcpslim/serena-slim) | OSS fork | Existence proof of the ~24k-token schema overhead |
+| [andrew.ooo — Serena review](https://andrew.ooo/posts/serena-mcp-coding-agent-ide-review/) | Independent review | The >20k LOC threshold; setup friction |
+| [CodeRAG-Bench](https://arxiv.org/abs/2406.14497) | Peer-reviewed (NAACL 2025) | RAG helps weak models/simple tasks, struggles at repo level |
+| [cAST](https://arxiv.org/abs/2506.15655) | Peer-reviewed (EMNLP 2025) | Chunking is a real, fixable RAG failure mode; single-digit gains |
+| [CORE-Bench](https://arxiv.org/abs/2606.11864) | Preprint (2026) | Off-the-shelf embeddings miscalibrated for agent queries |
+| [SWE-grep (Cognition)](https://cognition.com/blog/swe-grep) | Vendor benchmark | Retrieval-as-learned-policy; precision > recall for context |
+| [Cline — why no indexing](https://cline.bot/blog/why-cline-doesnt-index-your-codebase-and-why-thats-a-good-thing) | Vendor position | Convergent no-index arguments: chunking, staleness, ops |
+| [Sourcegraph — how Cody understands your codebase](https://sourcegraph.com/blog/how-cody-understands-your-codebase) | Vendor position (2024) | Dropped embeddings at scale; keyword/graph pivot |
+| [vadim.blog — Claude Code no indexing](https://vadim.blog/claude-code-no-indexing/) | Independent summary | Anthropic's unpublished "by a lot" claim, sourced quotes |
+| [Anthropic — effective context engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) | Vendor guidance | Just-in-time context as the official rationale |
+| [Anthropic — Claude Code best practices](https://code.claude.com/docs/en/best-practices) | Vendor guidance | The per-line admission test |
+| [Packmind — evaluating context](https://packmind.com/evaluate-context-ai-coding-agent/) | Practitioner field review | Stale context obeyed with full compliance |
+| [agents-lint](https://github.com/giacomo/agents-lint) | OSS tool | Existence proof that checked-in agent context rots |
+| [ariadoss/repomap](https://github.com/ariadoss/repomap), [RepoMapper](https://github.com/pdavis68/RepoMapper) | OSS tools | The static-map cottage industry; zero efficacy evidence |
+| [CodeWiki paper](https://arxiv.org/pdf/2510.24428) | Paper (Oct 2025) | Wikis evaluated for human doc quality only, never agent task success |
+| Working discussions, Zach, 2026-07-31 → 2026-08-01 | Conversation | Everything marked **(repokit hypothesis)**: the derivation-cost crossover model and the scale-gate recommend-don't-install rule — to be validated by experiment in repokit |
+
+## Open questions
+
+- **Anthropic's "by a lot" is unpublished.** The strongest anti-index claim rests on internal, unreleased results. If the ablation ever ships, the scale thresholds could move in either direction.
+- **The thresholds are folklore-grade.** Serena's >20k LOC line comes from one reviewer; the ManoMano benchmark is n=1 (one Java service, one task family, single run). Directionally consistent with everything else, but repokit's scale-gate defaults should be labeled as provisional and revisited with evals.
+- **Task type may dominate scale.** The ManoMano data suggests refactor-vs-lookup matters as much as LOC — a large repo doing only lookups may still not want Serena. Whether repokit's detection can cheaply classify *workload*, not just size, is unexplored **(repokit hypothesis)**.
+- **Does the pull-side forgetting problem cap all MCP overview tooling?** If agents drop tool usage after compaction ([Serena #802](https://github.com/oraios/serena/issues/802)), recommendations may need to pair tooling with a re-prompting mechanism — unmeasured territory.
+- **Whether nested, scoped static artifacts escape the ETH negative result** is untested — the study used root-level files; the progressive-disclosure result hints one level of scoping might change the answer.
+- **Drift detection is deliberately out of scope here** — the staleness findings above motivate it, but verifying that agent-facing claims still match the code (commands exist, paths resolve, config matches prose) is its own research question, to be treated in a separate paper.
