@@ -10,7 +10,7 @@ Decisions this project has made that an agent or a new contributor would not gue
 ## Conventions
 
 **Import `db` from `@ecom/utils/db`.** Don't construct a `PrismaClient`. Exceptions: `packages/utils/src/db.ts`, `scripts/seed.ts`.
-<!-- dockit:check cmd="rg -l 'new PrismaClient' apps/ packages/ --glob '!packages/utils/src/db.ts' | wc -l" expect="0" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -rlE 'new PrismaClient' apps/ packages/ | grep -v 'packages/utils/src/db.ts' | wc -l" expect="0" last="2026-08-01" -->
 
 <details><summary>Why</summary>
 
@@ -20,12 +20,12 @@ Rejected: a max-clients env cap — it turns the failure into a slow one rather 
 </details>
 
 **Return API responses through `success()` / `error()` from `@ecom/utils/response`.** Not bare `res.json()`.
-<!-- dockit:conform cmd="rg -l 'from .@ecom/utils/response' apps/backend/src/routes/*.ts | wc -l" total="ls apps/backend/src/routes/*.ts | wc -l" min="80%" last="2026-08-01" -->
+<!-- dockit:conform cmd="grep -lE 'from .@ecom/utils/response' apps/backend/src/routes/*.ts | wc -l" total="grep -lE 'router\.(get|post|put|delete)' apps/backend/src/routes/*.ts | wc -l" min="80%" last="2026-08-01" -->
 
 [TODO: why?]
 
 **Read environment variables through `config` from `@ecom/utils/config`.** Not `process.env`. Exceptions: `packages/utils/src/config.ts`, `*.config.ts` build files.
-<!-- dockit:check cmd="rg -l 'process\.env\.' apps/ packages/ --glob '!**/*.config.ts' --glob '!packages/utils/src/config.ts' | wc -l" expect="0" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -rlE 'process\.env\.' apps/ packages/ | grep -v '*.config.ts' | grep -v 'packages/utils/src/config.ts' | wc -l" expect="0" last="2026-08-01" -->
 
 <details><summary>Why</summary>
 
@@ -35,17 +35,17 @@ Rejected: runtime `??` defaults — they mask a misconfigured deploy as working.
 </details>
 
 **Import shared domain types from `@ecom/types`.** Don't redeclare them locally.
-<!-- dockit:check cmd="rg -l 'interface (Product|Order|User|Cart)\b' apps/ --glob '!packages/types/**' | wc -l" expect="0" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -rlE 'interface (Product|Order|User|Cart)\b' apps/ | grep -v 'packages/types' | wc -l" expect="0" last="2026-08-01" -->
 
 [TODO: why?]
 
 **API routes are kebab-case under a `/api/v1/` prefix.** Pagination is `?page=&limit=`.
-<!-- dockit:conform cmd="rg -o \"router\\.(get|post|put|delete)\\('/api/v1/[a-z0-9-]+\" apps/backend/src | wc -l" total="rg -o \"router\\.(get|post|put|delete)\\('\" apps/backend/src | wc -l" min="80%" last="2026-08-01" -->
+<!-- dockit:conform cmd="grep -rhoE '/api/v1/[a-z0-9-]+' apps/backend/src | wc -l" total="grep -rhoE 'router\.(get|post|put|delete)' apps/backend/src | wc -l" min="80%" last="2026-08-01" -->
 
 [TODO: why?]
 
 **Server state goes through React Query.** Don't fetch in `useEffect`.
-<!-- dockit:check cmd="rg -l 'useEffect\(\(\) => \{[^}]*fetch\(' apps/frontend/src | wc -l" expect="0" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -rlE 'useEffect\(\(\) => \{[^}]*fetch\(' apps/frontend/src | wc -l" expect="0" last="2026-08-01" -->
 
 [TODO: why?]
 
@@ -54,7 +54,7 @@ Rejected: runtime `??` defaults — they mask a misconfigured deploy as working.
 ## Rules
 
 **Every non-public endpoint requires authentication.** Public routes are listed explicitly in `apps/backend/src/middleware/public-routes.ts`.
-<!-- dockit:check cmd="rg -L 'requireAuth|isPublicRoute' apps/backend/src/routes/*.ts | wc -l" expect="0" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -LE 'requireAuth|isPublicRoute' apps/backend/src/routes/*.ts | wc -l" expect="0" last="2026-08-01" -->
 
 <details><summary>Why</summary>
 
@@ -65,7 +65,7 @@ instead of an explicit list someone reviews.
 </details>
 
 **Validate every request body with a Zod schema before it reaches a service.**
-<!-- dockit:conform cmd="rg -l 'z\.object' apps/backend/src/routes/*.ts | wc -l" total="ls apps/backend/src/routes/*.ts | wc -l" min="80%" last="2026-08-01" -->
+<!-- dockit:conform cmd="grep -lE 'z\.object' apps/backend/src/routes/*.ts | wc -l" total="grep -lE 'router\.(get|post|put|delete)' apps/backend/src/routes/*.ts | wc -l" min="80%" last="2026-08-01" -->
 
 [TODO: why?]
 

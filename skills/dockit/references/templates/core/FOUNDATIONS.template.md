@@ -2,7 +2,12 @@
 
 Registry of shared, foundational code in this project — the abstractions, services, and primitives that the rest of the codebase depends on. This document is the source of truth for `agentkit` (per-foundation subagents) and `foundationtik` in tikkit (maintenance tickets).
 
-A "foundation" here means: code with high fan-in across multiple features, intended to be reused, and expected to remain stable. Detection methodology in [dockit's FOUNDATIONS-DETECTION guide](../skills/dockit/references/guides/FOUNDATIONS-DETECTION.md). What may be written into an entry — and what must be left to a human — is in [CHOICE-MINING.md](../skills/dockit/references/guides/CHOICE-MINING.md).
+A "foundation" here means: code with high fan-in across multiple features, intended to be reused, and expected to remain stable. Regenerate this file with `/repokit:dockit sync`.
+
+<!-- Never link from a generated doc into the dockit skill's own files. The reader of this
+     document has the project checked out, not the plugin, so those paths resolve to
+     nothing. Name the command to run instead. -->
+
 
 > **Convention** — how it's done here. Follow by default; deviating is fine if you say why.
 > **Rule** — deviating is a defect. Don't.

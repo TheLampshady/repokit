@@ -2,7 +2,7 @@
 
 Registry of shared, foundational code in the Task Manager API — the abstractions, services, and primitives that the rest of the codebase depends on. This document is the source of truth for `agentkit` (per-foundation subagents) and `foundationtik` in tikkit (maintenance tickets).
 
-A "foundation" here means: code with high fan-in across multiple features, intended to be reused, and expected to remain stable. Detection methodology in [dockit's FOUNDATIONS-DETECTION guide](../../skills/dockit/references/guides/FOUNDATIONS-DETECTION.md).
+A "foundation" here means: code with high fan-in across multiple features, intended to be reused, and expected to remain stable. Regenerate this file with `/repokit:dockit sync`.
 
 > **Convention** — how it's done here. Follow by default; deviating is fine if you say why.
 > **Rule** — deviating is a defect. Don't.
@@ -42,7 +42,7 @@ A "foundation" here means: code with high fan-in across multiple features, inten
 ### Invariants
 
 **Reach the database through `get_db()`.** `engine` is exported for Alembic only. Exceptions: `alembic/env.py`.
-<!-- dockit:check cmd="rg -l 'from app.core.database import engine' app/ --glob '!alembic/**' | wc -l" expect="0" tier="rule" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -rlE 'from app.core.database import engine' app/ | grep -v 'alembic' | wc -l" expect="0" tier="rule" last="2026-08-01" -->
 
 <details><summary>Why</summary>
 
@@ -53,12 +53,12 @@ to remember to use it.
 </details>
 
 **Sessions are request-scoped.** Background tasks open their own; never pass one across a request boundary.
-<!-- dockit:check cmd="rg -l 'Depends\(get_db\)' app/workers/*.py | wc -l" expect="0" tier="convention" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -lE 'Depends\(get_db\)' app/workers/*.py | wc -l" expect="0" tier="convention" last="2026-08-01" -->
 
 [TODO: why?]
 
 **Query through the ORM.** `text()` requires platform-team review. Exceptions: `alembic/versions/`.
-<!-- dockit:check cmd="rg -l 'execute\(text\(' app/ | wc -l" expect="0" tier="rule" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -rlE 'execute\(text\(' app/ | wc -l" expect="0" tier="rule" last="2026-08-01" -->
 
 <details><summary>Why</summary>
 
@@ -146,7 +146,7 @@ Read replicas and connection routing. `get_db()` returns the primary uncondition
 ### Invariants
 
 **Every route declares `Depends(get_current_user)`.** Exceptions: `GET /health`.
-<!-- dockit:check cmd="rg -L 'Depends\(get_current_user\)' app/api/routes/*.py --glob '!**/health.py' | wc -l" expect="0" tier="rule" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -LE 'Depends\(get_current_user\)' app/api/routes/*.py | grep -v 'health.py' | wc -l" expect="0" tier="rule" last="2026-08-01" -->
 
 <details><summary>Why</summary>
 
@@ -157,12 +157,12 @@ invisible exceptions instead of explicit ones.
 </details>
 
 **Validate tokens through the Firebase Admin SDK.** No hand-rolled JWT parsing.
-<!-- dockit:check cmd="rg -l 'jwt.decode|base64.*\.split\(.\..\)' app/ | wc -l" expect="0" tier="rule" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -rlE 'jwt.decode|base64.*\.split\(.\..\)' app/ | wc -l" expect="0" tier="rule" last="2026-08-01" -->
 
 [TODO: why?]
 
 **Treat `User` as read-only.** Mutations go through `UserRepository`.
-<!-- dockit:check cmd="rg -l 'user\.[a-z_]+ = ' app/api/ app/services/ | wc -l" expect="0" tier="convention" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -rlE 'user\.[a-z_]+ = ' app/api/ app/services/ | wc -l" expect="0" tier="convention" last="2026-08-01" -->
 
 [TODO: why?]
 
@@ -239,12 +239,12 @@ Service-to-service auth. The two internal endpoints in `app/api/routes/internal.
 ### Invariants
 
 **Go through `cache`.** No direct `redis.Redis()` construction.
-<!-- dockit:check cmd="rg -l 'redis\.Redis\(|from redis import' app/ --glob '!app/core/cache.py' | wc -l" expect="0" tier="rule" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -rlE 'redis\.Redis\(|from redis import' app/ | grep -v 'app/core/cache.py' | wc -l" expect="0" tier="rule" last="2026-08-01" -->
 
 [TODO: why?]
 
 **Read paths work when Redis is down.** Treat misses and errors identically.
-<!-- dockit:conform cmd="rg -l 'except.*RedisError|cache\.get.*or ' app/services/*.py | wc -l" total="rg -l 'cache\.get' app/services/*.py | wc -l" min="80%" tier="rule" last="2026-08-01" -->
+<!-- dockit:conform cmd="grep -rlE 'except.*RedisError|cache\.get.*or ' app/services/*.py | wc -l" total="grep -lE 'cache\.get' app/services/*.py | wc -l" min="80%" tier="rule" last="2026-08-01" -->
 
 <details><summary>Why</summary>
 
@@ -255,7 +255,7 @@ optional by design.
 </details>
 
 **Every `set` passes a `ttl`.** No unbounded keys.
-<!-- dockit:check cmd="rg 'cache\.set\(' app/ | rg -v 'ttl=' | wc -l" expect="0" tier="convention" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -rE 'cache\.set\(' app/ | grep -v 'ttl=' | wc -l" expect="0" tier="convention" last="2026-08-01" -->
 
 [TODO: why?]
 
@@ -333,12 +333,12 @@ Write-through and read-through caching — every call site does its own get/set 
 ### Invariants
 
 **Publish through `publish()`.** No direct WebSocket sends from route handlers.
-<!-- dockit:check cmd="rg -l 'websocket\.send_(json|text)' app/api/routes/ | wc -l" expect="0" tier="rule" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -rlE 'websocket\.send_(json|text)' app/api/routes/ | wc -l" expect="0" tier="rule" last="2026-08-01" -->
 
 [TODO: why?]
 
 **Events are JSON-serialisable dicts carrying a `type` field.**
-<!-- dockit:conform cmd="rg -c 'publish\(.*\"type\":' app/services/*.py | wc -l" total="rg -c 'publish\(' app/services/*.py | wc -l" min="80%" tier="convention" last="2026-08-01" -->
+<!-- dockit:conform cmd="grep -lE 'publish\(.{0,40}type' app/services/*.py | wc -l" total="grep -cE 'publish\(' app/services/*.py | wc -l" min="80%" tier="convention" last="2026-08-01" -->
 
 [TODO: why?]
 
@@ -419,7 +419,7 @@ _None recorded. This foundation accumulated rather than being designed, so nothi
 Candidates observed in the code, unconfirmed:
 
 **Functions are pure — no I/O, no global state.** Currently 11/11.
-<!-- dockit:conform cmd="rg -L 'open\(|requests\.|await ' app/services/helpers.py | wc -l" total="1" min="80%" tier="convention" last="2026-08-01" -->
+<!-- dockit:conform cmd="grep -LE 'open\(|requests\.|await ' app/services/helpers.py | wc -l" total="1" min="80%" tier="convention" last="2026-08-01" -->
 
 [TODO: intentional rule, or just how it happens to be?]
 

@@ -76,11 +76,15 @@ For every `dockit:check` and `dockit:conform` comment in `PRINCIPLES.md` and `FO
 
 | Check | Fail condition | Report as |
 |---|---|---|
+| Commands resolve | Any command in the pipeline is not on `PATH` | **Unverified** — a missing command yields `0`, which passes a `check` expecting `0` |
 | Paths resolve | A directory or glob in the command matches nothing on disk | **Silently passing** — the predicate is dead |
 | Population non-zero | A `conform` predicate's `total` command returns 0 | **Silently passing** — dividing by an empty set |
+| Population reachable | `total` counts items that can never satisfy `cmd` | **Unreachable metric** — can never hit 100%, so it reports a healthy rule as decayed |
 | Grammar | Fails the allowlist in [CHOICE-MINING.md](./CHOICE-MINING.md#predicates-are-executed-code--treat-them-as-such) | **Unverifiable** — never run it |
 | Approval | Hash absent from `.dockit/predicates.lock` | **Unapproved** — show the command, ask |
 | Result | Runs, but `expect` / `min` not met | **Decayed** — doc wrong, or code drifting? |
+
+For the unreachable-metric check, the cheap heuristic is: if a `conform` predicate has never met its `min` since the `last=` stamp it was written with, suspect the denominator before suspecting the code. A rule that was true when someone wrote it down and has been failing ever since is more often mis-scoped than freshly violated.
 
 A silently-passing predicate is worse than a failing one: a failure gets looked at, a false pass gets trusted. Report those first.
 

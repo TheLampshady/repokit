@@ -10,7 +10,7 @@ Decisions this project has made that an agent or a new contributor would not gue
 ## Conventions
 
 **Import from `app/core/` rather than the underlying library.** Database access goes through `get_db()`, auth through `get_current_user()`, caching through `cache`. Exceptions: `alembic/env.py` constructs its own engine.
-<!-- dockit:check cmd="rg -l '^(from|import) (sqlalchemy|firebase_admin|redis)' app/ --glob '!app/core/**' --glob '!alembic/**' | wc -l" expect="0" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -rlE '^(from|import) (sqlalchemy|firebase_admin|redis)' app/ | grep -v 'app/core' | grep -v 'alembic' | wc -l" expect="0" last="2026-08-01" -->
 
 <details><summary>Why</summary>
 
@@ -20,12 +20,12 @@ Rejected: a lint rule banning the imports — it can't catch aliased or deferred
 </details>
 
 **Business logic lives in `app/services/`; route handlers only translate HTTP.** A handler parses the request, calls one service function, and shapes the response.
-<!-- dockit:conform cmd="rg -l 'from app.services' app/api/routes/*.py | wc -l" total="ls app/api/routes/*.py | wc -l" min="80%" last="2026-08-01" -->
+<!-- dockit:conform cmd="grep -lE 'from app.services' app/api/routes/*.py | wc -l" total="grep -lE '@router\.' app/api/routes/*.py | wc -l" min="80%" last="2026-08-01" -->
 
 [TODO: why?]
 
 **Use `pydantic` models for request and response bodies, `SQLAlchemy` models for persistence.** The two stay separate even where the fields match.
-<!-- dockit:check cmd="rg -l 'response_model=[A-Za-z]*Model' app/api/routes/ | wc -l" expect="0" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -rlE 'response_model=[A-Za-z]*Model' app/api/routes/ | wc -l" expect="0" last="2026-08-01" -->
 
 <details><summary>Why</summary>
 
@@ -35,12 +35,12 @@ Rejected: `orm_mode` on a single shared model — it defers the leak rather than
 </details>
 
 **Every I/O function is `async`.** Database calls, cache reads, HTTP clients. Exceptions: `app/utils/slugify.py`, `app/utils/tokens.py` (pure functions).
-<!-- dockit:conform cmd="rg -l 'async def' app/services/*.py app/repositories/*.py | wc -l" total="ls app/services/*.py app/repositories/*.py | wc -l" min="80%" last="2026-08-01" -->
+<!-- dockit:conform cmd="grep -lE 'async def' app/services/*.py app/repositories/*.py | wc -l" total="grep -lE '(async )?def ' app/services/*.py app/repositories/*.py | wc -l" min="80%" last="2026-08-01" -->
 
 [TODO: why?]
 
 **Reach the database through a repository class, not a session query in a service.** One repository per model in `app/repositories/`.
-<!-- dockit:conform cmd="rg -l 'from app.repositories' app/services/*.py | wc -l" total="ls app/services/*.py | wc -l" min="80%" last="2026-08-01" -->
+<!-- dockit:conform cmd="grep -lE 'from app.repositories' app/services/*.py | wc -l" total="grep -lE '(async )?def ' app/services/*.py | wc -l" min="80%" last="2026-08-01" -->
 
 <details><summary>Why</summary>
 
@@ -54,7 +54,7 @@ Rejected: query helpers on the model classes — nothing stops a caller bypassin
 ## Rules
 
 **All API routes require authentication.** The only exempt route is `GET /health`.
-<!-- dockit:check cmd="rg -L 'Depends\(get_current_user\)' app/api/routes/*.py --glob '!**/health.py' | wc -l" expect="0" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -LE 'Depends\(get_current_user\)' app/api/routes/*.py | grep -v 'health.py' | wc -l" expect="0" last="2026-08-01" -->
 
 <details><summary>Why</summary>
 
@@ -65,7 +65,7 @@ invisible exceptions instead of explicit ones.
 </details>
 
 **No raw SQL outside `alembic/`.** Query through the ORM.
-<!-- dockit:check cmd="rg -l 'execute\(text\(' app/ | wc -l" expect="0" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -rlE 'execute\(text\(' app/ | wc -l" expect="0" last="2026-08-01" -->
 
 <details><summary>Why</summary>
 

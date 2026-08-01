@@ -12,7 +12,7 @@ Decisions this project has made that an agent or a new contributor would not gue
 ## Conventions
 
 **Define blocks in `core/blocks/`.** Not in per-app `blocks.py` modules.
-<!-- dockit:check cmd="rg -l 'blocks\.(Struct|Stream|List)Block' --glob '!core/blocks/**' --glob '*.py' | wc -l" expect="0" last="2026-02-26" -->
+<!-- dockit:check cmd="grep -rlE 'blocks\.(Struct|Stream|List)Block' --include=*.py . | grep -v 'core/blocks' | wc -l" expect="0" last="2026-02-26" -->
 
 <details><summary>Why</summary>
 
@@ -23,17 +23,17 @@ editor experience, which is the part that mattered.
 </details>
 
 **Every `StreamField` passes `use_json_field=True`.**
-<!-- dockit:check cmd="rg 'StreamField\(' --glob '*.py' | rg -v 'use_json_field' | wc -l" expect="0" last="2026-02-26" -->
+<!-- dockit:check cmd="grep -rE 'StreamField\(' --include=*.py . | grep -v 'use_json_field' | wc -l" expect="0" last="2026-02-26" -->
 
 [TODO: why?]
 
 **Declare reusable `StreamBlock` classes; don't inline block lists in a field definition.**
-<!-- dockit:conform cmd="rg -c 'class \w+Block\(blocks\.StreamBlock\)' core/blocks/*.py | wc -l" total="rg -c 'StreamField\(' --glob '*.py' | wc -l" min="80%" last="2026-02-26" -->
+<!-- dockit:conform cmd="grep -cE 'class \w+Block\(blocks\.StreamBlock\)' core/blocks/*.py | wc -l" total="grep -rlE 'StreamField\(' --include=*.py . | wc -l" min="80%" last="2026-02-26" -->
 
 [TODO: why?]
 
 **Keep block nesting to two levels.**
-<!-- dockit:check cmd="rg -U 'StreamBlock\(\[[^]]*StreamBlock\(\[[^]]*StreamBlock\(' core/blocks/ | wc -l" expect="0" last="2026-02-26" -->
+<!-- dockit:check cmd="grep -rE 'StreamBlock\(\[[^]]*StreamBlock\(\[[^]]*StreamBlock\(' core/blocks/ | wc -l" expect="0" last="2026-02-26" -->
 
 <details><summary>Why</summary>
 

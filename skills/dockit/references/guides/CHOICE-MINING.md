@@ -200,14 +200,28 @@ Every mined rule carries the command that verifies it, in a comment beside the r
 
 ```markdown
 **Use `SearchClient` for all vendor-search operations.**
-<!-- dockit:check cmd="rg -l 'import vendor_sdk' --glob '!search/client.py' | wc -l" expect="0" last="2026-08-01" -->
+<!-- dockit:check cmd="grep -rlE 'import vendor_sdk' api/ | grep -v 'search/client.py' | wc -l" expect="0" last="2026-08-01" -->
 
 **API handlers return `Result[T]`.** Exceptions: `legacy_export.py`, `health.py`.
-<!-- dockit:conform cmd="rg -c '-> Result\[' api/handlers/*.py | wc -l" total="rg -l '' api/handlers/*.py | wc -l" min="80%" last="2026-08-01" -->
+<!-- dockit:conform cmd="grep -lE '\-> Result\[' api/handlers/*.py | wc -l" total="grep -lE 'def handle' api/handlers/*.py | wc -l" min="80%" last="2026-08-01" -->
 ```
 
 - `check` — `cmd` prints a violation count. Passes at `expect`.
 - `conform` — `cmd` prints conforming count, `total` prints the population. Passes at `min`.
+
+### Three rules that keep a predicate from lying
+
+Every one of these was found by running the design against a real codebase, and each produces a *confident wrong answer* rather than an error — which is the only failure mode that actually matters here.
+
+**1. Use `grep`, never `rg`.** Ripgrep is faster and nicer, and it is not installed by default. When a command isn't found, the shell prints to stderr and the pipeline still exits 0, so `| wc -l` yields `0` — and a `check` expecting `0` **passes**. Worse, it looks fine on the machine that wrote it, because that machine has `rg`. The same predicate returned `6` in an interactive shell and `0` under `/bin/sh` in testing. `grep` is on every POSIX system; the speed difference is invisible at documentation scale.
+
+Use `grep -E` (extended regex) — that's the dialect `rg` patterns are written in. Plain `grep` is basic regex, where `|` and `+` silently become literal characters and the pattern quietly stops matching what it used to.
+
+**2. No double quotes in the command.** The predicate lives inside `cmd="..."`, so a `"` in the command makes the attribute unparseable. Use single quotes, or a `.` wildcard where a quote character needs matching.
+
+**3. The `total` must count only things that could satisfy `cmd`.** A denominator that includes items structurally incapable of matching creates a metric that can never reach 100%. Real case: `total="grep -lE 'def handle' app/handlers/*.py | wc -l"` counted `__init__.py` — a registry file with no handler function in it — giving 6/8 = 75% against an 80% floor, and reporting a healthy convention as decayed. Count the population the rule actually applies to (`grep -lE 'def handle'`), not everything in the directory.
+
+The mirror of a check that can never fail is one that can never pass. Both read as authoritative.
 
 **Why stored and not re-derived.** Re-running a fixed command returns the same answer every sync. Re-deriving the count from a fresh analysis depends on the next pass scoping its scan identically — and when it doesn't, it reports drift that isn't there. The stored predicate is what keeps this check deterministic instead of a judgment call.
 
@@ -227,7 +241,8 @@ A predicate is admissible only if it satisfies all of:
 
 | Requirement | |
 |---|---|
-| Every command in the pipeline is one of | `rg` `grep` `ls` `find` `wc` `sort` `uniq` `head` `tail` `cut` `tr` |
+| Every command in the pipeline is one of | `grep` `ls` `find` `wc` `sort` `uniq` `head` `tail` `cut` `tr` |
+| Every command resolves on `PATH` | Check with `command -v` before trusting any result. A missing command yields empty output, `wc -l` turns that into `0`, and a `check` expecting `0` passes. Treat unresolvable as **unverified**, never as passing |
 | `git` is allowed with these subcommands only | `log` `ls-files` `grep` `show` `diff` — never `checkout`, `push`, `config`, `clean` |
 | No unquoted | `;` `&&` `\|\|` `$(` `` ` `` `>` `>>` `<` `&` newline |
 | Not invoked at all | `xargs`, `sh`, `bash`, `env`, `eval`, `exec`, `find -exec`, or any interpreter |
