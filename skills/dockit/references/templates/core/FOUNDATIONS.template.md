@@ -1,6 +1,6 @@
 # Foundations
 
-Registry of shared, foundational code in this project — the abstractions, services, and primitives that the rest of the codebase depends on. This document is the source of truth for `agentkit` (per-foundation subagents), `feedback-loop` (invariant validation), and `foundationtik` in tikkit (maintenance tickets).
+Registry of shared, foundational code in this project — the abstractions, services, and primitives that the rest of the codebase depends on. This document is the source of truth for `agentkit` (per-foundation subagents) and `foundationtik` in tikkit (maintenance tickets).
 
 A "foundation" here means: code with high fan-in across multiple features, intended to be reused, and expected to remain stable. Detection methodology in [dockit's FOUNDATIONS-DETECTION guide](../skills/dockit/references/guides/FOUNDATIONS-DETECTION.md). Background concepts in [foundations-reference](../docs/reference/foundations-reference.md).
 
@@ -49,7 +49,7 @@ A "foundation" here means: code with high fan-in across multiple features, inten
 
 ### Invariants
 
-<!-- Rules that must hold for any change to this foundation. feedback-loop validates against these. -->
+<!-- Rules that must hold for any change to this foundation. The foundation's owning agent carries these in hot memory and defends them on every change. -->
 
 - [INVARIANT_1]
 - [INVARIANT_2]

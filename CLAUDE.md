@@ -9,10 +9,7 @@ Repokit's premise: **a project's documentation is living context that AI agents 
 The architecture is:
 
 - **Foundation:** `dockit` scans the codebase and generates/syncs documentation. This is the context layer.
-- **Three consumers** of that context:
-  - `onboard` — humans ramping up; plans are personalized using real docs
-  - `feedback-loop` agent — validates completed work against the project's actual patterns
-  - `agentkit` — generates project-level subject-matter-expert agents that understand custom code and foundations
+- **Consumer:** `agentkit` — generates project-level subject-matter-expert agents that own each foundation and understand custom code. Reads `docs/FOUNDATIONS.md` as its source of truth.
 - **Hub:** `/repokit` orchestrates the loop with `status`, `sync`, and `init` modes.
 
 This repo distributes that toolkit as a Claude plugin, a Gemini extension, and a Copilot plugin. Components:
@@ -29,10 +26,8 @@ There is no build system or compiled code. Everything is Markdown, TOML, and JSO
 | Path | Purpose |
 |------|---------|
 | `skills/dockit/` | Documentation generation skill (init, sync, check, migrate, diagrams) |
-| `skills/onboard/` | Onboarding skill — creates phased plans for new devs |
 | `skills/agentkit/` | Agent generator skill — analyzes custom code, creates project-level agents for Claude/Gemini/Copilot |
 | `skills/repokit/` | Maintenance hub — repo health dashboard, post-change sync, project bootstrap (status, sync, init) |
-| `agents/` | Distributed agents bundled with the plugin (feedback-loop) |
 | `.claude/agents/` | Internal dev-only agents — NOT distributed (component-reviewer only) |
 | `.claude-plugin/` | Claude plugin metadata (`plugin.json`) and marketplace catalog (`marketplace.json`) |
 | `.mcp.json` | Bundled MCP servers (context7 for library documentation) |
@@ -50,17 +45,12 @@ Skills have YAML frontmatter (`name`, `description`, `user-invocable: true`) and
 | Skill | Modes | Key Behavior |
 |-------|-------|-------------|
 | `dockit` | init, sync, check, audit, migrate, diagrams | Scales docs by project size; detects frameworks; never destroys content |
-| `onboard` | (single mode) | Reads existing docs first; asks for role before proceeding; chat-only, creates no files |
-| `agentkit` | (single mode) | Analyzes custom code; generates project-level agents for Claude, Gemini, Copilot; scales by project size |
+| `agentkit` | init, sync, status | Analyzes custom code; generates project-level agents for Claude, Gemini, Copilot; scales by project size |
 | `repokit` | status, sync, init | Maintenance hub — orchestrates other tools; repo health dashboard, post-change sync, project bootstrap |
 
-### Agents (`agents/`, distributed with plugin)
+### Agents
 
-Agents auto-trigger based on their description. They run in isolated context windows.
-
-| Agent | Auto-triggers | Output |
-|-------|-------------|--------|
-| `feedback-loop` | Feature completion, end of major plan section, completion checkpoints | lint → format → typecheck → test; fixes what it can; creates tickets for unfixable issues |
+The plugin distributes **no agents of its own** — there is no `agents/` directory. Agents are an *output* of the toolkit, not part of it: `agentkit` generates them into the consuming project (`.claude/agents/`, `.gemini/agents/`, `.github/agents/`). Don't reintroduce a distributed `agents/` dir here.
 
 ### Internal Dev Agent (`.claude/agents/`, NOT distributed)
 
@@ -70,45 +60,39 @@ Agents auto-trigger based on their description. They run in isolated context win
 
 ### Ticket System (`.backlog/`)
 
-Repokit consumes (and contributes to) a shared `.backlog/` directory in the consuming project:
+Repokit **reads** a shared `.backlog/` directory in the consuming project and never writes to it. `/repokit status` surfaces open items so drift and open work appear in one dashboard; when a mode finds work worth a ticket, it says so and points at tikkit instead of creating the file.
+
 - `.backlog/backlog.md` — master checklist, one line per item, tagged by source
 - `.backlog/tickets/<slug>.md` or `.backlog/tickets/<slug>/ticket.md` — individual tickets with full context
 
 Format in `backlog.md` — position in the list IS the priority/dependency order:
 ```
-- [ ] Fix flaky auth test [feedback-loop] → tickets/flaky-auth-test.md
+- [ ] Migrate auth to the shared client [tik] → tickets/migrate-auth-client.md
 ```
 
-All skills use plain kebab-case slugs — no numeric prefixes. Dependencies are expressed via position in the backlog and references inside each ticket.
-
-Always check `.backlog/backlog.md` before creating a ticket to avoid duplicates.
+Slugs are plain kebab-case — no numeric prefixes. Dependencies are expressed via position in the backlog and references inside each ticket. If `.backlog/` doesn't exist, repokit omits the backlog rows rather than creating the directory.
 
 ### Cross-plugin contract with tikkit
 
-If [tikkit](https://github.com/TheLampshady/tikkit) is installed in the same project, both plugins share `.backlog/backlog.md`. Tag ownership:
+[tikkit](https://github.com/TheLampshady/tikkit) owns ticket *creation*; repokit owns ticket *awareness*. Repokit contributes no tags of its own — tikkit writes `[tik]`, `[figtik]`, `[stitchtik]`, `[modernizer]`, and repokit reports whatever tags it finds without assuming a fixed set.
 
-| Tag | Owner |
-|-----|-------|
-| `[feedback-loop]` | repokit |
-| `[tik]`, `[figtik]`, `[stitchtik]`, `[modernizer]` | tikkit |
-
-Format is identical — neither plugin imports the other.
+Neither plugin imports the other.
 
 ### Plugin Structure
 
-This repo is both a **Claude plugin** and a **Gemini extension**:
+The repo root **is** the plugin for every platform. Three manifests coexist because each platform reads a different file:
 
 - Claude: `.claude-plugin/plugin.json` (plugin metadata), `.claude-plugin/marketplace.json` (marketplace catalog pointing to `"."`)
 - Gemini: `gemini-extension.json` (extension manifest, references `GEMINI.md` as context file)
 
 The `plugins/` subdirectory no longer exists — the root is the plugin.
 
-### Agents vs `.claude/agents/`
+### Where agent files live
 
 | Location | Who Gets It | Use For |
 |----------|------------|---------|
-| `agents/` | Plugin users (distributed) | feedback-loop |
-| `.claude/agents/` | This repo's developers only | component-reviewer (internal tooling) |
+| `.claude/agents/` (this repo) | This repo's developers only | component-reviewer (internal tooling) |
+| `.claude/agents/` (consumer project) | Generated at runtime by agentkit | Per-foundation SME agents |
 
 ## Adding a New Framework to dockit
 

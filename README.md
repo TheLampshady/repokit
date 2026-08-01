@@ -2,15 +2,14 @@
 
 **Keep your project's context in sync, then put it to work.**
 
-Repokit treats your codebase's documentation as living context. `dockit` scans the project and keeps docs aligned with the code as it changes. That synced context then powers three consumers:
+Repokit treats your codebase's documentation as living context. `dockit` scans the project and keeps docs aligned with the code as it changes. `agentkit` then turns that synced context into project-level AI agents — one per foundation — that own their piece of the codebase and stay in sync with the docs that describe it.
 
-- **`onboard`** — ramps up new developers with plans grounded in the project's actual structure and conventions
-- **`feedback-loop`** — validates that completed work is correctly implemented against the project's real patterns
-- **`agentkit`** — generates project-specific AI agents that understand your custom code and foundations
+- **`dockit`** — the foundation: generates and syncs living documentation, including a `FOUNDATIONS.md` registry of the shared code everything else depends on
+- **`agentkit`** — the consumer: reads `FOUNDATIONS.md` and your custom code to generate subject-matter-expert agents
 
-The `/repokit` hub orchestrates the loop. Works with **Claude Code**, **Gemini CLI**, and **GitHub Copilot CLI**.
+The `/repokit` hub orchestrates the loop with `status`, `sync`, and `init`. Works with **Claude Code**, **Gemini CLI**, and **GitHub Copilot CLI**.
 
-> **Sibling plugin:** ticket creation lives in [tikkit](https://github.com/TheLampshady/tikkit) — `/tik`, `/figtik`, `/stitchtik`, `/modernizer`. Both plugins write to the same `.backlog/backlog.md` and can be installed together.
+> **Sibling plugin:** ticket creation lives in [tikkit](https://github.com/TheLampshady/tikkit) — `/tik`, `/figtik`, `/stitchtik`, `/modernizer`. Repokit reads `.backlog/backlog.md` for its health dashboard; tikkit writes it. Install both to have findings captured as work items.
 
 ## Install
 
@@ -77,14 +76,11 @@ copilot plugin uninstall https://github.com/TheLampshady/repokit
 |-------|---------|---------|--------|
 | **agentkit** | `/agentkit` | Generate project-level AI agents tailored to your codebase's custom code patterns. Supports Claude, Gemini, and Copilot. | WIP |
 | **dockit** | `/dockit` | Generate, sync, check, audit, migrate, and refresh diagrams in project documentation. Scales by project size, auto-detects frameworks. | Ready |
-| **onboard** | `/onboard` | Create personalized onboarding plans for new team members based on role or feature focus. | Ready |
-| **repokit** | `/repokit` | Show the full tool menu and get guided to the right tool. | Ready |
+| **repokit** | `/repokit` | Hub — repo health dashboard, post-change sync, project bootstrap. | Ready |
 
 ### Agents
 
-| Agent | Use when... | Platform |
-|-------|------------|----------|
-| **feedback-loop** | A feature is finished or a major plan section is complete, and you want to verify it's correctly implemented | Claude |
+Repokit ships **no agents of its own**. Agents are an output of the toolkit, not part of it — `/agentkit` generates them into your project so they describe *your* foundations, not repokit's.
 
 > **Gemini users:** See [Enabling Gemini Subagents](#gemini-subagents) to use agents on Gemini.
 
@@ -92,7 +88,7 @@ copilot plugin uninstall https://github.com/TheLampshady/repokit
 
 ## Ticket System
 
-Repokit consumes (and contributes to) a shared backlog under `.backlog/`:
+Repokit **reads** a shared backlog under `.backlog/` for its health dashboard. It never writes to it:
 
 ```
 .backlog/
@@ -102,7 +98,7 @@ Repokit consumes (and contributes to) a shared backlog under `.backlog/`:
     └── stale-setup-docs.md
 ```
 
-Tags from repokit: `[feedback-loop]`. If [tikkit](https://github.com/TheLampshady/tikkit) is also installed, it adds `[tik]`, `[figtik]`, `[stitchtik]`, `[modernizer]` to the same file. Format is identical across both plugins.
+Ticket creation comes from [tikkit](https://github.com/TheLampshady/tikkit), which writes `[tik]`, `[figtik]`, `[stitchtik]`, and `[modernizer]` items. `/repokit status` reports whatever it finds there alongside doc and agent drift, so open work and stale context show up in one place. No `.backlog/`? Repokit just omits those rows.
 
 ---
 
@@ -187,10 +183,8 @@ graph TD
             S_dockit["dockit<br/>Scan codebase &<br/>generate living docs"]
         end
 
-        subgraph consumers["Consumers"]
-            S_onboard["onboard<br/>Ramp up new devs<br/>using real docs"]
-            A_feedback["feedback-loop<br/>Validate completed work<br/>against project patterns"]
-            S_agentkit["agentkit<br/>Generate AI agents that<br/>understand custom code"]
+        subgraph consumers["Consumer: Context at Work"]
+            S_agentkit["agentkit<br/>Generate AI agents that<br/>own each foundation"]
         end
     end
 
@@ -208,30 +202,27 @@ graph TD
     hub -->|"orchestrates"| consumers
 
     S_dockit -->|"writes"| Docs
-    Docs -->|"feeds"| S_onboard
     Docs -->|"feeds"| S_agentkit
-    Docs -.->|"reference patterns"| A_feedback
 
     S_agentkit -->|"generates"| SME
-    A_feedback -.->|"writes tickets"| Spec
+    Docs -.->|"kept in sync with"| SME
+    Spec -.->|"read for dashboard"| S_repokit
 
     classDef skill   fill:#3b82f6,stroke:#1d4ed8,color:#fff
-    classDef agent   fill:#8b5cf6,stroke:#6d28d9,color:#fff
     classDef storage fill:#f59e0b,stroke:#b45309,color:#000
     classDef ai      fill:#7c3aed,stroke:#5b21b6,color:#fff
     classDef found   fill:#0ea5e9,stroke:#0284c7,color:#fff
     classDef sme     fill:#10b981,stroke:#059669,color:#fff
 
     class S_repokit found
-    class S_onboard,S_agentkit skill
-    class A_feedback agent
+    class S_agentkit skill
     class Docs,Spec storage
     class CA ai
     class SME sme
     class S_dockit found
 ```
 
-> The architecture is one foundation feeding three consumers. dockit produces synced context; onboard, feedback-loop, and agentkit each put that context to work in different ways.
+> The architecture is one foundation feeding one consumer. dockit produces synced context; agentkit turns it into agents that own the code it describes. The hub keeps both current and reports when either drifts.
 
 > **Claude Code:** skills invoked as `/repokit:skill-name` · **Gemini CLI / Copilot CLI:** invoked as `/skill-name`, agents require [opt-in setup](#gemini-subagents)
 
@@ -255,25 +246,6 @@ graph LR
 ```
 
 > Scans the codebase and generates docs from what's there — including a `FOUNDATIONS.md` catalog of shared/foundational code, detected by fan-in × cross-feature × stability scoring. Run once to bootstrap, then `/dockit sync` to keep everything current.
-
-#### Onboarding a New Developer
-
-```mermaid
-graph LR
-    Role["Role + Focus Area"]
-    Onboard["/onboard"]
-    Plan["Phased Plan<br/>tailored to role"]
-
-    Role -->|"input"| Onboard -->|"generates"| Plan
-
-    classDef skill fill:#3b82f6,stroke:#1d4ed8,color:#fff
-    classDef output fill:#86efac,stroke:#16a34a,color:#000
-    class Onboard skill
-    class Plan output
-    style Role fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
-```
-
-> Reads existing docs and codebase, asks for role, builds a personalized ramp-up plan.
 
 #### Generate SME Agents
 
@@ -300,21 +272,23 @@ graph LR
 
 > Recommended flow: `/dockit init` first to generate project docs (including `FOUNDATIONS.md` — the catalog of shared/foundational code), then `/agentkit` uses those docs as architecture context when building agents. Agents are scaled to project size and generated for Claude/Gemini/Copilot.
 
-#### Feedback at Completion
+#### Keeping Context in Sync
 
 ```mermaid
 graph LR
-    Done["Feature finished /<br/>plan section complete"]
-    FeedbackLoop["feedback-loop"]
-    Result["Verified done<br/>or issues to fix"]
+    Changed["Code changed"]
+    Status["/repokit status"]
+    Check["dockit check<br/>agentkit status"]
+    Sync["/repokit sync"]
 
-    Done -->|"auto-triggers"| FeedbackLoop -->|"lint · format · typecheck · test"| Result
+    Changed -->|"run"| Status -->|"delegates to"| Check -->|"drift found"| Sync
+    Sync -->|"refreshes docs + agents"| Changed
 
-    classDef agent fill:#8b5cf6,stroke:#6d28d9,color:#fff
-    classDef output fill:#86efac,stroke:#16a34a,color:#000
-    class FeedbackLoop agent
-    class Result output
-    style Done fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
+    classDef skill fill:#3b82f6,stroke:#1d4ed8,color:#fff
+    classDef found fill:#0ea5e9,stroke:#0284c7,color:#fff
+    class Status,Sync found
+    class Check skill
+    style Changed fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
 ```
 
 > When a feature or major plan section wraps up, the agent runs the project's lint/format/typecheck/test commands to confirm the work is correctly implemented before it's declared done.
@@ -328,9 +302,7 @@ repokit/
 ├── skills/                  ← cross-platform skills (Claude + Gemini + Copilot)
 │   ├── agentkit/
 │   ├── dockit/
-│   ├── onboard/
 │   └── repokit/
-├── agents/                  ← distributed agents (feedback-loop)
 ├── .claude/agents/          ← internal dev tools (component-reviewer)
 ├── .claude-plugin/          ← Claude plugin + marketplace metadata
 ├── policies/                ← Gemini policy engine rules

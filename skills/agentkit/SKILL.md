@@ -605,7 +605,7 @@ Keep the full description under 1024 characters. Full pattern guide with example
 
 9. **Research** — project docs first, framework docs via context7 second, check for native alternatives third.
 
-10. **Completion Handoff** — instructs the agent to emit a "ready for verification" signal when its scope is done, so a verification agent (if installed) triggers cleanly and the parent can sequence around dependent agents. Verbatim phrasing comes from the template — don't paraphrase, the wording is tuned to match feedback-loop's triggering cues without naming it.
+10. **Completion Handoff** — instructs the agent to state what it changed and what remains unverified when its scope is done, so the parent can sequence around dependent agents and knows what still needs checking. Verbatim phrasing comes from the template — don't paraphrase.
 
 **Additional sections for foundation-owner agents (from foundation-agent.template.md):**
 

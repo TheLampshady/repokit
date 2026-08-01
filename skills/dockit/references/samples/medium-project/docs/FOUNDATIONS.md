@@ -1,6 +1,6 @@
 # Foundations
 
-Registry of shared, foundational code in the Task Manager API — the abstractions, services, and primitives that the rest of the codebase depends on. This document is the source of truth for `agentkit` (per-foundation subagents), `feedback-loop` (invariant validation), and `foundationtik` in tikkit (maintenance tickets).
+Registry of shared, foundational code in the Task Manager API — the abstractions, services, and primitives that the rest of the codebase depends on. This document is the source of truth for `agentkit` (per-foundation subagents) and `foundationtik` in tikkit (maintenance tickets).
 
 A "foundation" here means: code with high fan-in across multiple features, intended to be reused, and expected to remain stable. Detection methodology in [dockit's FOUNDATIONS-DETECTION guide](../../skills/dockit/references/guides/FOUNDATIONS-DETECTION.md).
 

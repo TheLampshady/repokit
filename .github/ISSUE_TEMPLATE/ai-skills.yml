@@ -16,10 +16,9 @@ body:
       multiple: true
       options:
         - "Skill: dockit"
-        - "Skill: onboard"
         - "Skill: agentkit"
         - "Skill: repokit (hub)"
-        - "Agent: feedback-loop"
+        - "Generated agent (from agentkit)"
         - Other / General
     validations:
       required: true

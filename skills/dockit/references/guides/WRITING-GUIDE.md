@@ -4,7 +4,7 @@ How to write documentation that explains, not just instructs.
 
 ## Audience
 
-These practices serve both human readers and downstream AI tools (agentkit, feedback-loop, onboard, and external agents that load the project's docs as context). The two audiences need almost the same things — terse explanations, explicit cross-links, exact strings, purpose-bearing tables — so there's one set of rules below, not two. Where they genuinely diverge (tone, phased onboarding), the right move is to layer rather than fork: keep the docs flat and complete, and let downstream tools (like onboard) build personalized views on top.
+These practices serve both human readers and downstream AI tools (agentkit, plus any external agent that loads the project's docs as context). The two audiences need almost the same things — terse explanations, explicit cross-links, exact strings, purpose-bearing tables — so there's one set of rules below, not two. Where they genuinely diverge (tone, reading order, audience-specific framing), the right move is to layer rather than fork: keep the docs flat and complete, and let downstream tools build tailored views on top.
 
 ## The Core Principle
 
@@ -26,7 +26,7 @@ For each section, answer:
 
 A section earns its place when it answers a question that requires reading multiple files, understanding cross-feature usage, or talking to a human. If a reader could recover the content by reading one file in 60 seconds, the section is redundant with the codebase — and the docs are training the team to skim past it.
 
-This rule decides what goes *under* a heading, not whether the heading exists. Stable section names are still a contract (see [Stable Section Names](#stable-section-names)) — agentkit, feedback-loop, onboard, and `sync` look for those headings whether or not they're populated. So when source material is empty, render the heading with a `[TODO:]` body, not synthesized filler.
+This rule decides what goes *under* a heading, not whether the heading exists. Stable section names are still a contract (see [Stable Section Names](#stable-section-names)) — agentkit and dockit's own `sync` look for those headings whether or not they're populated. So when source material is empty, render the heading with a `[TODO:]` body, not synthesized filler.
 
 ### Derivable vs non-derivable
 
@@ -210,7 +210,7 @@ This principle applies to ALL generated documentation:
 
 ## Stable Section Names
 
-Downstream consumers — `agentkit`, `feedback-loop`, `onboard`, and dockit's own `sync` mode — depend on predictable structure across generated docs. They look for `## Foundations` in FOUNDATIONS.md, `## Quick Start` in README.md, env var tables under known headings. When a template author renames `## Architecture` to `## System Design`, the consumers don't break loudly — they silently miss the section, and project agents lose their context.
+Downstream consumers — `agentkit` and dockit's own `sync` and `check` modes — depend on predictable structure across generated docs. They look for `## Foundations` in FOUNDATIONS.md, `## Quick Start` in README.md, env var tables under known headings. When a template author renames `## Architecture` to `## System Design`, the consumers don't break loudly — they silently miss the section, and project agents lose their context.
 
 Treat canonical section names in the core templates as a contract.
 

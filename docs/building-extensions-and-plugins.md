@@ -471,7 +471,7 @@ Gemini CLI supports agent skills as an experimental feature. Enable in `.gemini/
 }
 ```
 
-Place agent `.md` files in `.gemini/agents/` within the extension.
+Agent `.md` files went in `.gemini/agents/`, and ran in YOLO mode with no per-step confirmation.
 
 > **Note**: Gemini agents run in YOLO mode — no per-step confirmation. They are suitable for well-defined, bounded tasks.
 
@@ -741,11 +741,8 @@ repokit/
 ├── skills/                 # Cross-platform skills (Claude auto-discovers here)
 │   ├── agentkit/SKILL.md
 │   ├── dockit/SKILL.md
-│   ├── onboard/SKILL.md
 │   └── repokit/SKILL.md
-├── .agents/skills -> ../skills  # Symlink — Gemini cross-compatibility
-├── agents/                 # Distributed agents (no color field)
-│   └── feedback-loop.agent.md
+├── .claude/agents/         # Internal dev agents — NOT distributed
 ├── policies/policies.toml  # Safety guardrails
 └── Makefile                # Dev workflow (make setup, make check)
 ```

@@ -6,7 +6,7 @@ user-invocable: true
 
 # dockit
 
-Generate and maintain project documentation that humans read and that downstream AI tools (agentkit, feedback-loop, onboard) consume as their context layer.
+Generate and maintain project documentation that humans read and that downstream AI tools (agentkit, plus any agent that loads the project's docs as context) consume as their context layer.
 
 **Modes:** `init` | `sync` | `check` | `audit` | `migrate` | `diagrams`
 

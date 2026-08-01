@@ -76,7 +76,7 @@ project/
     └── TROUBLESHOOTING.md   # Common issues by category
 ```
 
-**7 docs total.** README becomes a hub with links. Each concern gets its own file. FOUNDATIONS.md is detected automatically (see [FOUNDATIONS-DETECTION.md](../skills/dockit/references/guides/FOUNDATIONS-DETECTION.md)) — it powers agentkit's per-foundation subagents and feedback-loop's invariant validation.
+**7 docs total.** README becomes a hub with links. Each concern gets its own file. FOUNDATIONS.md is detected automatically (see [FOUNDATIONS-DETECTION.md](../skills/dockit/references/guides/FOUNDATIONS-DETECTION.md)) — it powers agentkit's per-foundation subagents, which carry each foundation's invariants in hot memory.
 
 ### Large (>50 source files)
 

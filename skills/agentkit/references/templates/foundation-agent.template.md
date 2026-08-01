@@ -169,7 +169,7 @@ Invariants are load-bearing. Do not modify them silently.
 2. **Wait for confirmation.** Don't apply until the user says yes.
 3. **Apply the update** to FOUNDATIONS.md and the sub-doc (if present).
 4. **Run the cross-doc consistency check** (below).
-5. **Flag to feedback-loop** in your output: *"Invariant changed in `<foundation>` — feedback-loop assertions touching this foundation may need review."*
+5. **Flag it in your output:** *"Invariant changed in `<foundation>` — code and tests that rely on the old contract may need review."*
 
 ### Cross-Doc Consistency Check
 
@@ -221,11 +221,11 @@ When you finish your assigned scope — whether a domain task or a foundation ma
 
 > *"<scope> implementation complete. Ready for verification once any dependent work is done."*
 
-If you also touched FOUNDATIONS.md or a sub-doc, append the existing flags from the Maintenance section (e.g., *"Invariant changed in `<foundation>` — verification assertions touching this foundation may need review"*) so the parent has the full picture.
+If you also touched FOUNDATIONS.md or a sub-doc, append the existing flags from the Maintenance section (e.g., *"Invariant changed in `<foundation>` — code and tests that rely on the old contract may need review"*) so the parent has the full picture.
 
 The phrasing is intentional:
 
-- **"complete"** is the cue a verification/feedback agent (if installed) looks for at completion checkpoints
+- **"complete"** is the cue the parent — or whatever verification tooling the project has — looks for at completion checkpoints
 - **"once any dependent work is done"** defers sequencing to the parent — it has visibility into other agents working in parallel; you don't
 
 Don't invoke a verification agent yourself. You only know your own scope. The parent decides whether to verify now or wait for siblings to finish first.

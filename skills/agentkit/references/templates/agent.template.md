@@ -133,7 +133,7 @@ When you finish your assigned scope, return control with an explicit completion 
 
 The phrasing is intentional:
 
-- **"complete"** is the cue a verification/feedback agent (if installed) looks for at completion checkpoints
+- **"complete"** is the cue the parent — or whatever verification tooling the project has — looks for at completion checkpoints
 - **"once any dependent work is done"** defers sequencing to the parent — it has visibility into other agents working in parallel; you don't
 
 Don't invoke a verification agent yourself. You only know your own scope. The parent decides whether to verify now or wait for siblings to finish first.

@@ -111,7 +111,7 @@ For detection logic, see: [SIZE-SMALL.md](guides/SIZE-SMALL.md) | [SIZE-MEDIUM.m
 
 ### FOUNDATIONS.md (Medium+)
 
-**Purpose:** Catalog of shared/foundational code with invariants, consumers, and refactor triggers. Source of truth for `agentkit` (per-foundation subagents), `feedback-loop` (invariant validation), and `foundationtik` (maintenance tickets in tikkit).
+**Purpose:** Catalog of shared/foundational code with invariants, consumers, and refactor triggers. Source of truth for `agentkit` (per-foundation subagents that own these foundations and carry their invariants in hot memory) and `foundationtik` (maintenance tickets in tikkit).
 
 | Section | Content |
 |---------|---------|

@@ -6,13 +6,13 @@ user-invocable: true
 
 # repokit
 
-Hub for repokit's context-in-sync architecture: dockit keeps docs aligned with the code; onboard, agentkit, and feedback-loop consume that synced context.
+Hub for repokit's context-in-sync architecture: dockit keeps docs aligned with the code; agentkit consumes that synced context to build project-level agents that own the foundations.
 
 **Modes:** `status` | `sync` | `init` | _(bare — tool menu)_
 
-> **Core principle:** repokit orchestrates, never duplicates. Each mode delegates to dockit and the three consumers rather than reimplementing their logic.
+> **Core principle:** repokit orchestrates, never duplicates. Each mode delegates to dockit and agentkit rather than reimplementing their logic.
 
-> **Sibling plugin:** ticket creation lives in [tikkit](https://github.com/TheLampshady/tikkit) (`/tik`, `/figtik`, `/stitchtik`, `/modernizer`). Both plugins write to the same `.backlog/backlog.md` if installed together.
+> **Sibling plugin:** ticket creation lives in [tikkit](https://github.com/TheLampshady/tikkit) (`/tik`, `/figtik`, `/stitchtik`, `/modernizer`). Repokit reads `.backlog/backlog.md` for its dashboard but never writes to it.
 
 ---
 
@@ -22,7 +22,7 @@ When invoked bare (`/repokit` with no mode), detect what the user likely needs:
 
 | Condition | Suggest |
 |-----------|---------|
-| No `docs/` or `README.md` and no `.backlog/` | → `init` |
+| No `docs/` or `README.md` | → `init` |
 | `.backlog/backlog.md` has open items | → `status` (show what needs attention) |
 | Git changes since last doc sync | → `sync` |
 | User asks "what can repokit do" | → show tool menu |
@@ -59,12 +59,10 @@ git rev-list --count $(git log -1 --format=%H -- docs/ README.md 2>/dev/null || 
 |------|--------|---------|
 | `dockit` | `/repokit:dockit` | Scan codebase and generate/sync living docs |
 
-**Consumers (put context to work):**
+**Consumer (puts context to work):**
 | Tool | Invoke | Purpose |
 |------|--------|---------|
-| `onboard` | `/repokit:onboard` | Personalized ramp-up plans for new team members |
-| `agentkit` | `/repokit:agentkit` | Generate AI agents that understand custom code |
-| `feedback-loop` | (agent — auto-triggered) | Validate completed work at feature/plan checkpoints |
+| `agentkit` | `/repokit:agentkit` | Generate project agents that own foundations and understand custom code |
 
 **Hub modes:**
 | Mode | Invoke | Purpose |
@@ -92,7 +90,7 @@ Install [tikkit](https://github.com/TheLampshady/tikkit) for ticket creation: `/
 
 Run these checks and present a unified dashboard:
 
-#### 1. Backlog & Tickets
+#### 1. Backlog & Tickets (skip entirely if `.backlog/` is absent)
 
 ```bash
 # Read backlog
@@ -109,7 +107,7 @@ grep -c '^\- \[x\]' .backlog/backlog.md 2>/dev/null  # done
 ls .backlog/tickets/*.md 2>/dev/null
 ```
 
-Tags from repokit: `[feedback-loop]`. Tags from tikkit (if installed): `[tik]`, `[figtik]`, `[stitchtik]`, `[modernizer]`.
+This row is **read-only and conditional** — repokit writes no tickets. If `.backlog/backlog.md` doesn't exist, omit the Backlog and Tickets rows entirely rather than showing zeros, and mention tikkit once in Suggested Next Steps. Report whatever tags are present without assuming a fixed set; tikkit contributes `[tik]`, `[figtik]`, `[stitchtik]`, `[modernizer]`.
 
 #### 2. Documentation Freshness
 
@@ -191,7 +189,7 @@ Map the result into the dashboard:
 
 | Area | Status | Details |
 |------|--------|---------|
-| Backlog | 🟡 3 open | 1 feedback-loop, 2 tikkit tags |
+| Backlog | 🟡 3 open | tags: 2 `[tik]`, 1 `[modernizer]` |
 | Tickets | 📋 2 pending | .backlog/tickets/ |
 | Docs | 🟡 Stale | `dockit check` reports drift; last updated 2 days ago |
 | Agents | 🟡 Drifted | 2 of 5 agents reference renamed foundations |
@@ -201,8 +199,8 @@ Map the result into the dashboard:
 | CI | 🟢 Present | 2 workflows |
 
 ### Open Backlog Items
-- [ ] Fix flaky auth test [feedback-loop] → tickets/flaky-auth-test.md
-- [ ] Add type checking [modernizer] → tickets/type-checking.md  ← from tikkit
+- [ ] Migrate auth to the shared client [tik] → tickets/migrate-auth-client.md
+- [ ] Add type checking [modernizer] → tickets/type-checking.md
 
 ### Suggested Next Steps
 1. Run `/repokit sync` — refreshes docs and reconciles drifted agents in one pass
@@ -309,7 +307,7 @@ ls package.json pyproject.toml Cargo.toml go.mod 2>/dev/null
 
 #### Step 2: Recommend a setup plan
 
-Repokit's architecture is **foundation + consumers**: dockit produces synced context; onboard, agentkit, and feedback-loop put it to work. Init proposes them in that order — the foundation must exist before the consumers add value.
+Repokit's architecture is **foundation + consumer**: dockit produces synced context; agentkit puts it to work. Init proposes them in that order — the foundation must exist before agentkit adds value, because agentkit reads FOUNDATIONS.md as its source of truth.
 
 Based on what's missing, propose a phased plan:
 
@@ -325,19 +323,10 @@ Based on your project, here's what I recommend:
 
 This is the foundation everything else builds on. Run dockit first.
 
-### Consumers (pick the ones you want):
-
-#### Onboarding (onboard)
-[ ] Personalized ramp-up plans for new devs — run `/repokit:onboard` anytime
-    No setup required. Uses the docs from Phase 1.
-
-#### Project AI Agents (agentkit)
+### Consumer: Project AI Agents (agentkit)
 [ ] Project-specific AI agents → run `/repokit:agentkit`
-    Reads your docs and analyzes custom code to generate SME agents.
-
-#### Validation at Completion (feedback-loop)
-[x] Auto-triggers when features/plan sections complete
-    No setup required. Already shipped as an agent.
+    Reads FOUNDATIONS.md and analyzes custom code to generate SME agents
+    that own each foundation and stay in sync with it.
 
 ### Optional: Install tikkit for ticket creation
 For text/Figma/Stitch designs and code-quality audits as tickets,
@@ -352,8 +341,6 @@ For each phase the user approves:
 
 - **Foundation (dockit):** Invoke `dockit init` — handles all doc generation with its own question/plan/confirm flow. This must complete before agentkit can use the docs as context.
 - **agentkit:** Invoke `agentkit` — analyzes custom code and generates project-level agents using the docs from the foundation
-- **onboard:** No init action — it runs on demand when a new dev joins
-- **feedback-loop:** No init action — it auto-triggers at completion checkpoints
 
 Let each skill handle its own interaction (questions, confirmations). Repokit just sequences them and provides transitions.
 
@@ -365,10 +352,8 @@ Let each skill handle its own interaction (questions, confirmations). Repokit ju
 ### Foundation
 - docs/README.md, docs/ARCHITECTURE.md, docs/ENVIRONMENTS.md (via dockit)
 
-### Consumers ready to use
-- /onboard — when a new team member joins
+### Consumer ready to use
 - /agentkit — generated [N] project-level agents (if run)
-- feedback-loop — auto-triggers when you finish a feature
 
 ### What's next
 - Review generated docs and fill [TODO] markers
@@ -381,16 +366,17 @@ Let each skill handle its own interaction (questions, confirmations). Repokit ju
 
 ## Cross-Cutting Concerns
 
-### Ticket Deduplication
+### Backlog is Read-Only
 
-Before suggesting any ticket creation, check `.backlog/backlog.md` for existing items. Tikkit (if installed) does this internally for its own ticket-writing skills.
+Repokit never writes to `.backlog/`. When a mode surfaces work that deserves a ticket, say so and point at tikkit — don't create the file. Ticket deduplication is tikkit's concern, handled internally by its ticket-writing skills.
 
 ### Missing Infrastructure
 
 If a mode needs something that doesn't exist:
-- `status` with no `.backlog/`: suggest `init`
+- `status` with no `docs/` or `README.md`: suggest `init`
+- `status` with no `.backlog/`: omit the backlog rows, mention tikkit once
 - `sync` with no docs: suggest `init`
 
 ### Agent Availability
 
-Not all environments have subagent support. The `feedback-loop` agent auto-triggers at completion checkpoints when supported. If subagents aren't available, suggest the user run quality checks manually at the end of features.
+Not all environments have subagent support. Agentkit generates project-level agents for Claude, Gemini, and Copilot; where subagents aren't available, its generated agents still work as loadable context files that a human or agent can read directly.

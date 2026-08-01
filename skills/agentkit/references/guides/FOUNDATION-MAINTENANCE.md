@@ -40,14 +40,14 @@ If the agent is invoked for general work (not a doc-maintenance request) and not
 
 ## Invariant Change Protocol
 
-Invariants are the load-bearing claims about a foundation. They're how `feedback-loop` validates work and how downstream code can trust the foundation's contract. **Do not modify invariants silently.**
+Invariants are the load-bearing claims about a foundation — the contract downstream code trusts, and the rules the foundation's owning agent carries in hot memory and defends on every change. **Do not modify invariants silently.**
 
 When the code change implies an invariant must be added, removed, or altered:
 
 1. **State the change to the user** in plain language. Example: *"This refactor weakens the invariant 'cache reads are always non-blocking' to 'cache reads are non-blocking unless the warm-up flag is set.' That's a contract change. Confirm before I update FOUNDATIONS.md?"*
 2. **Wait for confirmation.** Don't apply the change until the user says yes.
 3. **After update, run the cross-doc check** (below). Other docs may rely on the old invariant.
-4. **Flag the change to feedback-loop.** Add a note in the chat output: *"Invariant changed in `<foundation>` — feedback-loop assertions touching this foundation may need review."*
+4. **Flag the change for review.** Add a note in the chat output: *"Invariant changed in `<foundation>` — code and tests that rely on the old contract may need review."*
 
 ---
 
