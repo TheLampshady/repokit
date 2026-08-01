@@ -2,7 +2,11 @@
 
 Variant of `agent.template.md` for agents that own one or more rows in `docs/FOUNDATIONS.md`. Adds the `Owned Foundations` and `Maintenance` sections, plus elevated permissions in frontmatter.
 
-**Hot memory rule:** for each owned foundation, embed its **invariants** and **change checklist** verbatim from FOUNDATIONS.md. The agent must be able to act on them without re-reading the doc.
+**Hot memory rule:** for each owned foundation, embed the **agent payload** verbatim from FOUNDATIONS.md — `Use when`, `Invariants` (with their tier), `Canonical usage`, `Extend by`, `Doesn't cover` — plus the `Change checklist`. The agent must be able to act on all of it without re-reading the doc. Everything under the entry's `Reference` heading is *not* extracted; the agent reads it on demand.
+
+**Tier rule:** copy each invariant's `tier="convention|rule"` along with the text. The two are not interchangeable — a Convention is deviable with a stated reason, a Rule is not. An agent that defends a Convention as though it were a Rule blocks legitimate work, which is the failure mode the tiers exist to prevent. Strip the `dockit:` predicate comments; those are sync's business, not the agent's.
+
+**`Use when` rule:** the entry's `Use when` lines are the source for this agent's `description` frontmatter. Don't re-derive triggers from the code — the routing content already exists, and two independently-written versions drift. See [DESCRIPTION-WRITING.md](../guides/DESCRIPTION-WRITING.md).
 
 **Required-fields rule:** Every generated agent file MUST start with frontmatter containing `name` and `description`. Without those two, the agent isn't discoverable on any platform — it just sits as inert markdown. The body is useless without them. Foundation-owner agents additionally need `tools` (so they can edit `docs/`) and on Claude, `permissionMode: acceptEdits`.
 
@@ -72,20 +76,49 @@ These are the invariants the catalog claims for each owned foundation. **Do not 
 silently.** If a code change implies one of these must change, follow the Invariant Change
 Protocol below.
 
+Two strengths, and they are not interchangeable:
+
+- **Rule** — deviating is a defect. Push back, and say which rule and why.
+- **Convention** — how it's done here. Follow it by default, and flag a deviation, but a
+  contributor with a stated reason is allowed to deviate. Do not block them.
+
+Treating a Convention as a Rule is itself an error — it blocks legitimate work and makes the
+foundation look closed when it isn't.
+
+<!-- These two definitions are deliberately phrased as agent behaviour, not as the reader-
+     facing legend that appears in FOUNDATIONS.md and PRINCIPLES.md. Same meaning, expanded
+     into instructions. Don't "align" them with the doc wording — an agent needs to be told
+     what to *do*, not just what the tier means. Canonical definitions: dockit's
+     CHOICE-MINING.md § The two tiers. -->
+
+
 ### {{FOUNDATION_NAME}}
 
-- {{INVARIANT_1}}
-- {{INVARIANT_2}}
+- **[{{TIER_1}}]** {{INVARIANT_1}}
+- **[{{TIER_2}}]** {{INVARIANT_2}}
 
-<!-- Repeat per foundation. Copy invariants verbatim from FOUNDATIONS.md. -->
+<!-- Repeat per foundation. Copy verbatim from FOUNDATIONS.md → Invariants, including each
+     one's tier= value. Drop the dockit: predicate comments — those belong to sync. -->
 
-## Public API (hot memory)
+## Canonical usage (hot memory)
 
 ```{{LANG}}
-{{PUBLIC_API_EXAMPLE}}
+# from {{SOURCE_PATH}}:{{LINE}}
+{{CANONICAL_CALL_SITE}}
 ```
 
-<!-- One block per foundation. Pulled from FOUNDATIONS.md → Public API section. -->
+<!-- One block per foundation, copied from FOUNDATIONS.md → Canonical usage. This is a real
+     call site, not a signature list — replicate its shape when writing new code. -->
+
+## Extending and boundaries (hot memory)
+
+**Extend by:** {{EXTENSION_PROCEDURE}}
+
+**Doesn't cover:** {{UNCOVERED_SCOPE}}
+
+<!-- Copied from FOUNDATIONS.md. The second one matters as much as the first: it tells you
+     when building something new is the correct move rather than a violation. If a task
+     falls in the uncovered scope, say so — don't force it through this foundation. -->
 
 ## Custom Patterns
 
@@ -154,8 +187,10 @@ Items the team requires for any change to these foundations:
 
 | Trigger | Doc field to update |
 |---------|---------------------|
-| Public API symbol added/removed/renamed | `Public API` section + entry in catalog |
-| New invariant introduced | `Invariants` (after invariant change protocol) |
+| Public API symbol added/removed/renamed | `Canonical usage` (re-copy the call site) + entry in catalog |
+| New invariant introduced | `Invariants` (after invariant change protocol) — enters at **Convention**; only a human promotes it to Rule |
+| Sanctioned way to add a new instance changed | `Extend by` |
+| Foundation grows to cover a previously excluded case | `Doesn't cover` |
 | Status flip (active → deprecated/sunset) | Catalog `Status` + run cross-doc check |
 | Path moved or renamed | Catalog `Path` + `Working Directories` in this agent + cross-doc check |
 | New consumer feature folder | `Consumers` table |
@@ -203,6 +238,8 @@ Never silently rewrite. Always list hits and prompt — match the UX dockit `syn
 - **Does not write tickets** — `tikkit:foundationtik` owns ticket creation.
 - **Does not modify other foundations** — strict scope; only the foundations listed in `Owned Foundations`.
 - **Does not modify foundation source code** — read-only on `{{WORKING_DIRECTORIES}}`; edits limited to `docs/`.
+- **Does not promote a Convention to a Rule** — that's a human call. Recommend it and let `/repokit status` collect the decision.
+- **Does not invent rationale** — if an invariant's `Why` block is empty, leave it. A plausible-sounding reason you supplied reads to the next agent as settled team reasoning.
 
 ---
 

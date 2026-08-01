@@ -1,223 +1,108 @@
 # Principles
 
-Project patterns, architectural decisions, and guidelines for consistent development. This document serves both human developers and AI tools.
+Decisions this project has made that an agent or a new contributor would not guess.
 
----
-
-## Service Patterns
-
-### Database Access
-
-Always use the shared database client from `@ecom/utils`:
-
-```typescript
-// ✅ YES - use the shared client
-import { db } from '@ecom/utils/db'
-const users = await db.user.findMany()
-
-// ❌ NO - bypasses connection pooling and config
-import { PrismaClient } from '@prisma/client'
-const prisma = new PrismaClient()
-```
-
-**Why:** The shared client handles connection pooling, logging, and environment-specific configuration.
-
-### API Responses
-
-Always use the response helpers for consistent formatting:
-
-```typescript
-// ✅ YES - consistent response format
-import { success, error } from '@ecom/utils/response'
-return success(data)
-return error('Not found', 404)
-
-// ❌ NO - inconsistent formats
-res.json({ data })
-res.status(404).send({ error: 'Not found' })
-```
-
-**Why:** Consistent response format makes client-side error handling predictable.
-
-### Environment Variables
-
-Access env vars through the config module:
-
-```typescript
-// ✅ YES - typed and validated
-import { config } from '@ecom/utils/config'
-const dbUrl = config.DATABASE_URL
-
-// ❌ NO - untyped, may be undefined
-const dbUrl = process.env.DATABASE_URL
-```
-
-**Why:** Config validates at startup and provides TypeScript types.
-
-### Shared Types
-
-Import types from `@ecom/types`, never duplicate:
-
-```typescript
-// ✅ YES - single source of truth
-import { Product, Order } from '@ecom/types'
-
-// ❌ NO - will drift out of sync
-interface Product {
-  id: string
-  name: string
-}
-```
-
-**Why:** Shared types ensure frontend and backend stay in sync.
-
----
-
-## Testing Approach
-
-### Test Organization
-
-```
-service/
-├── src/
-│   └── orders/
-│       ├── orders.service.ts
-│       └── orders.service.test.ts   # Co-located unit tests
-└── tests/
-    ├── integration/                  # API tests
-    │   └── orders.test.ts
-    └── fixtures/                     # Shared test data
-        └── orders.ts
-```
-
-### Testing Patterns
-
-| Pattern | When to Use |
-|---------|-------------|
-| Unit tests | Pure functions, business logic |
-| Integration tests | API endpoints, database operations |
-| E2E tests | Critical user flows (checkout, auth) |
-
-### What to Test
-
-| Component | Test | Don't Test |
-|-----------|------|------------|
-| Services | Business logic, edge cases | Framework internals |
-| API routes | Request/response, auth, validation | Third-party libraries |
-| React components | User interactions, state | Implementation details |
-
-### Running Tests
-
-```bash
-# All tests
-pnpm test
-
-# Single service
-pnpm --filter backend test
-
-# Watch mode
-pnpm --filter frontend test:watch
-
-# Coverage
-pnpm test --coverage
-```
-
-### Test Requirements
-
-- All new features require tests
-- Critical paths require E2E tests
-- Coverage must not decrease
-
----
-
-## Tech Decisions
-
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Monorepo | pnpm workspaces | Shared code, atomic changes |
-| Frontend | React + TypeScript | Team expertise, type safety |
-| Backend | Node.js + Express | JavaScript ecosystem consistency |
-| ML Service | Python + FastAPI | ML library ecosystem |
-| Database | PostgreSQL | ACID, JSON support, familiarity |
-| Cache | Redis | Performance, pub/sub for events |
-| Cloud | GCP | Existing relationship, Cloud Run |
-| IaC | Terraform | Team expertise, state management |
+> **Convention** — how it's done here. Follow by default; deviating is fine if you say why.
+> **Rule** — deviating is a defect. Don't.
 
 ---
 
 ## Conventions
 
-### Naming
+**Import `db` from `@ecom/utils/db`.** Don't construct a `PrismaClient`. Exceptions: `packages/utils/src/db.ts`, `scripts/seed.ts`.
+<!-- dockit:check cmd="rg -l 'new PrismaClient' apps/ packages/ --glob '!packages/utils/src/db.ts' | wc -l" expect="0" last="2026-08-01" -->
 
-| Element | Convention | Example |
-|---------|------------|---------|
-| React components | PascalCase | `ProductCard.tsx` |
-| TypeScript files | camelCase | `productService.ts` |
-| Python files | snake_case | `product_recommender.py` |
-| API routes | kebab-case | `/api/v1/product-categories` |
-| Database tables | snake_case | `order_items` |
-| Environment vars | UPPER_SNAKE | `DATABASE_URL` |
+<details><summary>Why</summary>
 
-### File Organization
+Each `new PrismaClient()` opens its own pool. Four of them in the same Cloud Run instance
+exhausted Postgres connections under normal load.
+Rejected: a max-clients env cap — it turns the failure into a slow one rather than removing it.
+</details>
 
-- Feature-based folder structure in frontend
-- Route-based organization in backend
-- Shared types in `packages/types`
-- Shared UI in `packages/ui`
+**Return API responses through `success()` / `error()` from `@ecom/utils/response`.** Not bare `res.json()`.
+<!-- dockit:conform cmd="rg -l 'from .@ecom/utils/response' apps/backend/src/routes/*.ts | wc -l" total="ls apps/backend/src/routes/*.ts | wc -l" min="80%" last="2026-08-01" -->
 
-### API Design
+[TODO: why?]
 
-- RESTful for CRUD operations
-- Version prefix: `/api/v1/`
-- Pagination via `?page=&limit=`
-- Consistent error response format
+**Read environment variables through `config` from `@ecom/utils/config`.** Not `process.env`. Exceptions: `packages/utils/src/config.ts`, `*.config.ts` build files.
+<!-- dockit:check cmd="rg -l 'process\.env\.' apps/ packages/ --glob '!**/*.config.ts' --glob '!packages/utils/src/config.ts' | wc -l" expect="0" last="2026-08-01" -->
 
----
+<details><summary>Why</summary>
 
-## Non-Negotiables
+`config` validates the whole environment at startup, so a missing variable fails the
+container immediately instead of throwing on the first request that needs it.
+Rejected: runtime `??` defaults — they mask a misconfigured deploy as working.
+</details>
 
-> These rules are mandatory. Violations should block PRs.
+**Import shared domain types from `@ecom/types`.** Don't redeclare them locally.
+<!-- dockit:check cmd="rg -l 'interface (Product|Order|User|Cart)\b' apps/ --glob '!packages/types/**' | wc -l" expect="0" last="2026-08-01" -->
 
-### Security
+[TODO: why?]
 
-- [ ] No secrets in code or version control
-- [ ] All user input validated (Zod on backend, React Hook Form on frontend)
-- [ ] Authentication required on all non-public endpoints
-- [ ] HTTPS only in all environments
+**API routes are kebab-case under a `/api/v1/` prefix.** Pagination is `?page=&limit=`.
+<!-- dockit:conform cmd="rg -o \"router\\.(get|post|put|delete)\\('/api/v1/[a-z0-9-]+\" apps/backend/src | wc -l" total="rg -o \"router\\.(get|post|put|delete)\\('\" apps/backend/src | wc -l" min="80%" last="2026-08-01" -->
 
-### Code Quality
+[TODO: why?]
 
-- [ ] ESLint must pass
-- [ ] TypeScript strict mode enabled
-- [ ] No `any` types without justification
-- [ ] Prettier formatting enforced
+**Server state goes through React Query.** Don't fetch in `useEffect`.
+<!-- dockit:check cmd="rg -l 'useEffect\(\(\) => \{[^}]*fetch\(' apps/frontend/src | wc -l" expect="0" last="2026-08-01" -->
 
-### Testing
-
-- [ ] All new features require tests
-- [ ] Tests must pass before merge
-- [ ] E2E tests for critical user flows
-
-### Documentation
-
-- [ ] API endpoints documented in OpenAPI
-- [ ] Breaking changes require migration guide
+[TODO: why?]
 
 ---
 
-## Preferences
+## Rules
 
-Recommended but not enforced:
+**Every non-public endpoint requires authentication.** Public routes are listed explicitly in `apps/backend/src/middleware/public-routes.ts`.
+<!-- dockit:check cmd="rg -L 'requireAuth|isPublicRoute' apps/backend/src/routes/*.ts | wc -l" expect="0" last="2026-08-01" -->
 
-- Use React Query for server state
-- Prefer server components where possible
-- Keep components under 200 lines
-- Use conventional commits
+<details><summary>Why</summary>
+
+An unauthenticated `/api/v1/orders` shipped in the 2025 Black Friday release and exposed
+order history across accounts.
+Rejected: auth-by-default middleware — public routes then become invisible omissions
+instead of an explicit list someone reviews.
+</details>
+
+**Validate every request body with a Zod schema before it reaches a service.**
+<!-- dockit:conform cmd="rg -l 'z\.object' apps/backend/src/routes/*.ts | wc -l" total="ls apps/backend/src/routes/*.ts | wc -l" min="80%" last="2026-08-01" -->
+
+[TODO: why?]
+
+**Breaking API changes ship with a migration guide in `docs/migrations/`.**
+
+[TODO: why?]
 
 ---
 
-## Related Documentation
+## Extending the codebase
 
-- [README.md](../README.md) - Project overview
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - System design
-- [CONTRIBUTING.md](./CONTRIBUTING.md) - Development workflow
+| Adding a... | Do this |
+|-------------|---------|
+| Package | `pnpm create @ecom/<name>` → add to `pnpm-workspace.yaml` → add the path alias to the root `tsconfig.json` |
+| Backend route | Add `apps/backend/src/routes/<name>.ts`, register it in `routes/index.ts`, add the Zod schema alongside |
+| Shared type | Add to `packages/types/src/<domain>.ts` and export from the package index — never redeclare in a consumer |
+| Frontend page | Add under `apps/frontend/src/app/<route>/page.tsx`; server component unless it needs browser state |
+| ML endpoint | Add to `services/ml/app/routers/`, register in `main.py`, update the OpenAPI spec |
+
+---
+
+## Tech decisions
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Monorepo tooling | pnpm workspaces | [TODO: why?] |
+| Backend runtime | Node.js + Express | [TODO: why?] |
+| ML service | Python + FastAPI, separate deploy | The recommender depends on libraries with no JS equivalent, and its memory profile would force the whole API to a larger instance class |
+| Database | PostgreSQL | [TODO: why?] |
+| Cache and events | Redis | [TODO: why?] |
+| Cloud | GCP Cloud Run | [TODO: why?] |
+| IaC | Terraform | [TODO: why?] |
+
+---
+
+## Related documentation
+
+- [README.md](../README.md) — project overview
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — system design
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — development workflow, test commands, setup

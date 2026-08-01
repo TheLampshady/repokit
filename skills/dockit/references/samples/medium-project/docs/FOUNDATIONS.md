@@ -4,11 +4,14 @@ Registry of shared, foundational code in the Task Manager API — the abstractio
 
 A "foundation" here means: code with high fan-in across multiple features, intended to be reused, and expected to remain stable. Detection methodology in [dockit's FOUNDATIONS-DETECTION guide](../../skills/dockit/references/guides/FOUNDATIONS-DETECTION.md).
 
+> **Convention** — how it's done here. Follow by default; deviating is fine if you say why.
+> **Rule** — deviating is a defect. Don't.
+
 ---
 
 ## Catalog
 
-5 foundations detected across `app/`. Last sync: 2026-05-07.
+5 foundations detected across `app/`. Last sync: 2026-08-01.
 
 | Name | Type | Path | Owner | Status | Health | Consumers | Last Reviewed |
 |------|------|------|-------|--------|--------|-----------|---------------|
@@ -30,32 +33,70 @@ A "foundation" here means: code with high fan-in across multiple features, inten
 **Status:** active
 **Last reviewed:** 2026-04-12
 
-### Purpose
+### Use when
 
-Provides the async SQLAlchemy session factory and FastAPI dependency for all database access. Owns connection pooling, transaction lifecycle, and test-isolation behaviour.
-
-### Public API
-
-| Symbol | Purpose |
-|--------|---------|
-| `get_db()` | FastAPI dependency yielding an `AsyncSession`; commits on success, rolls back on exception |
-| `engine` | Module-level engine, exported for migration scripts only |
-| `Base` | Declarative base for ORM models |
-
-```python
-from app.core.database import get_db
-
-async def list_tasks(db: AsyncSession = Depends(get_db)):
-    return await db.execute(select(Task))
-```
+- Reading or writing anything persisted
+- Adding a repository, a migration, or a test that touches the database
+- Deciding how a service gets its session
 
 ### Invariants
 
-- **All database access goes through `get_db()`.** Direct use of `engine` outside of Alembic migrations is forbidden.
-- **No raw SQL.** Use SQLAlchemy ORM expressions. Raw `text()` calls require platform-team review.
-- **Sessions are request-scoped.** Never share a session across requests or background tasks; spawn a new one.
+**Reach the database through `get_db()`.** `engine` is exported for Alembic only. Exceptions: `alembic/env.py`.
+<!-- dockit:check cmd="rg -l 'from app.core.database import engine' app/ --glob '!alembic/**' | wc -l" expect="0" tier="rule" last="2026-08-01" -->
 
-### Consumers
+<details><summary>Why</summary>
+
+`get_db()` owns commit-on-success and rollback-on-exception. Code holding the engine
+directly gets neither, and two early handlers left transactions open under load.
+Rejected: a session context manager per call site — same guarantees, but every caller has
+to remember to use it.
+</details>
+
+**Sessions are request-scoped.** Background tasks open their own; never pass one across a request boundary.
+<!-- dockit:check cmd="rg -l 'Depends\(get_db\)' app/workers/*.py | wc -l" expect="0" tier="convention" last="2026-08-01" -->
+
+[TODO: why?]
+
+**Query through the ORM.** `text()` requires platform-team review. Exceptions: `alembic/versions/`.
+<!-- dockit:check cmd="rg -l 'execute\(text\(' app/ | wc -l" expect="0" tier="rule" last="2026-08-01" -->
+
+<details><summary>Why</summary>
+
+Two string-interpolated queries bypassed the tenant filter and returned rows belonging to
+other workspaces.
+Rejected: a query linter — it can't see interpolation built up across several statements.
+</details>
+
+### Canonical usage
+
+```python
+# from app/api/routes/tasks.py:41
+@router.get("/tasks")
+async def list_tasks(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> list[TaskRead]:
+    return await TaskRepository(db).list_for_workspace(user.workspace_id)
+```
+
+### Extend by
+
+New repository → add `app/repositories/<model>.py` subclassing `BaseRepository`, then take it as a constructor arg in the service. New table → `make migration name=<slug>`, edit the generated revision under `alembic/versions/`.
+
+<!-- Derived from the last 4 additions (task, comment, workspace, invite repositories) —
+     every one touched exactly these files. -->
+
+### Doesn't cover
+
+Read replicas and connection routing. `get_db()` returns the primary unconditionally; the two reporting endpoints in `app/api/routes/reports.py` construct their own read-only session.
+
+[TODO: intentional boundary, or a gap?]
+
+---
+
+#### Reference
+
+**Consumers**
 
 | Feature / Module | Usage |
 |------------------|-------|
@@ -64,22 +105,22 @@ async def list_tasks(db: AsyncSession = Depends(get_db)):
 | `app/repositories/` | Repository pattern wraps the session |
 | `tests/` | Test fixtures override with transaction-rollback session |
 
-### Dependencies
+**Dependencies**
 
 - `sqlalchemy` (async)
 - `app.core.config` (for `DATABASE_URL`)
 
-### Test coverage
+**Test coverage**
 
-`tests/integration/test_database.py` — covers session lifecycle, rollback, pool exhaustion. Coverage: ~85%.
+`tests/integration/test_database.py` — session lifecycle, rollback, pool exhaustion. Coverage: ~85%.
 
-### Refactor triggers
+**Refactor triggers**
 
 - Public API exceeds 5 symbols → split into `database/session.py` + `database/engine.py`.
 - Consumers begin importing `engine` directly → tighten exports.
 - Any consumer needs sync access → resist; route through async; document why if approved.
 
-### Change checklist
+**Change checklist**
 
 - [ ] Update consumers in the same PR if `get_db` signature changes.
 - [ ] Re-run integration tests against PostgreSQL 14, 15, 16.
@@ -96,55 +137,84 @@ async def list_tasks(db: AsyncSession = Depends(get_db)):
 **Status:** active
 **Last reviewed:** 2026-04-12
 
-### Purpose
+### Use when
 
-Validates Firebase JWTs and exposes the current user as a FastAPI dependency. Single point of contact between the API and Firebase Auth — no other module talks to Firebase directly.
-
-### Public API
-
-| Symbol | Purpose |
-|--------|---------|
-| `get_current_user()` | FastAPI dependency; validates Bearer token, returns `User` |
-| `require_role(role)` | Dependency factory for role-gated routes |
-
-```python
-from app.core.auth import get_current_user, require_role
-
-@router.get("/tasks")
-async def list_tasks(user: User = Depends(get_current_user)): ...
-
-@router.delete("/workspaces/{id}")
-async def delete_workspace(_: User = Depends(require_role("owner"))): ...
-```
+- Adding or changing any route, WebSocket handshake, or background job that acts on behalf of a user
+- Gating something by role
+- Anything touching identity, tokens, or Firebase
 
 ### Invariants
 
-- **No protected route bypasses `get_current_user`.** Health check is the only exception.
-- **Token validation always uses Firebase Admin SDK.** No manual JWT parsing.
-- **`User` is read-only.** Mutations go through the user repository, not this module.
+**Every route declares `Depends(get_current_user)`.** Exceptions: `GET /health`.
+<!-- dockit:check cmd="rg -L 'Depends\(get_current_user\)' app/api/routes/*.py --glob '!**/health.py' | wc -l" expect="0" tier="rule" last="2026-08-01" -->
 
-### Consumers
+<details><summary>Why</summary>
+
+An unauthenticated `/workspaces` listing shipped in March 2025 and exposed workspace names
+across tenants for nine days.
+Rejected: middleware-level auth — routes that legitimately need anonymous access become
+invisible exceptions instead of explicit ones.
+</details>
+
+**Validate tokens through the Firebase Admin SDK.** No hand-rolled JWT parsing.
+<!-- dockit:check cmd="rg -l 'jwt.decode|base64.*\.split\(.\..\)' app/ | wc -l" expect="0" tier="rule" last="2026-08-01" -->
+
+[TODO: why?]
+
+**Treat `User` as read-only.** Mutations go through `UserRepository`.
+<!-- dockit:check cmd="rg -l 'user\.[a-z_]+ = ' app/api/ app/services/ | wc -l" expect="0" tier="convention" last="2026-08-01" -->
+
+[TODO: why?]
+
+### Canonical usage
+
+```python
+# from app/api/routes/workspaces.py:88
+@router.delete("/workspaces/{workspace_id}")
+async def delete_workspace(
+    workspace_id: UUID,
+    _: User = Depends(require_role("owner")),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    await WorkspaceService(db).delete(workspace_id)
+```
+
+### Extend by
+
+New role → add it to the `Role` enum in `app/core/auth.py`, then gate routes with `require_role("<name>")`. New identity provider → not currently supported; see Doesn't cover.
+
+### Doesn't cover
+
+Service-to-service auth. The two internal endpoints in `app/api/routes/internal.py` check a shared secret header instead of going through this module.
+
+[TODO: intentional boundary, or a gap?]
+
+---
+
+#### Reference
+
+**Consumers**
 
 | Feature / Module | Usage |
 |------------------|-------|
 | `app/api/routes/` | Every protected route |
 | `app/api/websockets/` | WS handshake uses the same dependency |
 
-### Dependencies
+**Dependencies**
 
 - `firebase-admin`
 - `app.core.config` (for service-account credentials)
 
-### Test coverage
+**Test coverage**
 
 `tests/integration/test_auth.py` — token validation, role gates, expired-token handling. Coverage: ~90%.
 
-### Refactor triggers
+**Refactor triggers**
 
 - More than 3 role-checking helpers accumulate → extract to `auth/roles.py`.
 - Multiple identity providers added → extract `auth/providers/` directory.
 
-### Change checklist
+**Change checklist**
 
 - [ ] Update consumers in the same PR if dependency return type changes.
 - [ ] Test against expired and revoked tokens.
@@ -160,26 +230,63 @@ async def delete_workspace(_: User = Depends(require_role("owner"))): ...
 **Status:** active
 **Last reviewed:** 2026-03-18
 
-### Purpose
+### Use when
 
-Redis client wrapper providing typed get/set with serialization, TTL handling, and graceful fallback when Redis is unavailable.
-
-### Public API
-
-| Symbol | Purpose |
-|--------|---------|
-| `cache.get(key)` | Returns deserialized value or `None` |
-| `cache.set(key, value, ttl=)` | Stores JSON-serialized value with TTL |
-| `cache.delete(key)` | Removes key |
-| `cache.invalidate(pattern)` | Pattern-based deletion (use sparingly — uses `SCAN`) |
+- Caching anything, or invalidating a cached value
+- Publishing to or subscribing from Redis
+- Deciding whether a read path can tolerate a cache miss
 
 ### Invariants
 
-- **All Redis access goes through `cache`.** No direct `redis.Redis()` instantiation.
-- **Cache is best-effort.** Read paths must work when Redis is down; treat misses and errors identically.
-- **TTL is required on every `set`.** No unbounded keys.
+**Go through `cache`.** No direct `redis.Redis()` construction.
+<!-- dockit:check cmd="rg -l 'redis\.Redis\(|from redis import' app/ --glob '!app/core/cache.py' | wc -l" expect="0" tier="rule" last="2026-08-01" -->
 
-### Consumers
+[TODO: why?]
+
+**Read paths work when Redis is down.** Treat misses and errors identically.
+<!-- dockit:conform cmd="rg -l 'except.*RedisError|cache\.get.*or ' app/services/*.py | wc -l" total="rg -l 'cache\.get' app/services/*.py | wc -l" min="80%" tier="rule" last="2026-08-01" -->
+
+<details><summary>Why</summary>
+
+A Redis restart during the 2025-11 deploy took the whole API down for four minutes —
+every list endpoint raised instead of falling through to the database.
+Rejected: a circuit breaker — it adds a failure mode of its own for a cache that's already
+optional by design.
+</details>
+
+**Every `set` passes a `ttl`.** No unbounded keys.
+<!-- dockit:check cmd="rg 'cache\.set\(' app/ | rg -v 'ttl=' | wc -l" expect="0" tier="convention" last="2026-08-01" -->
+
+[TODO: why?]
+
+### Canonical usage
+
+```python
+# from app/services/task.py:112
+cached = await cache.get(f"tasks:{workspace_id}")
+if cached is not None:
+    return cached
+
+tasks = await TaskRepository(self.db).list_for_workspace(workspace_id)
+await cache.set(f"tasks:{workspace_id}", tasks, ttl=300)
+return tasks
+```
+
+### Extend by
+
+New cached read → follow the get-miss-set shape above and add the key prefix to the `CACHE_PREFIXES` table in `app/core/cache.py` so invalidation can find it.
+
+### Doesn't cover
+
+Write-through and read-through caching — every call site does its own get/set by hand. Also no cache stampede protection; three services hit the same key on expiry.
+
+[TODO: intentional boundary, or a gap?]
+
+---
+
+#### Reference
+
+**Consumers**
 
 | Feature / Module | Usage |
 |------------------|-------|
@@ -187,21 +294,21 @@ Redis client wrapper providing typed get/set with serialization, TTL handling, a
 | `app/services/workspace.py` | Workspace member lookup caching |
 | `app/api/websockets/` | Pub/sub for fan-out |
 
-### Dependencies
+**Dependencies**
 
 - `redis` (async)
 - `app.core.config`
 
-### Test coverage
+**Test coverage**
 
 `tests/unit/test_cache.py` + `tests/integration/test_cache_failover.py`. Coverage: ~75%.
 
-### Refactor triggers
+**Refactor triggers**
 
 - Pub/sub usage exceeds simple key/value usage → split `cache.py` and `pubsub.py`.
 - Serialization needs grow beyond JSON (e.g. msgpack) → introduce a serializer abstraction.
 
-### Change checklist
+**Change checklist**
 
 - [ ] Update consumers if signature changes.
 - [ ] Run failover test (Redis killed mid-request).
@@ -217,24 +324,51 @@ Redis client wrapper providing typed get/set with serialization, TTL handling, a
 **Status:** active
 **Last reviewed:** 2026-02-04
 
-### Purpose
+### Use when
 
-WebSocket fan-out for real-time updates (task changes, comments, presence). Publishes to Redis pub/sub channels, fans out to connected clients.
-
-### Public API
-
-| Symbol | Purpose |
-|--------|---------|
-| `publish(channel, event)` | Send event to channel |
-| `subscribe(channel)` | Async generator of events for a channel |
-| `Hub` | Connection manager (currently exposed; should be internal) |
+- Sending anything to a connected client in real time
+- Adding a new event type or WebSocket channel
+- Debugging why a client didn't receive an update
 
 ### Invariants
 
-- **All real-time traffic goes through `publish` / `subscribe`.** No direct WebSocket sends from route handlers.
-- **Events are JSON-serializable dicts with a `type` field.**
+**Publish through `publish()`.** No direct WebSocket sends from route handlers.
+<!-- dockit:check cmd="rg -l 'websocket\.send_(json|text)' app/api/routes/ | wc -l" expect="0" tier="rule" last="2026-08-01" -->
 
-### Consumers
+[TODO: why?]
+
+**Events are JSON-serialisable dicts carrying a `type` field.**
+<!-- dockit:conform cmd="rg -c 'publish\(.*\"type\":' app/services/*.py | wc -l" total="rg -c 'publish\(' app/services/*.py | wc -l" min="80%" tier="convention" last="2026-08-01" -->
+
+[TODO: why?]
+
+### Canonical usage
+
+```python
+# from app/services/task.py:64
+await publish(
+    f"workspace:{task.workspace_id}",
+    {"type": "task.updated", "task_id": str(task.id), "status": task.status},
+)
+```
+
+### Extend by
+
+New event type → publish it with a dotted `type` string from the owning service, then add a case to the client-side handler. There is no registry; the set of event types is discoverable only by grepping `publish(`.
+
+<!-- Flagged: no scaffold or registry exists for this. Reported to the user, not written as a rule. -->
+
+### Doesn't cover
+
+Delivery guarantees. Events are fire-and-forget — a client that reconnects mid-publish misses them, and nothing replays. Presence is also handled separately in `app/api/websockets/presence.py` rather than through this module.
+
+[TODO: intentional boundary, or a gap?]
+
+---
+
+#### Reference
+
+**Consumers**
 
 | Feature / Module | Usage |
 |------------------|-------|
@@ -242,22 +376,22 @@ WebSocket fan-out for real-time updates (task changes, comments, presence). Publ
 | `app/services/workspace.py` | Publishes on member changes |
 | `app/api/websockets/` | Subscribes per-connection |
 
-### Dependencies
+**Dependencies**
 
 - `app.core.cache` (for Redis pub/sub)
 - `fastapi.WebSocket`
 
-### Test coverage
+**Test coverage**
 
 `tests/unit/test_notifications.py` — coverage thin (~50%); pub/sub tested only via mocked Redis.
 
-### Refactor triggers — fired
+**Refactor triggers — fired**
 
 - **`change_count_12m = 14` (top quartile).** This module is being actively redesigned. Expect a `foundation-wrong-abstraction` ticket from foundationtik.
 - **`Hub` leaks connection objects to consumers.** Encapsulate or split.
 - **Public API has 3 symbols with growing parameter counts.** See [Sandi Metz on the wrong abstraction](https://sandimetz.com/blog/2016/1/20/the-wrong-abstraction).
 
-### Change checklist
+**Change checklist**
 
 - [ ] Coordinate with consumers — high churn means high blast radius.
 - [ ] Update integration tests for any pub/sub semantics change.
@@ -273,30 +407,45 @@ WebSocket fan-out for real-time updates (task changes, comments, presence). Publ
 **Status:** active
 **Last reviewed:** never
 
-### Purpose
+### Use when
 
-A catch-all utility module that accumulated over the last year: date formatting, slug generation, retry decorators, currency math. Not originally designed as a foundation — but its fan-in (19 importers across 5 features) makes it one in practice.
-
-### Public API
-
-| Symbol | Purpose |
-|--------|---------|
-| `format_due_date(dt)` | Human-readable date strings |
-| `slugify(text)` | URL-safe slug |
-| `retry_with_backoff(fn, max=3)` | Decorator for transient failures |
-| `to_cents(amount)` | Money math |
-| `from_cents(cents)` | Money math |
-| _(several others — see Refactor triggers)_ |
+- Formatting a due date, slugifying text, converting currency, or retrying a transient failure
+- Before writing any of the above from scratch — one of the 11 functions here probably does it
 
 ### Invariants
 
-_No invariants documented yet. Adding these is the priority for this foundation._
+_None recorded. This foundation accumulated rather than being designed, so nothing has been asserted about it yet — the priority for its first review._
 
-Suggested invariants pending review:
-- Functions must be pure (no I/O, no global state).
-- Each function must have unit tests.
+Candidates observed in the code, unconfirmed:
 
-### Consumers
+**Functions are pure — no I/O, no global state.** Currently 11/11.
+<!-- dockit:conform cmd="rg -L 'open\(|requests\.|await ' app/services/helpers.py | wc -l" total="1" min="80%" tier="convention" last="2026-08-01" -->
+
+[TODO: intentional rule, or just how it happens to be?]
+
+### Canonical usage
+
+```python
+# from app/api/routes/tasks.py:77
+from app.services.helpers import format_due_date, slugify
+
+slug = slugify(payload.title)
+due = format_due_date(task.due_at)
+```
+
+### Extend by
+
+No sanctioned path — functions are appended to the module directly. That's the reason it's flagged as a hidden foundation; see the split proposed under Refactor triggers.
+
+### Doesn't cover
+
+[TODO: nothing recorded — needs an owner before this can be answered]
+
+---
+
+#### Reference
+
+**Consumers**
 
 | Feature / Module | Usage |
 |------------------|-------|
@@ -306,15 +455,15 @@ Suggested invariants pending review:
 | `app/services/notifications.py` | `format_due_date` |
 | `app/api/websockets/` | `retry_with_backoff` |
 
-### Dependencies
+**Dependencies**
 
 - Standard library only.
 
-### Test coverage
+**Test coverage**
 
 Partial — `tests/unit/test_helpers.py` covers `slugify` and money math. `format_due_date` and `retry_with_backoff` are untested.
 
-### Refactor triggers — fired
+**Refactor triggers — fired**
 
 - **Module exceeds 11 public functions across unrelated concerns.** Split by responsibility:
   - `app/core/dates.py` — date formatting
@@ -324,7 +473,7 @@ Partial — `tests/unit/test_helpers.py` covers `slugify` and money math. `forma
 - **Lives outside `app/core/`.** After splitting, move to `app/core/`.
 - **No owner.** Assign to platform team or distribute pieces to feature teams.
 
-### Change checklist
+**Change checklist**
 
 - [ ] Assign an owner before any further additions.
 - [ ] Add unit tests for `format_due_date` and `retry_with_backoff` before splitting.
@@ -374,11 +523,13 @@ Foundations are reviewed on a rolling cadence. A foundation's `Last reviewed` da
 | Health flips to `hotspot` | foundationtik writes a `foundation-wrong-abstraction` or `foundation-bloat` ticket |
 | New hidden foundation detected | dockit `sync` adds a row, flags for review |
 | Consumer count drops below threshold | foundationtik writes a `foundation-deprecation-candidate` ticket |
+| Invariant predicate fails | dockit `sync` flags it; `/repokit status` asks whether the doc is wrong or the code is drifting |
 
 Currently triggered:
 - `core.notifications` — hotspot, will get a refactor ticket on next foundationtik run.
 - `services.helpers` — hidden foundation, needs an owner.
-- `core.cache` — `Last reviewed = 2026-03-18`, approaching the 90-day threshold (currently 50 days old).
+- `core.cache` — `Last reviewed = 2026-03-18`, past the 90-day threshold.
+- 8 open decisions across these entries — run `/repokit status` to walk them.
 
 ### Re-running detection
 
@@ -386,12 +537,14 @@ Currently triggered:
 /repokit:dockit sync
 ```
 
-Refreshes the catalog from current code state. Existing manual edits to invariants, refactor triggers, and change checklists are preserved — dockit only updates the table, consumers, dependencies, and findings.
+Refreshes the catalog from current code state, and re-runs every stored predicate. Manual edits to invariants, refactor triggers, and change checklists are preserved.
+
+**Nothing here is auto-removed on a failed predicate.** A decayed count means either the invariant is wrong or the code is drifting away from a correct invariant, and the evidence doesn't distinguish those. Sync flags; a human decides.
 
 ---
 
 ## Related documentation
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — system design context
-- [PRINCIPLES.md](./PRINCIPLES.md) — patterns and conventions that foundations implement
+- [PRINCIPLES.md](./PRINCIPLES.md) — codebase-wide conventions and rules
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — workflow for changes that touch foundations

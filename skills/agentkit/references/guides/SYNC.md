@@ -53,12 +53,21 @@ The foundation's path in the catalog changed (e.g., `core/notifications.py` → 
 
 The catalog's invariants for a foundation differ from what's embedded in the agent's hot memory.
 
-**Detection:** parse the bullet list under each foundation's `### Invariants` heading in FOUNDATIONS.md and the matching `### <FoundationName>` block in the agent body. A drift is any of:
+**Detection:** parse each foundation's `### Invariants` section in FOUNDATIONS.md and the matching `### <FoundationName>` block in the agent body.
+
+An invariant in FOUNDATIONS.md is a **bold statement line**, optionally followed by a `<!-- dockit:check|conform ... -->` comment and a `<details><summary>Why</summary>` block. In the agent, the same invariant appears as a bullet prefixed with its tier: `- **[Rule]** <text>`. Compare the statement text only — ignore the `dockit:` comments (sync's business, deliberately not copied into agents) and the `Why` blocks (not extracted).
+
+A drift is any of:
 - Invariant present in FOUNDATIONS.md, missing from agent
 - Invariant present in agent, missing from FOUNDATIONS.md
 - Wording differs in a way that changes meaning (use loose normalization — case + whitespace + punctuation — to avoid noise)
+- **Tier differs** — the agent says `[Rule]` where the catalog says `tier="convention"`, or vice versa
+
+Tier drift matters as much as text drift and is easier to miss: an agent enforcing a Convention as a Rule blocks work the team considers legitimate, and one treating a Rule as a Convention lets a real defect through. Always report it explicitly rather than folding it into a wording diff.
 
 **Default action:** show the diff. Ask the user `[u]pdate agent to match catalog`, `[r]econsider the catalog`, `[s]kip`. Don't auto-rewrite — invariants are load-bearing.
+
+> Sync never *promotes* an invariant. If the catalog and agent disagree on tier, the catalog wins on update — but moving something from Convention to Rule in the catalog itself is a human decision, collected by `/repokit status`.
 
 ### 5. Status drift
 

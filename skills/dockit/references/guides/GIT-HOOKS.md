@@ -43,7 +43,7 @@ CHANGED=$(git diff --name-only $LAST_SYNC HEAD)
 | src/, lib/, app/ | ARCHITECTURE.md + diagrams |
 | .env*, config/ | ENVIRONMENTS.md |
 | infra/, .github/ | CLOUD.md |
-| .specify/memory/constitution.md | PRINCIPLES.md |
+| .specify/memory/constitution.md, openspec/project.md, conductor/workflow.md | PRINCIPLES.md — compare and report only, never merge |
 
 ---
 

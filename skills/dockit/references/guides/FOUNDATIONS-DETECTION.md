@@ -4,7 +4,7 @@ How dockit finds the foundational code in a project — even when it isn't named
 
 The premise: **a foundation is whatever the rest of the codebase actually depends on, regardless of where it lives or what it's called.** That's a measurable property — fan-in, cross-feature usage, and change stability — not a naming convention.
 
-This guide produces input rows for `FOUNDATIONS.md`. Background and terminology in [`docs/reference/foundations-reference.md`](../../../../docs/reference/foundations-reference.md).
+This guide produces input rows for `FOUNDATIONS.md`.
 
 ---
 
@@ -155,6 +155,44 @@ The top-N records (where score ≥ threshold and category ∈ {foundation, hotsp
 | Low | Marginal score, or git history < 6 months, or fan-in ≤ 3 |
 
 Always show confidence to the user. Always ask before adding `Low`-confidence rows.
+
+---
+
+## Mining the entry, once a foundation is confirmed
+
+Scoring finds *which* code is foundational. Filling its entry is a second pass, and it reuses the same import data you already collected. Full rules — the tiers, the two filters, what may never be written — are in [CHOICE-MINING.md](./CHOICE-MINING.md); this section is only the hook into detection.
+
+Three of the six choice families fall directly out of the scan:
+
+**Boundary invariants (family 1)** — you already know the foundation's fan-in. Now invert the question: how many modules import the thing the foundation *wraps*, rather than the foundation itself?
+
+```bash
+# What third-party packages does the foundation import?
+rg '^(from|import) (\w+)' app/core/cache.py -or '$2' | sort -u
+
+# Who else imports them?
+rg -l '^(from|import) redis' app/ --glob '!app/core/cache.py'
+```
+
+Zero hits outside the foundation is a boundary invariant with a ready-made predicate. A handful of hits is the exception list. Many hits means the wrapper is vestigial — say nothing, and report it as an observation.
+
+**Structural conventions (family 2)** — the consumers table is the population. Count how many of them share a shape: the same dependency, the same return type, the same registration call. ≥80% conforming is a Convention with a `conform` predicate; below that, silence.
+
+**Extension procedure (family 3)** — this is the `Extend by:` field, and git history answers it better than static analysis:
+
+```bash
+# Find commits that added an instance of this kind of thing
+git log --diff-filter=A --format='%H' -- 'app/repositories/*.py' | head -5
+
+# For each, what else changed in that commit?
+git show --stat --format= <sha>
+```
+
+Intersect the file sets across the last few additions. Files appearing every time *are* the procedure. Cross-check against scaffold targets in `Makefile` / `package.json` scripts and any registry module whose body is a list of registered things.
+
+**`Doesn't cover:`** is not scored — it's the residue. Consumers that reach past the foundation to the underlying library, or a sibling module handling an adjacent case, are the observable half. Write the observation, mark the intent question, and let a human answer it.
+
+Two things the scan must not do: promote anything to the Rule tier, and fill in a `Why` block. Both are human-only.
 
 ---
 

@@ -123,7 +123,7 @@ Extract from FOUNDATIONS.md:
 | Field | Source within doc | Used for |
 |-------|-------------------|----------|
 | Catalog rows | The `## Catalog` table | Names, paths, status, health, owner, last reviewed |
-| Per-foundation entries | `## <Foundation Name>` sections | Public API, invariants, consumers, dependencies, refactor triggers, change checklist |
+| Per-foundation entries | `## <Foundation Name>` sections | Agent payload — `Use when`, tiered invariants, canonical usage, `Extend by`, `Doesn't cover` — plus the change checklist. Everything under the entry's `Reference` heading is read on demand, not extracted |
 | Findings | `## Findings` (hotspots, hidden, pretenders) | Inform priority — hotspots get their own agent |
 | Sub-doc presence | Existence of `docs/architecture/foundations/<slug>.md` | Marks the foundation as "heavy" — own agent |
 
@@ -611,9 +611,11 @@ Keep the full description under 1024 characters. Full pattern guide with example
 
 11. **Owned Foundations** — table of foundations this agent owns (name, path, status, sub-doc).
 
-12. **Invariants (hot memory)** — copied verbatim from FOUNDATIONS.md per foundation.
+12. **Invariants (hot memory)** — copied verbatim from FOUNDATIONS.md per foundation, **including each one's `tier`** (Convention or Rule). Drop the `dockit:` predicate comments — those belong to sync. An agent that defends a Convention as though it were a Rule blocks legitimate work.
 
-13. **Public API (hot memory)** — code blocks pulled from FOUNDATIONS.md per foundation.
+13. **Canonical usage (hot memory)** — the real call site from FOUNDATIONS.md per foundation, with its `path:line` comment. Not a signature list.
+
+13b. **Extending and boundaries (hot memory)** — `Extend by` and `Doesn't cover` from the entry. The second tells the agent when building something new is correct rather than a violation; without it the agent forces every task through the foundation.
 
 14. **Maintenance** — Change Checklist (verbatim from FOUNDATIONS.md), When to Update Docs table, Invariant Change Protocol, Cross-Doc Consistency Check.
 

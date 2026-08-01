@@ -2,7 +2,14 @@
 
 Registry of shared, foundational code in this project — the abstractions, services, and primitives that the rest of the codebase depends on. This document is the source of truth for `agentkit` (per-foundation subagents) and `foundationtik` in tikkit (maintenance tickets).
 
-A "foundation" here means: code with high fan-in across multiple features, intended to be reused, and expected to remain stable. Detection methodology in [dockit's FOUNDATIONS-DETECTION guide](../skills/dockit/references/guides/FOUNDATIONS-DETECTION.md). Background concepts in [foundations-reference](../docs/reference/foundations-reference.md).
+A "foundation" here means: code with high fan-in across multiple features, intended to be reused, and expected to remain stable. Detection methodology in [dockit's FOUNDATIONS-DETECTION guide](../skills/dockit/references/guides/FOUNDATIONS-DETECTION.md). What may be written into an entry — and what must be left to a human — is in [CHOICE-MINING.md](../skills/dockit/references/guides/CHOICE-MINING.md).
+
+> **Convention** — how it's done here. Follow by default; deviating is fine if you say why.
+> **Rule** — deviating is a defect. Don't.
+
+<!-- The legend above is load-bearing — an agent reads an undeclared tier as plain
+     instruction. Canonical wording lives in CHOICE-MINING.md § The two tiers; copy it
+     verbatim rather than paraphrasing. -->
 
 ---
 
@@ -33,59 +40,108 @@ A "foundation" here means: code with high fan-in across multiple features, inten
 **Status:** [STATUS]
 **Last reviewed:** [YYYY-MM-DD]
 
-### Purpose
+<!--
+AGENT PAYLOAD — the four sections below are extracted verbatim into agentkit hot memory
+and agent descriptions. Keep them tight, instruction-shaped, and self-contained: an agent
+must be able to act on them without opening this file.
 
-[FOUNDATION_PURPOSE]
-<!-- One paragraph: what this foundation provides and why it exists. Avoid implementation detail; that's what the code is for. -->
+Everything after "Reference" is pulled on demand and is not extracted.
+-->
 
-### Public API
+### Use when
 
-[PUBLIC_API_DESCRIPTION]
-<!-- Bullet or table form: the surface that consumers depend on. Symbol name + one-line purpose. -->
-
-```[LANGUAGE]
-[PUBLIC_API_EXAMPLE]
-```
+[USE_WHEN_TRIGGERS]
+<!-- Task-shaped trigger lines, not a description. "Reading or writing X", "adding a Y".
+     agentkit turns these into the agent's description, so they drive routing — this is the
+     highest-leverage line in the entry. -->
 
 ### Invariants
 
-<!-- Rules that must hold for any change to this foundation. The foundation's owning agent carries these in hot memory and defends them on every change. -->
+<!-- Positively phrased where possible. Each carries a stored predicate that sync re-runs;
+     a failing predicate is flagged, never auto-deleted. Prohibitions are admissible only
+     with a predicate, and only at Convention tier. -->
 
-- [INVARIANT_1]
-- [INVARIANT_2]
+**[INVARIANT_1]**[IF_HAS_EXCEPTIONS] Exceptions: [EXCEPTION_LIST].[ENDIF]
+<!-- dockit:[check|conform] cmd="[VERIFY_COMMAND]" [expect="0"|total="[TOTAL_COMMAND]" min="80%"] tier="[convention|rule]" last="[YYYY-MM-DD]" -->
 
-### Consumers
+[IF_HAS_RATIONALE]
+<details><summary>Why</summary>
+
+[REASON]
+Rejected: [REJECTED_ALTERNATIVE]
+</details>
+[ENDIF]
+[IF_NO_RATIONALE]
+[TODO: why?]
+[ENDIF]
+
+### Canonical usage
+
+<!-- A real call site copied verbatim from the best-conforming consumer, with a path:line
+     comment. NOT a signature list — signatures are derivable by opening the file and go
+     stale on every rename. A real invocation additionally carries construction, async-ness,
+     and house style. Picking which consumer to copy is itself a recorded choice. -->
+
+```[LANGUAGE]
+# from [SOURCE_PATH]:[LINE]
+[CANONICAL_CALL_SITE]
+```
+
+### Extend by
+
+[EXTENSION_PROCEDURE]
+<!-- The sanctioned path to add a new instance of whatever this foundation manages.
+     Detect from git history first: take the last few additions of this kind and intersect
+     the files each one touched — that intersection is the procedure. Then scaffold commands
+     and registry files.
+
+     This is the field that lets the entry say something other than "use the existing thing." -->
+
+### Doesn't cover
+
+[UNCOVERED_SCOPE]
+<!-- The foundation's deliberate edge, so an agent can tell when building something new is
+     correct rather than a violation. Only half-inferable: the observation is visible
+     ("4 features write directly, bypassing this"), the intent is not.
+     Draft the observation, then: [TODO: intentional boundary, or a gap?] -->
+
+---
+
+#### Reference
+
+<!-- Pulled on demand. Not extracted into agents. -->
+
+**Consumers**
 
 [CONSUMERS_CONTEXT]
-<!-- Number of importers, distinct feature folders, links to top consumers. -->
 
 | Feature / Module | Usage |
 |------------------|-------|
 [CONSUMERS_TABLE]
 
-### Dependencies
+**Dependencies**
 
 [DEPENDENCIES_CONTEXT]
-<!-- What this foundation depends on. Should be short — foundations have low efferent coupling. -->
+<!-- Should be short — foundations have low efferent coupling. -->
 
 - [DEPENDENCY_1]
 - [DEPENDENCY_2]
 
-### Test coverage
+**Test coverage**
 
 [TEST_COVERAGE_DESCRIPTION]
-<!-- Test file path, coverage % if known, what's tested vs. what isn't. -->
 
-### Refactor triggers
+**Refactor triggers**
 
 <!-- When to revisit this foundation. Concrete thresholds, not aspirational. -->
 
 - [TRIGGER_1]
 - [TRIGGER_2]
 
-### Change checklist
+**Change checklist**
 
-<!-- What a contributor must do when modifying this foundation. -->
+<!-- What a contributor must do when modifying this foundation. Extracted into agentkit
+     hot memory alongside the invariants. -->
 
 - [ ] [CHECKLIST_ITEM_1]
 - [ ] [CHECKLIST_ITEM_2]
@@ -147,6 +203,7 @@ Foundations are reviewed on a rolling cadence. A foundation's `Last reviewed` da
 | Health flips to `hotspot` | foundationtik writes a `foundation-wrong-abstraction` or `foundation-bloat` ticket |
 | New hidden foundation detected | dockit `sync` adds a row, flags for review |
 | Consumer count drops below threshold | foundationtik writes a `foundation-deprecation-candidate` ticket |
+| Invariant predicate fails | dockit `sync` flags it; `/repokit status` asks whether the doc is wrong or the code is drifting |
 
 ### Re-running detection
 
@@ -154,12 +211,14 @@ Foundations are reviewed on a rolling cadence. A foundation's `Last reviewed` da
 /repokit:dockit sync
 ```
 
-Refreshes the catalog from current code state. Existing manual edits to invariants, refactor triggers, and change checklists are preserved — dockit only updates the table, consumers, dependencies, and findings.
+Refreshes the catalog from current code state, and re-runs every stored predicate. Manual edits to invariants, refactor triggers, and change checklists are preserved — dockit only updates the table, consumers, dependencies, and findings.
+
+**Nothing here is auto-removed on a failed predicate.** A decayed count means either the invariant is wrong or the code is drifting away from a correct invariant, and the evidence doesn't distinguish those. Sync flags; a human decides.
 
 ---
 
 ## Related documentation
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — system design context
-- [PRINCIPLES.md](./PRINCIPLES.md) — patterns and conventions that foundations implement
+- [PRINCIPLES.md](./PRINCIPLES.md) — codebase-wide conventions and rules; foundation-scoped ones live here
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — workflow for changes that touch foundations

@@ -124,7 +124,7 @@ gemini extensions uninstall https://github.com/TheLampshady/repokit
 | Skill | Command | Purpose | Status |
 |-------|---------|---------|--------|
 | **agentkit** | `/agentkit` | Generate project-level AI agents tailored to your codebase's custom code patterns. Supports Claude, Antigravity, and Copilot. | WIP |
-| **dockit** | `/dockit` | Generate, sync, check, audit, migrate, and refresh diagrams in project documentation. Scales by project size, auto-detects frameworks. | Ready |
+| **dockit** | `/dockit` | Generate, sync, check, migrate, and refresh diagrams in project documentation. `sync --deep` runs a whole-repo scan. Scales by project size, auto-detects frameworks. | Ready |
 | **repokit** | `/repokit` | Hub — repo health dashboard, post-change sync, project bootstrap. | Ready |
 
 ### Agents

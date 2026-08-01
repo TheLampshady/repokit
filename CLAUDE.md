@@ -29,7 +29,7 @@ There is no build system or compiled code. Everything is Markdown, TOML, and JSO
 
 | Path | Purpose |
 |------|---------|
-| `skills/dockit/` | Documentation generation skill (init, sync, check, audit, migrate, diagrams) |
+| `skills/dockit/` | Documentation generation skill (init, sync/sync --deep, check, migrate, diagrams) |
 | `skills/agentkit/` | Agent generator skill — analyzes custom code, creates project-level agents for Claude/Antigravity/Copilot |
 | `skills/repokit/` | Maintenance hub — repo health dashboard, post-change sync, project bootstrap (status, sync, init) |
 | `.claude/agents/` | Internal dev-only agents — NOT distributed (component-reviewer only) |
@@ -51,7 +51,7 @@ Skills have YAML frontmatter (`name`, `description`, `user-invocable: true`) and
 
 | Skill | Modes | Key Behavior |
 |-------|-------|-------------|
-| `dockit` | init, sync, check, audit, migrate, diagrams | Scales docs by project size; detects frameworks; never destroys content |
+| `dockit` | init, sync (`--deep`), check, migrate, diagrams | Scales docs by project size; detects frameworks; never destroys content. Mines choices into PRINCIPLES/FOUNDATIONS at the Convention tier only — never rationale, never Rules |
 | `agentkit` | init, sync, status | Analyzes custom code; generates project-level agents for Claude, Antigravity, Copilot; scales by project size |
 | `repokit` | status, sync, init | Maintenance hub — orchestrates other tools; repo health dashboard, post-change sync, project bootstrap. Also owns the **context-handoff check**: does the auto-loaded context file reference `docs/FOUNDATIONS.md`? `status` reports the gap, `init` offers to append the pointer. Never edits context files during `status` or `sync` |
 
