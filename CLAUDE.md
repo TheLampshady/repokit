@@ -46,7 +46,7 @@ Skills have YAML frontmatter (`name`, `description`, `user-invocable: true`) and
 |-------|-------|-------------|
 | `dockit` | init, sync, check, audit, migrate, diagrams | Scales docs by project size; detects frameworks; never destroys content |
 | `agentkit` | init, sync, status | Analyzes custom code; generates project-level agents for Claude, Gemini, Copilot; scales by project size |
-| `repokit` | status, sync, init | Maintenance hub — orchestrates other tools; repo health dashboard, post-change sync, project bootstrap |
+| `repokit` | status, sync, init | Maintenance hub — orchestrates other tools; repo health dashboard, post-change sync, project bootstrap. Also owns the **context-handoff check**: does the auto-loaded context file reference `docs/FOUNDATIONS.md`? `status` reports the gap, `init` offers to append the pointer. Never edits context files during `status` or `sync` |
 
 ### Agents
 

@@ -291,7 +291,9 @@ graph LR
     style Changed fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
 ```
 
-> When a feature or major plan section wraps up, the agent runs the project's lint/format/typecheck/test commands to confirm the work is correctly implemented before it's declared done.
+> Docs drift from code, and agents drift from docs. `status` delegates both checks to the tools that own them — `dockit check` for doc drift, `agentkit status` for agent drift — then `sync` reconciles both in one pass. The hub orchestrates; it never reimplements either check.
+>
+> `status` also checks the **context handoff**: whether your `CLAUDE.md` / `AGENTS.md` / `GEMINI.md` / `copilot-instructions.md` actually references `docs/FOUNDATIONS.md`. That file is loaded on every turn; the foundation registry isn't. Without the pointer, agents re-derive your architecture from scratch each time. `status` reports the gap; `/repokit init` offers to append a two-line section — always asking first, always appending, never rewriting.
 
 ---
 

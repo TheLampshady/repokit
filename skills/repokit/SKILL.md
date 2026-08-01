@@ -1,6 +1,6 @@
 ---
 name: repokit
-description: 'Hub for the context-in-sync toolkit. Check repo health, sync docs and project agents after changes, or bootstrap the foundation+consumers loop on a new project. Use when asked to: see repo status, check repo health, sync after changes, refresh docs and agents, check for drift, run maintenance, bootstrap repokit, what needs attention, or list repokit tools. Modes: status, sync, init.'
+description: 'Hub for the context-in-sync toolkit. Check repo health, sync docs and project agents after changes, or bootstrap the docs+agents loop on a new project. Use when asked to: see repo status, check repo health, sync after changes, refresh docs and agents, check for drift, run maintenance, bootstrap repokit, what needs attention, list repokit tools, or check whether agents can find the project docs. Modes: status, sync, init.'
 user-invocable: true
 ---
 
@@ -182,6 +182,36 @@ Map the result into the dashboard:
 | Drift detected | 🟡 Drifted — run `/repokit sync` (or `/agentkit sync` directly) |
 | No agents found | Skip the row, or note "Not adopted" |
 
+#### 6. Context Handoff
+
+Synced docs only pay off if agents *find* them. The project's context file (`CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `.github/copilot-instructions.md`) is the one artifact loaded on every turn without anyone asking for it — so it's the handoff point between "docs exist" and "docs get used." If it never names `docs/FOUNDATIONS.md`, agents re-derive the architecture from scratch on every task and the foundation registry sits unread.
+
+This is repokit's decision-phase concern: route agents to context that already exists rather than building another retrieval layer.
+
+```bash
+# Is there a foundation registry to point at?
+ls docs/FOUNDATIONS.md 2>/dev/null
+
+# Which context files are auto-loaded in this project?
+ls CLAUDE.md GEMINI.md AGENTS.md .github/copilot-instructions.md 2>/dev/null
+
+# Do any of them reference it?
+grep -l "FOUNDATIONS.md" CLAUDE.md GEMINI.md AGENTS.md .github/copilot-instructions.md 2>/dev/null
+```
+
+| State | Dashboard row |
+|-------|---------------|
+| No `docs/FOUNDATIONS.md` | Skip the row — nothing to point at yet |
+| Referenced by at least one context file | 🟢 Wired — `<file>` references `docs/FOUNDATIONS.md` |
+| Context file exists, no reference | 🟡 Not wired — `<file>` doesn't reference `docs/FOUNDATIONS.md` |
+| `FOUNDATIONS.md` exists, no context file at all | 🔴 No context file — nothing is auto-loaded |
+
+`status` is read-only: **report the gap, don't fix it.** When the row isn't 🟢, add this to Suggested Next Steps:
+
+> Run `/repokit init` to wire `docs/FOUNDATIONS.md` into `<context file>` — or add the line yourself.
+
+If several context files exist (a project targeting Claude *and* Gemini), check each and name the ones missing the reference. One 🟢 file doesn't cover the others — each platform loads only its own.
+
 ### Output Format
 
 ```
@@ -204,7 +234,8 @@ Map the result into the dashboard:
 
 ### Suggested Next Steps
 1. Run `/repokit sync` — refreshes docs and reconciles drifted agents in one pass
-2. Address the open backlog items in order
+2. Run `/repokit init` to wire docs/FOUNDATIONS.md into CLAUDE.md — or add the line yourself
+3. Address the open backlog items in order
 ```
 
 Use 🟢 for healthy, 🟡 for needs attention, 🔴 for missing/broken. Adapt the checks to whatever project structure exists — not all projects will have all of these.
@@ -223,6 +254,7 @@ This mode is non-destructive and requires minimal interaction. It runs the light
 #### Step 1: Assess what changed
 
 ```bash
+| Context handoff | 🟡 Not wired | CLAUDE.md doesn't reference docs/FOUNDATIONS.md |
 # What changed since last doc sync?
 LAST_DOC=$(git log -1 --format=%H -- docs/ README.md 2>/dev/null)
 git diff --name-only "$LAST_DOC"..HEAD 2>/dev/null | head -30
@@ -298,8 +330,9 @@ ls .ruff.toml eslint.config.js biome.json 2>/dev/null
 # Existing repokit/tikkit artifacts
 ls .backlog/backlog.md .backlog/tickets/ 2>/dev/null
 
-# AI instruction files
+# AI instruction files — and whether they already route to the foundation registry
 ls CLAUDE.md GEMINI.md .github/copilot-instructions.md 2>/dev/null
+grep -l "FOUNDATIONS.md" CLAUDE.md GEMINI.md .github/copilot-instructions.md 2>/dev/null
 
 # Project type
 ls package.json pyproject.toml Cargo.toml go.mod 2>/dev/null
@@ -352,6 +385,36 @@ Let each skill handle its own interaction (questions, confirmations). Repokit ju
 ### Foundation
 - docs/README.md, docs/ARCHITECTURE.md, docs/ENVIRONMENTS.md (via dockit)
 
+##### Wiring the context handoff
+
+Only act if `docs/FOUNDATIONS.md` exists — never add a pointer to a file that isn't there.
+
+**Ask before writing.** Context files are hand-maintained and often carry team conventions; an unrequested edit is an intrusion. Show the exact text and name the target file, then wait.
+
+**Append, never overwrite.** Add a section at the end of the file — or immediately after an existing architecture/overview section if there's an obvious home. Touch nothing else.
+
+The text to add, verbatim except for the path:
+
+```markdown
+## Foundations
+
+Shared, foundational code is catalogued in [docs/FOUNDATIONS.md](docs/FOUNDATIONS.md),
+with the invariants each foundation guarantees. Read it before changing anything under
+those paths.
+```
+
+Handle each case:
+
+| Situation | Action |
+|-----------|--------|
+| One context file, no reference | Ask, then append to it |
+| Several context files (Claude + Gemini + Copilot) | Each platform loads only its own — ask once, then append to every one that's missing the reference |
+| Already references `FOUNDATIONS.md` | Nothing to do; say so and move on |
+| No context file at all | Offer to create the smallest useful one for the detected platform, containing this section and nothing else. Don't generate project context you haven't verified — that's dockit's job |
+| `docs/FOUNDATIONS.md` doesn't exist | Skip silently. Revisit after dockit runs |
+
+If the user declines, don't re-ask later in the same run. Note it in the summary as skipped so `status` can surface it again next time.
+
 ### Consumer ready to use
 - /agentkit — generated [N] project-level agents (if run)
 
@@ -359,6 +422,12 @@ Let each skill handle its own interaction (questions, confirmations). Repokit ju
 - Review generated docs and fill [TODO] markers
 - Run `/repokit status` anytime to check progress
 - Run `/repokit sync` after code changes — keeps the foundation current
+### Context handoff — one line, big payoff
+[ ] CLAUDE.md doesn't reference docs/FOUNDATIONS.md
+    Your context file is loaded on every turn; the foundation registry isn't.
+    Without the pointer, agents re-derive the architecture each time.
+    I'll add a two-line section — say the word.
+
 - For ticket creation, install [tikkit](https://github.com/TheLampshady/tikkit)
 ```
 
@@ -372,6 +441,7 @@ Repokit never writes to `.backlog/`. When a mode surfaces work that deserves a t
 
 ### Missing Infrastructure
 
+- **Context handoff:** wire the context file to the foundation registry — see below. Run this **after** dockit, so the file you're pointing at actually exists.
 If a mode needs something that doesn't exist:
 - `status` with no `docs/` or `README.md`: suggest `init`
 - `status` with no `.backlog/`: omit the backlog rows, mention tikkit once
@@ -380,3 +450,11 @@ If a mode needs something that doesn't exist:
 ### Agent Availability
 
 Not all environments have subagent support. Agentkit generates project-level agents for Claude, Gemini, and Copilot; where subagents aren't available, its generated agents still work as loadable context files that a human or agent can read directly.
+### Context handoff
+- CLAUDE.md now points at docs/FOUNDATIONS.md — agents find the foundation without being told
+  (or: "skipped — run `/repokit init` again, or add the pointer yourself")
+
+- `status` with no `docs/FOUNDATIONS.md`: omit the context-handoff row — there's nothing to point at
+### Editing Context Files
+
+`CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, and `.github/copilot-instructions.md` are hand-maintained and carry team conventions. Repokit touches them in exactly one place — wiring the `docs/FOUNDATIONS.md` pointer during `init` — and only after asking, only by appending. Never rewrite or reformat one, and never edit it during `status` (read-only) or `sync`.
