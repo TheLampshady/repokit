@@ -12,7 +12,7 @@ Before running, sync gathers:
 
 | Input | Source | What's needed |
 |-------|--------|---------------|
-| Existing agents | `.claude/agents/`, `.gemini/agents/`, `.github/agents/` | All `*.md` and `*.agent.md` files |
+| Existing agents | `.claude/agents/`, `.agents/agents/`, `.github/agents/` | All `*.md` and `*.agent.md` files |
 | Current foundations | `docs/FOUNDATIONS.md` (catalog table + entries) | Names, paths, status, invariants, last-reviewed dates |
 | Per-foundation sub-docs | `docs/architecture/foundations/*.md` (if present) | Deeper context for large projects |
 | Code state | Source files referenced by foundations | To detect path renames, public API drift |
@@ -161,9 +161,9 @@ The agent should never claim an invariant the catalog doesn't endorse.
 
 ## Multi-Platform Considerations
 
-When a project has agents on multiple platforms (Claude + Gemini, etc.), the same drift may appear in each platform's copy of an agent. Apply changes to **all platforms** in one pass — never let Claude and Gemini agents drift apart.
+When a project has agents on multiple platforms (Claude + Antigravity, etc.), the same drift may appear in each platform's copy of an agent. Apply changes to **all platforms** in one pass — never let Claude and Antigravity agents drift apart.
 
-If only one platform has the agent (e.g., Claude has `auth.md` but Gemini doesn't), flag it as a **coverage gap** rather than drift. Ask: *"`auth` agent exists for Claude only. Generate Gemini and Copilot copies?"*
+If only one platform has the agent (e.g., Claude has `auth.md` but Antigravity doesn't), flag it as a **coverage gap** rather than drift. Ask: *"`auth` agent exists for Claude only. Generate Antigravity and Copilot copies?"*
 
 ---
 

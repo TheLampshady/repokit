@@ -14,13 +14,14 @@ Variant of `agent.template.md` for agents that own one or more rows in `docs/FOU
 name: {{AGENT_NAME}}
 description: {{AGENT_DESCRIPTION}}
 # Required for foundation-owner agents — see references/platforms.md for full details:
-# Claude:  tools: Read, Edit, Write, Glob, Grep, Bash      (enforced)
-#          permissionMode: acceptEdits                     (enforced)
-# Gemini:  model: gemini-2.5-pro
-#          max_turns: 20
-#          NO tools field — Gemini does NOT enforce a frontmatter tools allowlist.
-#          Scope comes from the YOLO note in the body + description + self-policing.
-# Copilot: tools: [readFile, editFile, createFile, search, terminal]   (enforced)
+# Claude:      tools: Read, Edit, Write, Glob, Grep, Bash      (enforced)
+#              permissionMode: acceptEdits                     (enforced)
+# Antigravity: tools: [view_file, grep_search, replace_file_content, run_command]
+#              (ENFORCED — replace_file_content is required to edit docs,
+#               run_command for the git log / grep consistency checks)
+#              mainAgent: false, model: pro, commandExecutionPolicy: sandbox
+#              No permissionMode equivalent — doc edits will prompt inline.
+# Copilot:     tools: [readFile, editFile, createFile, search, terminal]   (enforced)
 ---
 
 <!-- agentkit-managed -->

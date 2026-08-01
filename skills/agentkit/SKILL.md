@@ -1,8 +1,8 @@
 ---
 name: agentkit
-description: 'Generate, sync, and maintain project-level AI subagents tailored to your codebase. Reads dockit FOUNDATIONS.md as the source of truth and analyzes custom code patterns, then creates agents that own foundations, understand custom extensions, and keep their own docs in sync. Modes: init, sync, status. Use when asked to: create agents for this project, generate AI helpers, set up subagents, sync project agents, check agent drift, update agents after foundation changes, help AI understand my custom code, create coding assistants, generate project agents. Supports Claude, Gemini, and Copilot.'
+description: 'Generate, sync, and maintain project-level AI subagents tailored to your codebase. Reads dockit FOUNDATIONS.md as the source of truth and analyzes custom code patterns, then creates agents that own foundations, understand custom extensions, and keep their own docs in sync. Modes: init, sync, status. Use when asked to: create agents for this project, generate AI helpers, set up subagents, sync project agents, check agent drift, update agents after foundation changes, help AI understand my custom code, create coding assistants, generate project agents. Supports Claude, Antigravity, and Copilot.'
 user-invocable: true
-argument-hint: "[init|sync|status] [claude|gemini|copilot|all]"
+argument-hint: "[init|sync|status] [claude|antigravity|copilot|all]"
 ---
 
 # agentkit
@@ -18,7 +18,7 @@ Generate and maintain project-level AI subagents that understand your team's fou
 - **Dynamic discovery** — No hardcoded framework lists. Detects what's in your project, researches what's native vs custom, builds agents around the delta.
 - **Plans first, generates second** — Always presents a plan for user review. Asks questions when something could be native instead of custom.
 - **Sync, don't redo** — Existing agents are reconciled against current state, not regenerated. Drift is surfaced; the user picks what to update.
-- **Cross-platform** — Generates and syncs agents for Claude, Gemini, and Copilot from the same analysis.
+- **Cross-platform** — Generates and syncs agents for Claude, Antigravity, and Copilot from the same analysis.
 
 ---
 
@@ -35,7 +35,7 @@ Generate and maintain project-level AI subagents that understand your team's fou
 
 | Project state | Default mode |
 |--------------|--------------|
-| No agents in `.claude/agents/`, `.gemini/agents/`, `.github/agents/` | → `init` (with FOUNDATIONS.md guard, below) |
+| No agents in `.claude/agents/`, `.agents/agents/`, `.github/agents/` | → `init` (with FOUNDATIONS.md guard, below) |
 | Agents exist + content drift detected (invariants/paths in agent body don't match FOUNDATIONS.md) | → `sync` |
 | Agents exist + content matches | → `status` |
 
@@ -244,7 +244,7 @@ Check for pre-existing project agents:
 | Platform | Path | Pattern |
 |----------|------|---------|
 | Claude | `.claude/agents/*.md` | All `.md` files |
-| Gemini | `.gemini/agents/*.md` | All `.md` files |
+| Antigravity | `.agents/agents/*.md` (or `<name>/agent.md`) | All `.md` files |
 | Copilot | `.github/agents/*.agent.md` | All `.agent.md` files |
 
 #### Hard rule: never modify hand-authored agents
@@ -313,7 +313,7 @@ Skip if `$ARGUMENTS` specifies a platform (e.g., `/agentkit claude`).
 
 > Which platforms should I generate agents for?
 > - Claude
-> - Gemini
+> - Antigravity
 > - Copilot
 > - All (recommended)
 
@@ -557,7 +557,7 @@ A description with only positive scope **over-triggers** (the agent fires on top
 
 **Per-platform pattern:**
 - **Claude** — include at least one negative `<example>` showing a query that sounds related but should NOT trigger this agent. Claude uses these to learn the boundary.
-- **Gemini / Copilot** — include an explicit "Do NOT use for:" clause naming the near-misses.
+- **Antigravity / Copilot** — include an explicit "Do NOT use for:" clause naming the near-misses.
 
 **Foundation-owner skeleton:**
 
@@ -581,7 +581,7 @@ Keep the full description under 1024 characters. Full pattern guide with example
 
 - **Claude** — `tools: Read, Edit, Write, Glob, Grep, Bash` plus `permissionMode: acceptEdits` (Claude enforces both — without them the agent can't edit `docs/`)
 - **Copilot** — include `editFile`, `createFile`, `terminal` in `tools` (Copilot enforces the allowlist)
-- **Gemini** — do NOT add a `tools:` field. Gemini doesn't enforce it. Scope is governed by the body's YOLO note (foundation-owner variant authorizes editing `docs/`), the description, and the agent's self-policing — not frontmatter. Adding a `tools` list creates false confidence.
+- **Antigravity** — `tools: [view_file, grep_search, replace_file_content, run_command]` plus `mainAgent: false` and `commandExecutionPolicy: sandbox`. Antigravity **does** enforce the allowlist (a reversal from Gemini CLI), and the default is `[]` — omit it and the agent can't do anything. Use Antigravity tool names, not Claude's; misspelled names can hang the subagent.
 
 #### Step 2 — Build the body (once, shared across platforms)
 
@@ -628,7 +628,7 @@ Before writing the file, confirm every requirement is satisfied:
 | Frontmatter starts with `---` and ends with `---` | yes |
 | Frontmatter contains `name:` | yes, kebab-case, matches filename |
 | Frontmatter contains `description:` | yes, includes positive scope (paths/foundations), negative scope ("Do NOT use for" or negative `<example>` on Claude), and "Use when..." triggers; under 1024 chars |
-| Frontmatter contains platform-specific required fields | per `platforms.md`: **Claude** foundation-owners need `tools` + `permissionMode: acceptEdits` (both enforced); **Copilot** foundation-owners need `editFile`/`createFile`/`terminal` in `tools` (enforced); **Gemini** does NOT enforce frontmatter tools — do NOT add a `tools` field on Gemini, scope comes from the body |
+| Frontmatter contains platform-specific required fields | per `platforms.md`: **Claude** foundation-owners need `tools` + `permissionMode: acceptEdits` (both enforced); **Copilot** foundation-owners need `editFile`/`createFile`/`terminal` in `tools` (enforced); **Antigravity** needs an explicit `tools` list in Antigravity tool names (enforced; default `[]`) plus `mainAgent: false` and `commandExecutionPolicy: sandbox` |
 | Body has `<!-- agentkit-managed -->` near the top | yes (agentkit-generated agents only) |
 | Body has Owned Foundations + Maintenance sections | yes (foundation-owner agents only) |
 | Body has Completion Handoff section with the verbatim "ready for verification" phrasing | yes (both templates) |
@@ -666,16 +666,16 @@ The right level is **one agent per domain area**: a group of related custom code
 
 #### Per-platform frontmatter quirks (reference)
 
-Frontmatter is built in Step 1, but the platform-specific fields differ. Crucially, **Gemini does not enforce frontmatter `tools` or any permission mode** — the body's YOLO note + description + self-policing instructions are what scope a Gemini agent. Recap of what `platforms.md` covers:
+Frontmatter is built in Step 1, but the platform-specific fields differ. All three platforms now enforce their `tools` allowlist — Antigravity's enforcement is new, so don't carry over old Gemini CLI habits. Recap of what `platforms.md` covers:
 
 **Default agents (no foundation ownership):**
 - Claude: `<example>` blocks inside the description string; no `permissionMode` needed; `tools` optional
-- Gemini: read-only YOLO note in body; **no `tools:` field** (Gemini ignores it); `model`, `temperature`, `max_turns`, `timeout_mins` are honored
+- Antigravity: `tools: [view_file, grep_search]`, `mainAgent: false`, `model: inherit`, `commandExecutionPolicy: sandbox`; read-only scope note in body
 - Copilot: keep total file size under 30,000 chars; tools allowlist IS enforced
 
 **Foundation-owner agents:**
 - Claude: `tools: Read, Edit, Write, Glob, Grep, Bash` plus `permissionMode: acceptEdits` (both enforced)
-- Gemini: foundation-owner YOLO note in body (authorized to edit `docs/`, forbidden outside it); `max_turns: 20`; **still no `tools:` field**. Scoping comes from the body, not frontmatter.
+- Antigravity: add `replace_file_content` and `run_command` to `tools`, `model: pro`, keep `commandExecutionPolicy: sandbox`; foundation-owner scope note in body (authorized to edit `docs/`, forbidden outside it). No `permissionMode` equivalent exists — doc edits will prompt, and that's expected
 - Copilot: include `editFile`, `createFile`, `terminal` in tools (enforced)
 
 #### Step 4 — Write to output location
@@ -683,7 +683,7 @@ Frontmatter is built in Step 1, but the platform-specific fields differ. Crucial
 | Platform | Path |
 |----------|------|
 | Claude | `.claude/agents/<agent-name>.md` |
-| Gemini | `.gemini/agents/<agent-name>.md` |
+| Antigravity | `.agents/agents/<agent-name>.md` |
 | Copilot | `.github/agents/<agent-name>.agent.md` |
 
 Create directories if missing. Check Copilot size limit (30,000 chars) — if exceeded, split or trim.
@@ -699,7 +699,7 @@ Check which instruction files exist:
 | Platform | Instruction File | Created By |
 |----------|-----------------|------------|
 | Claude | `CLAUDE.md` | `/init` in Claude Code |
-| Gemini | `GEMINI.md` | `/init` in Gemini CLI |
+| Antigravity | `GEMINI.md` or `AGENTS.md` (workspace root) | `/init` in Antigravity CLI |
 | Copilot | `.github/copilot-instructions.md` | `/init` in Copilot CLI |
 
 #### If instruction file exists
@@ -745,10 +745,11 @@ Do not create instruction files from scratch — that is `/init`'s job. Agentkit
 - Note that agents live in `.claude/agents/`
 - Include `<example>` trigger scenarios for each agent
 
-**Gemini (GEMINI.md):**
+**Antigravity (GEMINI.md or AGENTS.md):**
 - Agent routing table
-- Note that agents live in `.gemini/agents/`
-- Reminder that subagents require `experimental.enableAgents` in `.gemini/settings.json`
+- Note that agents live in `.agents/agents/`
+- Use whichever file already exists at the workspace root; if neither does, create `AGENTS.md`. Do **not** create both — Antigravity parses either, and two files means two places to drift.
+- Do NOT emit the old `experimental.enableAgents` reminder — that was a Gemini CLI flag and does not apply to Antigravity
 
 **Copilot (.github/copilot-instructions.md):**
 - Agent routing table

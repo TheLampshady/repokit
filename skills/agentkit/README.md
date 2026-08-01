@@ -21,7 +21,7 @@ If FOUNDATIONS.md doesn't exist yet, agentkit stops and recommends `/dockit init
 /agentkit status       # Read-only inventory and drift report
 ```
 
-Optional platform filter: `/agentkit init claude`, `/agentkit sync gemini`, etc.
+Optional platform filter: `/agentkit init claude`, `/agentkit sync antigravity`, etc.
 
 ## How init Works
 
@@ -30,7 +30,7 @@ Optional platform filter: `/agentkit init claude`, `/agentkit sync gemini`, etc.
 3. **Groups** foundations into 1–5 agents using the AGENT-SIZING heuristic (combined to avoid trigger conflicts)
 4. **Plans** — shows the foundation→agent mapping and asks for confirmation
 5. **Generates** foundation-owner agents (with maintenance sections + edit permissions) for the chosen platforms
-6. **Enriches** your instruction file (CLAUDE.md / GEMINI.md / copilot-instructions) with agent routing
+6. **Enriches** your instruction file (CLAUDE.md / AGENTS.md / copilot-instructions) with agent routing
 
 ## How sync Works
 
@@ -51,10 +51,10 @@ Agent files are created in project-level directories:
 | Platform | Location | Extension |
 |----------|----------|-----------|
 | Claude | `.claude/agents/` | `.md` |
-| Gemini | `.gemini/agents/` | `.md` |
+| Antigravity | `.agents/agents/` | `.md` |
 | Copilot | `.github/agents/` | `.agent.md` |
 
-Plus an agent routing section appended to your existing instruction files (CLAUDE.md / GEMINI.md / copilot-instructions).
+Plus an agent routing section appended to your existing instruction files (CLAUDE.md / AGENTS.md or GEMINI.md / copilot-instructions).
 
 ## Recommended Flow
 
@@ -79,7 +79,7 @@ To get the latest version of agentkit (and all repokit tools):
 | Platform | Command |
 |----------|---------|
 | Claude | `claude plugin marketplace update repokit-marketplace` |
-| Gemini | `gemini extensions update repokit` |
+| Antigravity | reinstall the plugin under `.agents/plugins/` (or `~/.gemini/config/plugins/`) |
 | Copilot | `copilot plugin update repokit` |
 
 ## Agent Scaling

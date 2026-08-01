@@ -158,8 +158,8 @@ ls .github/workflows/*.yml 2>/dev/null
 # When was dockit last run? (proxy: last docs/ change)
 git log -1 --format="%cr" -- docs/ 2>/dev/null || echo "never"
 
-# When was agentkit last run? (proxy: last .claude/agents or .gemini/agents change)
-git log -1 --format="%cr" -- .claude/agents/ .gemini/agents/ .github/agents/ 2>/dev/null || echo "never"
+# When was agentkit last run? (proxy: last agent-dir change)
+git log -1 --format="%cr" -- .claude/agents/ .agents/agents/ .github/agents/ 2>/dev/null || echo "never"
 ```
 
 #### 5. Agent-to-Doc Drift
@@ -169,7 +169,7 @@ If agentkit has been initialized on this project, the agents reference foundatio
 Check whether agentkit agents exist:
 
 ```bash
-ls .claude/agents/*.md .gemini/agents/*.md .github/agents/*.md 2>/dev/null
+ls .claude/agents/*.md .agents/agents/*.md .agents/agents/*/agent.md .github/agents/*.md 2>/dev/null
 ```
 
 If any exist, delegate to **`agentkit status`** for the actual drift check — it knows the exact shape of agentkit's outputs and how they reference FOUNDATIONS.md. Don't re-implement the comparison here; that violates "orchestrate, never duplicate."
@@ -210,7 +210,7 @@ grep -l "FOUNDATIONS.md" CLAUDE.md GEMINI.md AGENTS.md .github/copilot-instructi
 
 > Run `/repokit init` to wire `docs/FOUNDATIONS.md` into `<context file>` — or add the line yourself.
 
-If several context files exist (a project targeting Claude *and* Gemini), check each and name the ones missing the reference. One 🟢 file doesn't cover the others — each platform loads only its own.
+If several context files exist (a project targeting Claude *and* Antigravity), check each and name the ones missing the reference. One 🟢 file doesn't cover the others — each platform loads only its own.
 
 ### Output Format
 
@@ -223,6 +223,7 @@ If several context files exist (a project targeting Claude *and* Gemini), check 
 | Tickets | 📋 2 pending | .backlog/tickets/ |
 | Docs | 🟡 Stale | `dockit check` reports drift; last updated 2 days ago |
 | Agents | 🟡 Drifted | 2 of 5 agents reference renamed foundations |
+| Context handoff | 🟡 Not wired | CLAUDE.md doesn't reference docs/FOUNDATIONS.md |
 | Pre-commit | 🟢 Installed | .pre-commit-config.yaml present |
 | Linting | 🟢 Configured | ruff |
 | Type checking | 🔴 Missing | No mypy/pyright config found |
@@ -254,7 +255,6 @@ This mode is non-destructive and requires minimal interaction. It runs the light
 #### Step 1: Assess what changed
 
 ```bash
-| Context handoff | 🟡 Not wired | CLAUDE.md doesn't reference docs/FOUNDATIONS.md |
 # What changed since last doc sync?
 LAST_DOC=$(git log -1 --format=%H -- docs/ README.md 2>/dev/null)
 git diff --name-only "$LAST_DOC"..HEAD 2>/dev/null | head -30
@@ -275,7 +275,7 @@ dockit may have just changed foundation names, file paths, or component names th
 Check whether agentkit has been initialized on this project:
 
 ```bash
-ls .claude/agents/*.md .gemini/agents/*.md .github/agents/*.md 2>/dev/null
+ls .claude/agents/*.md .agents/agents/*.md .agents/agents/*/agent.md .github/agents/*.md 2>/dev/null
 ```
 
 If any agent files exist, invoke `agentkit sync`. It reconciles each agent against the now-current docs, surfaces drift, and lets the user pick what to update — it doesn't auto-overwrite.
@@ -331,8 +331,8 @@ ls .ruff.toml eslint.config.js biome.json 2>/dev/null
 ls .backlog/backlog.md .backlog/tickets/ 2>/dev/null
 
 # AI instruction files — and whether they already route to the foundation registry
-ls CLAUDE.md GEMINI.md .github/copilot-instructions.md 2>/dev/null
-grep -l "FOUNDATIONS.md" CLAUDE.md GEMINI.md .github/copilot-instructions.md 2>/dev/null
+ls CLAUDE.md GEMINI.md AGENTS.md .github/copilot-instructions.md 2>/dev/null
+grep -l "FOUNDATIONS.md" CLAUDE.md GEMINI.md AGENTS.md .github/copilot-instructions.md 2>/dev/null
 
 # Project type
 ls package.json pyproject.toml Cargo.toml go.mod 2>/dev/null
@@ -361,6 +361,12 @@ This is the foundation everything else builds on. Run dockit first.
     Reads FOUNDATIONS.md and analyzes custom code to generate SME agents
     that own each foundation and stay in sync with it.
 
+### Context handoff — one line, big payoff
+[ ] CLAUDE.md doesn't reference docs/FOUNDATIONS.md
+    Your context file is loaded on every turn; the foundation registry isn't.
+    Without the pointer, agents re-derive the architecture each time.
+    I'll add a two-line section — say the word.
+
 ### Optional: Install tikkit for ticket creation
 For text/Figma/Stitch designs and code-quality audits as tickets,
 install the [tikkit](https://github.com/TheLampshady/tikkit) sibling plugin.
@@ -374,16 +380,9 @@ For each phase the user approves:
 
 - **Foundation (dockit):** Invoke `dockit init` — handles all doc generation with its own question/plan/confirm flow. This must complete before agentkit can use the docs as context.
 - **agentkit:** Invoke `agentkit` — analyzes custom code and generates project-level agents using the docs from the foundation
+- **Context handoff:** wire the context file to the foundation registry — see below. Run this **after** dockit, so the file you're pointing at actually exists.
 
 Let each skill handle its own interaction (questions, confirmations). Repokit just sequences them and provides transitions.
-
-#### Step 4: Summary
-
-```
-## Setup Complete
-
-### Foundation
-- docs/README.md, docs/ARCHITECTURE.md, docs/ENVIRONMENTS.md (via dockit)
 
 ##### Wiring the context handoff
 
@@ -408,26 +407,32 @@ Handle each case:
 | Situation | Action |
 |-----------|--------|
 | One context file, no reference | Ask, then append to it |
-| Several context files (Claude + Gemini + Copilot) | Each platform loads only its own — ask once, then append to every one that's missing the reference |
+| Several context files (Claude + Antigravity + Copilot) | Each platform loads only its own — ask once, then append to every one that's missing the reference |
 | Already references `FOUNDATIONS.md` | Nothing to do; say so and move on |
 | No context file at all | Offer to create the smallest useful one for the detected platform, containing this section and nothing else. Don't generate project context you haven't verified — that's dockit's job |
 | `docs/FOUNDATIONS.md` doesn't exist | Skip silently. Revisit after dockit runs |
 
 If the user declines, don't re-ask later in the same run. Note it in the summary as skipped so `status` can surface it again next time.
 
+#### Step 4: Summary
+
+```
+## Setup Complete
+
+### Foundation
+- docs/README.md, docs/ARCHITECTURE.md, docs/ENVIRONMENTS.md (via dockit)
+
 ### Consumer ready to use
 - /agentkit — generated [N] project-level agents (if run)
+
+### Context handoff
+- CLAUDE.md now points at docs/FOUNDATIONS.md — agents find the foundation without being told
+  (or: "skipped — run `/repokit init` again, or add the pointer yourself")
 
 ### What's next
 - Review generated docs and fill [TODO] markers
 - Run `/repokit status` anytime to check progress
 - Run `/repokit sync` after code changes — keeps the foundation current
-### Context handoff — one line, big payoff
-[ ] CLAUDE.md doesn't reference docs/FOUNDATIONS.md
-    Your context file is loaded on every turn; the foundation registry isn't.
-    Without the pointer, agents re-derive the architecture each time.
-    I'll add a two-line section — say the word.
-
 - For ticket creation, install [tikkit](https://github.com/TheLampshady/tikkit)
 ```
 
@@ -441,20 +446,16 @@ Repokit never writes to `.backlog/`. When a mode surfaces work that deserves a t
 
 ### Missing Infrastructure
 
-- **Context handoff:** wire the context file to the foundation registry — see below. Run this **after** dockit, so the file you're pointing at actually exists.
 If a mode needs something that doesn't exist:
 - `status` with no `docs/` or `README.md`: suggest `init`
 - `status` with no `.backlog/`: omit the backlog rows, mention tikkit once
+- `status` with no `docs/FOUNDATIONS.md`: omit the context-handoff row — there's nothing to point at
 - `sync` with no docs: suggest `init`
 
-### Agent Availability
-
-Not all environments have subagent support. Agentkit generates project-level agents for Claude, Gemini, and Copilot; where subagents aren't available, its generated agents still work as loadable context files that a human or agent can read directly.
-### Context handoff
-- CLAUDE.md now points at docs/FOUNDATIONS.md — agents find the foundation without being told
-  (or: "skipped — run `/repokit init` again, or add the pointer yourself")
-
-- `status` with no `docs/FOUNDATIONS.md`: omit the context-handoff row — there's nothing to point at
 ### Editing Context Files
 
 `CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, and `.github/copilot-instructions.md` are hand-maintained and carry team conventions. Repokit touches them in exactly one place — wiring the `docs/FOUNDATIONS.md` pointer during `init` — and only after asking, only by appending. Never rewrite or reformat one, and never edit it during `status` (read-only) or `sync`.
+
+### Agent Availability
+
+Not all environments have subagent support. Agentkit generates project-level agents for Claude, Antigravity, and Copilot; where subagents aren't available, its generated agents still work as loadable context files that a human or agent can read directly.

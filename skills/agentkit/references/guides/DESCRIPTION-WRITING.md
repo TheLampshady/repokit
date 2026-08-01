@@ -1,6 +1,6 @@
 # Writing Agent Descriptions for Auto-Triggering
 
-The description field is the most critical part of an agent definition. It determines when the host AI (Claude, Gemini, Copilot) decides to delegate to this agent — and just as important, when it decides **not** to.
+The description field is the most critical part of an agent definition. It determines when the host AI (Claude, Antigravity, Copilot) decides to delegate to this agent — and just as important, when it decides **not** to.
 
 ## The Scope Boundary Rule
 
@@ -66,9 +66,9 @@ foundation. Answering directly without delegating to the auth agent.\"
 
 The negative example is doing real work. Without it, Claude tends to over-trigger on topical keywords like "JWT," "auth," "login."
 
-### Gemini
+### Antigravity
 
-Gemini uses plain text. Include an explicit "Do not use for:" clause.
+Antigravity uses plain text — its planner reads the description to decide delegation. Include an explicit "Do not use for:" clause.
 
 ```
 'Owner of the auth foundation in the myproject codebase. Use when modifying or
@@ -142,7 +142,7 @@ Good: *"Use when the user is modifying or extending code in `core/auth/` or file
 
 ### Missing negative scope
 
-A description with only positive triggers will trigger on adjacent topics it shouldn't own. Always include at least one negative clause. The Claude format makes this a negative `<example>`; Gemini/Copilot do it as a "Do NOT use for:" clause.
+A description with only positive triggers will trigger on adjacent topics it shouldn't own. Always include at least one negative clause. The Claude format makes this a negative `<example>`; Antigravity/Copilot do it as a "Do NOT use for:" clause.
 
 ### No examples (Claude)
 

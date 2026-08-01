@@ -1,6 +1,6 @@
 # Agent Template
 
-This is the unified template for all platforms (Claude, Gemini, Copilot). It includes a frontmatter scaffold (required fields) plus the body. Platform-specific frontmatter additions come from `references/platforms.md`.
+This is the unified template for all platforms (Claude, Antigravity, Copilot). It includes a frontmatter scaffold (required fields) plus the body. Platform-specific frontmatter additions come from `references/platforms.md`.
 
 **Hot memory rule:** Embed real code snippets for the 2-3 most critical patterns. Describe the rest in prose. The agent should be effective without reading any files, but can go deeper by reading the files listed in Key Files.
 
@@ -14,10 +14,11 @@ This is the unified template for all platforms (Claude, Gemini, Copilot). It inc
 name: {{AGENT_NAME}}
 description: {{AGENT_DESCRIPTION}}
 # Add platform-specific fields per references/platforms.md:
-# Claude:  tools (optional, enforced), permissionMode (optional), model (optional)
-# Gemini:  model, temperature, max_turns, timeout_mins, kind: local
-#          (Gemini does NOT enforce a frontmatter tools allowlist — omit it)
-# Copilot: tools (enforced), no permission concept
+# Claude:      tools (optional, enforced), permissionMode (optional), model (optional)
+# Antigravity: tools: [view_file, grep_search]   (ENFORCED — default is [], so omitting
+#              it leaves the agent with no tools), mainAgent: false,
+#              model: inherit|flash|pro, commandExecutionPolicy: sandbox
+# Copilot:     tools (enforced), no permission concept
 ---
 
 You are an expert in {{PROJECT_NAME}}'s custom {{CUSTOM_AREA}}. Your role is to help

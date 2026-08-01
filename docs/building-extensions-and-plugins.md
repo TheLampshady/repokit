@@ -1,6 +1,8 @@
 # Building Extensions, Plugins, and Marketplaces
 
-This guide covers how to build and distribute tools for **Claude Code** (plugins + marketplaces) and **Gemini CLI** (extensions). repokit itself is a working example you can reference throughout.
+This guide covers how to build and distribute tools for **Claude Code** (plugins + marketplaces), **Antigravity** (plugins), and **Gemini CLI** (extensions, legacy). repokit itself is a working example you can reference throughout.
+
+> **Gemini CLI is retired for most users.** It stopped serving Pro/Ultra/free tiers on **2026-06-18**; extensions are now Antigravity *plugins*. The Gemini CLI section below stays for Code Assist Standard/Enterprise license holders — for everyone else, read [Antigravity Plugins](#antigravity-plugins).
 
 ---
 
@@ -9,7 +11,8 @@ This guide covers how to build and distribute tools for **Claude Code** (plugins
 1. [Concepts: Skills, Agents, Commands, Hooks](#concepts)
 2. [Claude Code Plugins](#claude-code-plugins)
 3. [Claude Code Marketplaces](#claude-code-marketplaces)
-4. [Gemini CLI Extensions](#gemini-cli-extensions)
+4. [Gemini CLI Extensions (legacy)](#gemini-cli-extensions)
+4b. [Antigravity Plugins](#antigravity-plugins)
 5. [Cross-Platform Toolkit (Both Platforms)](#cross-platform-toolkit)
 6. [Local Development Workflow](#local-development-workflow)
 7. [Verifying Installation](#verifying-installation)
@@ -459,9 +462,9 @@ type = "user"
 content = "Please review the current file or selected code for bugs, security issues, and performance problems. Be concise and specific."
 ```
 
-### Agent Skills (Experimental)
+### Subagents (Experimental, legacy)
 
-Gemini CLI supports agent skills as an experimental feature. Enable in `.gemini/settings.json`:
+Gemini CLI gated subagents behind a flag in `.gemini/settings.json`:
 
 ```json
 {
@@ -473,7 +476,7 @@ Gemini CLI supports agent skills as an experimental feature. Enable in `.gemini/
 
 Agent `.md` files went in `.gemini/agents/`, and ran in YOLO mode with no per-step confirmation.
 
-> **Note**: Gemini agents run in YOLO mode — no per-step confirmation. They are suitable for well-defined, bounded tasks.
+> **Superseded.** On Antigravity, subagents are a standard feature — no flag — and live at `.agents/agents/`, with an enforced `tools` allowlist and `commandExecutionPolicy` instead of YOLO. See [Antigravity Plugins](#antigravity-plugins).
 
 ### Local Development
 
@@ -497,6 +500,103 @@ gemini extensions install https://github.com/your-username/my-extension
 ```
 
 Browse community extensions at: https://geminicli.com/extensions/browse/
+
+---
+
+## Antigravity Plugins
+
+Antigravity replaced Gemini CLI. Its plugin format is simpler than the Gemini extension manifest — no themes, no `excludeTools`, no `contextFileName`. A plugin is a directory with a manifest and whatever components you ship.
+
+> **Antigravity is two products.** The **IDE** (v2.x) and the **CLI** (`agy`, v1.x) have separate plugin systems. The plugin *contents* are identical, so you build one directory — but each product installs it differently, and the CLI supports one extra component. Differences are called out below and tabulated in [platform-feature-comparison.md](platform-feature-comparison.md#antigravity-ide-vs-cli).
+
+### Manifest (`plugin.json` at plugin root)
+
+```json
+{
+  "name": "repokit"
+}
+```
+
+That's the whole required schema. `name` is optional and defaults to the directory name — so the minimum viable Antigravity plugin is a `skills/` directory with a `plugin.json` next to it.
+
+> **Two `plugin.json` files, on purpose.** Claude reads `.claude-plugin/plugin.json` (rich metadata: version, author, homepage, license). Antigravity reads `plugin.json` at the root. They're different files with different schemas — don't try to consolidate them, and don't copy Claude's fields into Antigravity's.
+
+### Directory layout
+
+```
+plugins/<plugin-name>/
+├── plugin.json          # manifest (required)
+├── mcp_config.json      # optional — MCP servers
+├── hooks.json           # optional — event-triggered scripts
+├── skills/              # optional
+│   └── <skill-name>/SKILL.md
+├── rules/               # optional
+│   └── <rule-name>.md
+└── agents/              # optional — bundled subagents (CLI only)
+```
+
+### Install locations
+
+**IDE** — no marketplace, no registry, no command. Installation is placing a folder:
+
+| Scope | Path |
+|-------|------|
+| Workspace | `.agents/plugins/` or `_agents/plugins/` at workspace root |
+| Global | `~/.gemini/config/plugins/` |
+
+**CLI** — has real plugin management:
+
+```bash
+agy plugin install /path/to/local/plugin
+agy plugin list
+agy plugin disable <name>     # keep it staged, stop loading it
+agy plugin enable  <name>
+agy plugin uninstall <name>
+```
+
+Installed plugins land in `~/.gemini/antigravity-cli/plugins/<plugin_name>/`. The CLI also requires `name` in `plugin.json` to be alphanumeric plus hyphens/underscores.
+
+To distribute for both: publish one repo, tell IDE users to clone it into a plugin dir and CLI users to `agy plugin install` the clone. Repokit's `make antigravity` does both locally, skipping whichever product isn't installed.
+
+### Skills
+
+Identical to what repokit already ships: `skills/<name>/SKILL.md` with YAML frontmatter. `description` is required; `name` is optional and defaults to the folder name. This is why repokit's skills work on Antigravity unchanged.
+
+Invocation differs between the two products:
+
+- **IDE** — the agent sees available skills and reads the full `SKILL.md` when one looks relevant. No slash command required, though you can mention a skill by name to force it.
+- **CLI** — skills are compiled into slash commands.
+
+A description written for auto-activation still works as a slash command, so you don't need two versions. But don't document auto-activation as universal.
+
+### Rules (`rules/*.md`)
+
+Markdown files that constrain agent behavior. **12,000 characters each.** Four activation modes:
+
+| Mode | Behavior |
+|------|----------|
+| Manual | Activated by @mention in the input box |
+| Always On | Applied to every request |
+| Model Decision | The model decides from a natural-language description |
+| Glob | Applied to files matching a pattern (e.g. `src/**/*.ts`) |
+
+Workspace rules also live at `.agents/rules/` (with `.agent/rules` kept for backward compatibility); global rules at `~/.gemini/GEMINI.md`.
+
+> **Rules are guidance, not enforcement.** Unlike Gemini CLI's `policies.toml` — a policy engine that could hard-`deny` a tool call — a markdown rule is instruction the model may or may not follow. When porting policies to rules, don't assume equivalent strength. Repokit keeps both: `policies/policies.toml` for Gemini CLI's engine, `rules/*.md` for Antigravity.
+
+### Subagents
+
+Standard feature, no flag. Workspace subagents live at `.agents/agents/` for **both** products, so generated agents need no per-product handling. Only the **CLI** additionally supports bundling `agents/` inside a plugin — the IDE plugin spec has no such component.
+
+See the [platform comparison](platform-feature-comparison.md) for the full frontmatter schema. The three things that bite when migrating from Gemini CLI:
+
+1. Path moved: `.agents/agents/<name>.md` (or `<name>/agent.md`), **not** `.gemini/agents/`
+2. `tools` is now an **enforced** allowlist defaulting to `[]`, using Antigravity tool names (`view_file`, `grep_search`, `replace_file_content`, `run_command`)
+3. `temperature`, `max_turns`, `timeout_mins`, and `kind` are gone; `model` takes tiers (`inherit`, `flash`, `pro`) not model IDs
+
+### Context file
+
+`GEMINI.md` or `AGENTS.md` at the workspace root, parsed on startup. Either works — pick one. Note that global config stayed under `~/.gemini/`, so `~/.gemini/GEMINI.md` is the global rules file even though workspace paths moved to `.agents/`.
 
 ---
 
@@ -541,17 +641,20 @@ ln -s ../skills skills
 
 ### Platform Differences
 
-| Feature | Claude Code | Gemini CLI |
-|---------|-------------|------------|
-| Skills | `.agents/skills/` or `skills/` | `.agents/skills/` |
-| Agents | `.claude/agents/` or `agents/` (plugin) | `.gemini/agents/` (experimental, manual setup) |
-| Commands | `commands/*.toml` | `commands/*.toml` |
-| Context file | `CLAUDE.md` (project context) | `GEMINI.md` (set in manifest) |
-| Agent `color` field | Supported | Not a valid field — ignored, does not error |
-| Agent `tools` format | Comma-separated string: `Read, Grep` | YAML list with different names: `- read_file` |
-| Agent `model` values | Aliases: `sonnet`, `opus`, `haiku`, `inherit` | Model IDs: `gemini-2.5-pro` |
-| Agent turn limit field | `maxTurns` (camelCase) | `max_turns` (snake_case) |
-| Agent confirmation | Per-step | YOLO mode (no confirmation) |
+| Feature | Claude Code | Antigravity | Gemini CLI (legacy) |
+|---------|-------------|-------------|---------------------|
+| Manifest | `.claude-plugin/plugin.json` | `plugin.json` (root) | `gemini-extension.json` |
+| Skills | `skills/` | `skills/` in plugin; `.agents/skills/` in workspace | `.agents/skills/` |
+| Agents | `.claude/agents/` or `agents/` (plugin) | `.agents/agents/` in workspace; `plugins/<name>/agents/` in plugin | `.gemini/agents/` (experimental) |
+| Commands | `commands/*.md` | — (none; skills auto-activate) | `commands/*.toml` |
+| Rules / policies | — | `rules/*.md` (12k chars each) | `policies/policies.toml` |
+| MCP config | `.mcp.json` | `mcp_config.json` (root) | in `gemini-extension.json` |
+| Hooks | `hooks/hooks.json` | `hooks.json` (root) | `hooks` in manifest |
+| Context file | `CLAUDE.md` | `GEMINI.md` or `AGENTS.md` (workspace root) | `GEMINI.md` (set in manifest) |
+| Agent `tools` format | Comma-separated string: `Read, Grep` | YAML list, **enforced**: `- view_file` | YAML list, parsed but NOT enforced |
+| Agent `model` values | Aliases: `sonnet`, `opus`, `haiku`, `inherit` | Tiers: `inherit`, `flash`, `pro` | Model IDs: `gemini-2.5-pro` |
+| Agent turn limit field | `maxTurns` (camelCase) | — (retired) | `max_turns` (snake_case) |
+| Agent confirmation | Per-step | `commandExecutionPolicy` (default `sandbox`) | YOLO mode (no confirmation) |
 
 ### AGENTS.md: Emerging Cross-Tool Standard
 
@@ -671,7 +774,7 @@ gemini --debug
 |-------|----------|
 | Linked (dev) | Symlinked from your repo via `gemini extensions link` |
 | Installed | `~/.gemini/extensions/<name>/` |
-| Agents (experimental) | `.gemini/agents/` in your project |
+| Agents (experimental, legacy) | `.gemini/agents/` in your project |
 
 **In-session:** Type `/` in Gemini CLI to see available commands including those from your extension.
 
@@ -684,8 +787,10 @@ After running `make setup` (or the equivalent install steps), verify:
 - [ ] **Claude agents**: `/agents` shows your agent(s) listed under the plugin name
 - [ ] **Claude skills**: `/help` lists `/your-plugin:skill-name`
 - [ ] **Claude commands**: `/help` lists `/your-plugin:command-name`
-- [ ] **Gemini extension**: `gemini extensions list` shows your extension
-- [ ] **Gemini commands**: `/` in a Gemini session shows your command(s)
+- [ ] **Antigravity plugin**: folder present under `.agents/plugins/` (or `~/.gemini/config/plugins/`)
+- [ ] **Antigravity skills**: mention a skill by name and confirm the agent reads it
+- [ ] **Antigravity agents**: `/agents` lists your generated agents
+- [ ] **Gemini extension** (legacy): `gemini extensions list` shows your extension
 
 ---
 
@@ -736,8 +841,11 @@ repokit/
 ├── .claude-plugin/
 │   ├── plugin.json         # Claude plugin manifest (metadata only)
 │   └── marketplace.json    # Single-plugin catalog, source: "./"
-├── gemini-extension.json   # Gemini manifest, contextFileName: "GEMINI.md"
-├── GEMINI.md               # Tool docs loaded by Gemini in any project
+├── plugin.json             # Antigravity plugin manifest (root)
+├── mcp_config.json         # Antigravity MCP config (root)
+├── rules/                  # Antigravity rules (markdown, 12k chars each)
+├── gemini-extension.json   # Gemini CLI manifest (legacy), contextFileName: "GEMINI.md"
+├── GEMINI.md               # Tool docs loaded as workspace context
 ├── skills/                 # Cross-platform skills (Claude auto-discovers here)
 │   ├── agentkit/SKILL.md
 │   ├── dockit/SKILL.md
@@ -753,7 +861,10 @@ repokit/
 
 - **Claude Code plugins**: https://code.claude.com/docs/en/plugins
 - **Claude Code marketplaces**: https://code.claude.com/docs/en/plugin-marketplaces
-- **Gemini CLI extensions**: https://geminicli.com/docs/extensions/writing-extensions/
-- **Gemini CLI getting started**: https://codelabs.developers.google.com/getting-started-gemini-cli-extensions
-- **Gemini extensions gallery**: https://geminicli.com/extensions/browse/
+- **Antigravity plugins**: https://antigravity.google/docs/plugins
+- **Antigravity skills**: https://antigravity.google/docs/skills
+- **Antigravity subagents**: https://antigravity.google/docs/subagents
+- **Antigravity rules**: https://antigravity.google/docs/rules-workflows
+- **Gemini CLI → Antigravity transition**: https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/
+- **Gemini CLI extensions** (legacy): https://geminicli.com/docs/extensions/writing-extensions/
 - **Official Claude plugins directory**: https://github.com/anthropics/claude-plugins-official

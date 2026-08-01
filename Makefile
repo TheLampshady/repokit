@@ -11,7 +11,7 @@ help: ## Show available targets
 # ── Setup ─────────────────────────────────────────────────────────────────────
 
 .PHONY: setup
-setup: hooks gemini claude ## First-time dev setup: install hooks, link Gemini extension, install Claude plugin
+setup: hooks antigravity claude ## First-time dev setup: install hooks, link Antigravity plugin, install Claude plugin
 
 .PHONY: hooks
 hooks: ## Install pre-commit hooks
@@ -23,15 +23,56 @@ hooks: ## Install pre-commit hooks
 	@echo "✓ pre-commit hooks installed"
 
 
-# ── GEMINI ─────────────────────────────────────────────────────────────────────
+# ── ANTIGRAVITY ────────────────────────────────────────────────────────────────
+# Two separate products, same plugin contents, different install surface:
+#   IDE (v2.x)      — folder placement, no command. Symlink for live reload.
+#   CLI (agy, v1.x) — `agy plugin install`, own dir under ~/.gemini/antigravity-cli/
+# `make antigravity` does both when available.
+
+ANTIGRAVITY_PLUGINS ?= $(HOME)/.gemini/config/plugins
+
+.PHONY: antigravity
+antigravity: antigravity-ide antigravity-cli ## Install for Antigravity IDE + CLI (whichever are present)
+
+.PHONY: antigravity-ide
+antigravity-ide: ## Symlink into the Antigravity IDE global plugin dir (live reloads on changes)
+	@mkdir -p $(ANTIGRAVITY_PLUGINS)
+	@ln -sfn $(PWD) $(ANTIGRAVITY_PLUGINS)/repokit
+	@echo "✓ Antigravity IDE plugin linked: $(ANTIGRAVITY_PLUGINS)/repokit -> $(PWD)"
+	@echo "  Restart the IDE, then mention 'dockit' or 'repokit' to confirm skills load."
+
+.PHONY: antigravity-cli
+antigravity-cli: ## Install into Antigravity CLI via `agy plugin install`
+	@command -v agy >/dev/null 2>&1 \
+		&& { agy plugin install $(PWD) && echo "✓ Antigravity CLI plugin installed (agy plugin list to verify)"; } \
+		|| echo "⊘ agy not found — skipping CLI install (https://antigravity.google/cli/install.sh)"
+
+.PHONY: antigravity-workspace
+antigravity-workspace: ## Symlink into a workspace's .agents/plugins/ (set DIR=/path/to/workspace)
+	@test -n "$(DIR)" || { echo "Usage: make antigravity-workspace DIR=/path/to/workspace"; exit 1; }
+	@mkdir -p $(DIR)/.agents/plugins
+	@ln -sfn $(PWD) $(DIR)/.agents/plugins/repokit
+	@echo "✓ Antigravity plugin linked: $(DIR)/.agents/plugins/repokit -> $(PWD)"
+
+.PHONY: un-antigravity
+un-antigravity: ## Remove the Antigravity IDE symlink and uninstall from the CLI
+	@rm -f $(ANTIGRAVITY_PLUGINS)/repokit
+	@echo "✓ Antigravity IDE plugin unlinked"
+	@command -v agy >/dev/null 2>&1 \
+		&& { agy plugin uninstall repokit && echo "✓ Antigravity CLI plugin uninstalled"; } \
+		|| echo "⊘ agy not found — nothing to uninstall"
+
+# ── GEMINI CLI (legacy) ────────────────────────────────────────────────────────
+# Gemini CLI stopped serving Pro/Ultra/free tiers on 2026-06-18.
+# Retained for Code Assist Standard/Enterprise license holders.
 
 .PHONY: gemini
-gemini: ## Link this repo as a Gemini extension (live reloads on changes)
+gemini: ## [legacy] Link this repo as a Gemini CLI extension
 	gemini extensions link $(PWD)
 	@echo "✓ Gemini extension linked at $(PWD)"
 
 .PHONY: un-gemini
-un-gemini: ## Uninstall the Gemini extension
+un-gemini: ## [legacy] Uninstall the Gemini CLI extension
 	gemini extensions uninstall repokit
 	@echo "✓ Gemini extension uninstalled"
 
@@ -100,11 +141,23 @@ status: ## Show open backlog items and installed extension status
 		&& grep '\- \[ \]' .backlog/backlog.md \
 		|| echo "  No open items"
 	@echo ""
-	@echo "── Gemini Extension ─────────────────────────────────────"
-	@gemini extensions list 2>/dev/null | grep -i repokit || echo "  repokit not linked (run: make gemini)"
+	@echo "── Antigravity IDE Plugin ───────────────────────────────"
+	@test -L $(ANTIGRAVITY_PLUGINS)/repokit \
+		&& echo "  linked -> $$(readlink $(ANTIGRAVITY_PLUGINS)/repokit)" \
+		|| echo "  repokit not linked (run: make antigravity-ide)"
+	@echo ""
+	@echo "── Antigravity CLI Plugin ───────────────────────────────"
+	@command -v agy >/dev/null 2>&1 \
+		&& { agy plugin list 2>/dev/null | grep -i repokit || echo "  repokit not installed (run: make antigravity-cli)"; } \
+		|| echo "  agy not installed"
 	@echo ""
 	@echo "── Claude Plugin ────────────────────────────────────────"
 	@claude plugin list 2>/dev/null | grep -i repokit || echo "  repokit not installed (run: make claude)"
+	@echo ""
+	@echo "── Gemini CLI Extension (legacy) ────────────────────────"
+	@command -v gemini >/dev/null 2>&1 \
+		&& { gemini extensions list 2>/dev/null | grep -i repokit || echo "  repokit not linked (run: make gemini)"; } \
+		|| echo "  gemini CLI not installed (retired 2026-06-18)"
 	@echo ""
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────

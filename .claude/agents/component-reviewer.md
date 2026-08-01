@@ -13,15 +13,17 @@ Determine what you're reviewing before starting. Ask for the file path if not pr
 
 | Type | File pattern | Platforms |
 |------|-------------|-----------|
-| **Skill** | `SKILL.md` (anywhere) | Claude + Gemini |
-| **Claude agent** | `agents/*.md` or `.claude/agents/*.md` | Claude only |
-| **Gemini agent** | `.gemini/agents/*.md` | Gemini only |
+| **Skill** | `SKILL.md` (anywhere) | Claude + Antigravity + Copilot |
+| **Claude agent** | `.claude/agents/*.md` | Claude only |
+| **Antigravity agent** | `.agents/agents/*.md` or `.agents/agents/<name>/agent.md` | Antigravity only |
+
+> This repo distributes **no agents**. `.claude/agents/` here holds internal dev tooling only (this reviewer). Agent files you review are usually agentkit *templates* under `skills/agentkit/references/templates/`, or generated output in a consumer project.
 
 ---
 
 ## Frontmatter Reference
 
-### Claude Agent Frontmatter (`agents/*.md`)
+### Claude Agent Frontmatter (`.claude/agents/*.md`)
 
 | Field | Required | Values | Notes |
 |-------|----------|--------|-------|
@@ -42,33 +44,38 @@ Determine what you're reviewing before starting. Ask for the file path if not pr
 
 **Description best practice:** Write 2–3 sentences covering what the agent does, when to trigger it, and 1–2 inline `<example>` blocks. Longer is better here — Claude uses the full description for delegation decisions.
 
-### Gemini Agent Frontmatter (`.gemini/agents/*.md`)
+### Antigravity Agent Frontmatter (`.agents/agents/*.md`)
 
 | Field | Required | Values | Notes |
 |-------|----------|--------|-------|
 | `name` | Yes | string | Agent identifier |
-| `description` | Yes | string | What the agent specializes in |
-| `kind` | No | `local` | Agent kind |
-| `tools` | No | YAML list | Available tools (e.g. `read_file`, `grep_search`) |
-| `model` | No | model ID string | e.g. `gemini-2.5-pro` |
-| `temperature` | No | float 0.0–2.0 | Lower = more deterministic |
-| `max_turns` | No | integer | Max turns (default: 15) |
-| `timeout_mins` | No | integer | Max execution time in minutes (default: 5) |
+| `description` | Yes | string | What the agent specializes in; the planner reads it to decide delegation |
+| `tools` | No | YAML list (default `[]`) | **Enforced allowlist.** Antigravity names: `view_file`, `grep_search`, `replace_file_content`, `run_command` |
+| `subagent` | No | boolean (default `true`) | Allows invocation via `invoke_subagent` |
+| `mainAgent` | No | boolean (default `true`) | Selectable as primary agent — set `false` for generated SME agents |
+| `model` | No | `inherit`, `flash`, `pro` | Tier name, **not** a model ID |
+| `commandExecutionPolicy` | No | `off`, `auto`, `eager`, `sandbox` (default `sandbox`) | Shell auto-execution |
+| `mcpServers` | No | list of objects | MCP servers for this agent |
+| `skills` / `plugins` | No | list of strings | Skill paths / plugin dependencies |
 
-> **Note:** Gemini agents run in YOLO mode (no per-step confirmation). Design accordingly.
+**Flag these as errors — they're retired Gemini CLI fields with no Antigravity equivalent:** `kind: local`, `temperature`, `max_turns`, `timeout_mins`, and model IDs like `gemini-2.5-pro` in `model`.
 
-**Example Gemini agent:**
+**Two review checks specific to this platform:**
+1. **`tools` present and correctly named.** The default is `[]`, so an omitted list yields an agent that can't act. Claude tool names (`Read`, `Grep`, `Edit`, `Bash`) are wrong here, and misspelled names can hang the subagent process.
+2. **`commandExecutionPolicy` is `sandbox`.** Flag `off`, `auto`, or `eager` on a generated agent — those bypass the inline approval prompt.
+
+**Example Antigravity agent:**
 ```yaml
 ---
 name: security-auditor
 description: Specialized in finding security vulnerabilities in code.
-kind: local
 tools:
-  - read_file
+  - view_file
   - grep_search
-model: gemini-2.5-pro
-temperature: 0.2
-max_turns: 10
+subagent: true
+mainAgent: false
+model: pro
+commandExecutionPolicy: sandbox
 ---
 ```
 
