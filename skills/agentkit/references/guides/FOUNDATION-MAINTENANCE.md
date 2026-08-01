@@ -26,8 +26,11 @@ The agent updates its foundation's docs when invoked for any of these reasons:
 
 | Trigger | Action |
 |---------|--------|
-| Public API of the foundation changed (new export, removed export, signature change) | Update **Public API** section + bump **Last reviewed** |
-| New invariant being introduced via the code change | Add to **Invariants** list; flag the implication for downstream agents |
+| Public API of the foundation changed (new export, removed export, signature change) | Re-copy the **Canonical usage** call site from the best-conforming consumer + bump **Last reviewed** |
+| New invariant being introduced via the code change | Add to **Invariants** at `tier="convention"` with a stored predicate; flag the implication for downstream agents. **Never enter one at `tier="rule"`** — promotion is a human call collected by `/repokit status` |
+| Sanctioned way to add a new instance changed | Update **Extend by** |
+| Foundation grows to cover a case it previously didn't | Update **Doesn't cover** |
+| An invariant's stored predicate now fails | **Flag it, never delete the invariant.** A failing predicate means either the invariant is wrong or the code is drifting away from a correct one, and the evidence doesn't say which |
 | Status change (active → deprecated, active → sunset) | Update catalog row + run cross-doc check |
 | Path moved or renamed | Update **Path**, all refs in PRINCIPLES.md / ARCHITECTURE.md, sub-doc filename |
 | New consumer added (a feature folder starts importing) | Update **Consumers** table |

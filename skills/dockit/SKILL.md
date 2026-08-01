@@ -1,6 +1,6 @@
 ---
 name: dockit
-description: 'Generate, update, and maintain project documentation. Use when asked to: create/write/add docs, generate/make/write a README, setup documentation, document this/my project/codebase, fill in docs, check doc freshness, explain doc structure, sync docs with code, verify docs against code, audit docs for accuracy, or cross-reference docs with codebase. Modes: init, sync, check, audit, migrate, diagrams. Auto-detects frameworks and scales by project size.'
+description: 'Generate, update, and maintain project documentation. Use when asked to: create/write/add docs, generate/make/write a README, setup documentation, document this/my project/codebase, fill in docs, check doc freshness, explain doc structure, sync docs with code, verify docs against code, cross-reference docs with codebase, or run a deep/full scan of everything. Modes: init, sync (add --deep for a whole-repo scan), check, migrate, diagrams. Auto-detects frameworks and scales by project size.'
 user-invocable: true
 ---
 
@@ -8,7 +8,7 @@ user-invocable: true
 
 Generate and maintain project documentation that humans read and that downstream AI tools (agentkit, plus any agent that loads the project's docs as context) consume as their context layer.
 
-**Modes:** `init` | `sync` | `check` | `audit` | `migrate` | `diagrams`
+**Modes:** `init` | `sync` (`--deep`) | `check` | `migrate` | `diagrams`
 
 **Frameworks:** Wagtail (dedicated module), others use `_default.md` (auto-detected)
 
@@ -59,7 +59,7 @@ When a foundation changes status during sync — `active → pretender`, `active
 
 - `PRINCIPLES.md` — search for the foundation's path (`app/core/notifications`) and module name (`core.notifications`). Hits are likely "use this foundation" patterns that may now be invalid.
 - `ARCHITECTURE.md` — same search. Hits are likely component-table rows or diagram nodes.
-- Any sub-doc under `architecture/`, `principles/`, or `architecture/foundations/`.
+- Any sub-doc under `architecture/` or `architecture/foundations/`. (There is no `principles/` sub-doc directory — PRINCIPLES.md links to code, never to a second level of principles.)
 
 For each hit, **ASK** the user:
 > *"`core.notifications` was demoted to a pretender. Found a reference in `PRINCIPLES.md` line 47 ('Always publish via core.notifications'). Update, remove, or leave with `[TODO: review]`?"*
@@ -80,7 +80,7 @@ Auto-detects what to do based on project state.
 
 ### Auto-Detection
 
-Explicit user intent (e.g. "audit my docs", "run sync", "migrate") always wins over the state-based rules below. Only fall through to detection when the user is non-specific.
+Explicit user intent (e.g. "run sync", "migrate", "scan everything") always wins over the state-based rules below. Only fall through to detection when the user is non-specific.
 
 | Condition | Action |
 |-----------|--------|
@@ -88,7 +88,7 @@ Explicit user intent (e.g. "audit my docs", "run sync", "migrate") always wins o
 | CI environment | → check |
 | Git changes since docs | → sync |
 | Docs exist, wrong structure | → suggest migrate |
-| User asks to verify/audit/cross-reference docs | → audit |
+| User asks to verify/cross-reference docs, or for a deep/full scan or "everything" | → `sync --deep` |
 | Docs current | → "Up to date" |
 
 ### Explicit Modes
@@ -96,17 +96,23 @@ Explicit user intent (e.g. "audit my docs", "run sync", "migrate") always wins o
 | Mode | Flow | Prompts? | Destructive? |
 |------|------|----------|--------------|
 | `init` | Questions → Plan → Confirm → Generate all docs from templates | Yes | Can restructure |
-| `sync` | Git diff → update stale sections → regenerate diagrams if needed; removes docs for removed code | Only for prose-heavy deletions | Removes code-derived sections for removed features |
+| `sync` | Git diff → update stale sections → re-run stored predicates → regenerate diagrams if needed; removes docs for removed code | Only for prose-heavy deletions | Removes code-derived sections for removed features — **never a mined rule** (see below) |
 | `check` | Detect drift → exit 0 (current) or exit 1 (stale) | No | Read-only |
-| `audit` | Extract references → verify against codebase → redundancy check (flag sections recoverable from one source file) → report. See [AUDIT.md](./references/guides/AUDIT.md) | No | Read-only |
+| `sync --deep` | Everything `sync` does, plus a whole-repo pass: verify every doc reference resolves · catch silently-passing predicates · find code documented nowhere · re-apply the mining filters to existing rules. See [DEEP-SCAN.md](./references/guides/DEEP-SCAN.md) | Same as sync | Same as sync — the four extra checks are report-only |
 | `migrate` | Questions → Plan → Confirm → merge into existing files | Yes | Can restructure |
 | `diagrams` | Generate/update mermaid diagrams only | No | Updates diagrams only |
 
-**Read-only modes:** `check`, `audit`
+**Read-only modes:** `check`
 **Auto-write modes** (no prompts for routine changes): `sync`, `diagrams`
 **Interactive modes** (prompts, can restructure): `init`, `migrate`
 
+> **`--deep` is a flag, not a mode.** Normal `sync` is diff-scoped and fast enough to run after every change; `--deep` reads every doc, every predicate, and every source file. Four checks only work at whole-repo scope — a broken path appears when *code* moves rather than when a doc changes; a silently-passing predicate is indistinguishable from a working one; undocumented code never shows up in a doc diff; and docs predating a filter were never tested against it. Trigger it on an explicit flag or on words like "deep", "full", "everything", "scan the whole repo". Never run it implicitly — it's slow, and normal sync is the right default.
+
 > Sync removes doc sections when the underlying code is gone — see "Syncing: Remove docs for removed code" above. Removals are reported in the chat summary, not left as tombstones in the docs.
+
+> **Predicates are executed code.** Before running any `dockit:check` / `dockit:conform` command, check it against the grammar allowlist and the `.dockit/predicates.lock` approval file — see [CHOICE-MINING.md § Predicates are executed code](./references/guides/CHOICE-MINING.md#predicates-are-executed-code--treat-them-as-such). A predicate is a shell command in a checked-in file, so a docs PR is an execution path. Grammar check first, then the lock file; a rejected command is flagged and left unverified, never run.
+
+> **Mined rules are exempt from removal.** On sync, re-run every `dockit:check` / `dockit:conform` predicate in PRINCIPLES.md and the foundation entries. A failing predicate is **flagged, never deleted** — a decayed count means either the rule is wrong or the code is drifting away from a correct rule, and nothing in the evidence distinguishes those. Deleting on failure would quietly strip correct rules exactly when a codebase is going bad. Report the failure and let a human decide. See [CHOICE-MINING.md](./references/guides/CHOICE-MINING.md).
 
 ---
 
@@ -122,8 +128,10 @@ Explicit user intent (e.g. "audit my docs", "run sync", "migrate") always wins o
 6. Load framework module or `_default.md`
 7. Extract commands from package.json, Makefile, pyproject.toml
 8. Discover environment variables — see [DETECTION.md](./references/guides/DETECTION.md)
-9. Check for constitution at `.specify/memory/constitution.md`
-10. Scan for foundations (medium/large only) — see [FOUNDATIONS-DETECTION.md](./references/guides/FOUNDATIONS-DETECTION.md). Score every source file by fan-in × cross-feature × stability; categorise as foundation / hotspot / hidden / pretender. Skipped on small projects.
+9. Check for SDD artifacts — `.specify/memory/constitution.md`, `openspec/project.md`, `conductor/workflow.md`, `conductor/product-guidelines.md`. Read for comparison only; never write to them
+10. Decide the generation posture — **documented** (a `docs/` dir exists, or README is >~50 lines of real content) or **doc-barren**. Strict overview ban applies only to documented repos; on a barren repo, generated orientation prose is the measured-helpful case. See [CHOICE-MINING.md § The overview ban is conditional](./references/guides/CHOICE-MINING.md#the-overview-ban-is-conditional--check-before-applying-it)
+11. Mine choices for PRINCIPLES.md — see [CHOICE-MINING.md](./references/guides/CHOICE-MINING.md). Run both filters (name the rejected alternative; skip anything a linter enforces) before writing any line, attach a stored predicate to each one, and check the file against its size budget
+12. Scan for foundations (medium/large only) — see [FOUNDATIONS-DETECTION.md](./references/guides/FOUNDATIONS-DETECTION.md). Score every source file by fan-in × cross-feature × stability; categorise as foundation / hotspot / hidden / pretender. Skipped on small projects.
 
 ### Phase 2: Questions
 
@@ -149,6 +157,7 @@ When filling sections in `init` / `migrate` / `sync`, apply the **Earn the Headi
 1. Cross-link all docs
 2. Validate markdown syntax
 3. List remaining `[TODO:]` markers
+3b. **Report the review queue** — the human-required work this run produced: conventions written at 80–99% conformance, empty `[TODO: why?]` slots, `Doesn't cover:` intent questions, failed predicates awaiting the doc-wrong-or-code-drifting call, and SDD-artifact discrepancies. `/repokit status` reads this list. Best-practice observations (no tests on a foundation, duplicated retry logic, no scaffold path) go here too — **in chat only, never written into the docs**, since a generic recommendation sitting in a project's own documentation reads to the next agent as a decision the team made
 4. **List removals in chat** (not in docs) — for sync runs that deleted sections, surface what was removed and why so the user can confirm. Format:
    ```
    Removed:
@@ -181,8 +190,9 @@ See guides for detection logic and document structure details.
 | [SIZE-MEDIUM.md](./references/guides/SIZE-MEDIUM.md) | Medium project documentation structure |
 | [SIZE-LARGE.md](./references/guides/SIZE-LARGE.md) | Large project documentation structure |
 | [WRITING-GUIDE.md](./references/guides/WRITING-GUIDE.md) | How to write explanatory documentation |
+| [CHOICE-MINING.md](./references/guides/CHOICE-MINING.md) | What may be written into PRINCIPLES.md and foundation entries — the three bands, the Convention/Rule tiers, the two filters, stored predicates |
 | [DIAGRAMS.md](./references/guides/DIAGRAMS.md) | Mermaid diagram standards |
-| [AUDIT.md](./references/guides/AUDIT.md) | Doc accuracy verification against codebase |
+| [DEEP-SCAN.md](./references/guides/DEEP-SCAN.md) | The `sync --deep` whole-repo pass — reference verification, predicate quality, undocumented code, filter re-application |
 | [DETECTION.md](./references/guides/DETECTION.md) | Project name, description, and env var discovery |
 | [FOUNDATIONS-DETECTION.md](./references/guides/FOUNDATIONS-DETECTION.md) | How to find foundational code via fan-in, cross-feature usage, and git stability |
 | [GIT-HOOKS.md](./references/guides/GIT-HOOKS.md) | CI/pre-commit integration |
@@ -230,17 +240,39 @@ CHANGED=$(git diff --name-only $LAST_SYNC HEAD)
 | src/core/, src/shared/, src/lib/, packages/*/src/ | FOUNDATIONS.md (re-score; refresh table, consumers, findings) |
 | .env*, config/ | ENVIRONMENTS.md |
 | infra/, .github/ | CLOUD.md |
-| .specify/memory/constitution.md | PRINCIPLES.md |
+| .specify/memory/constitution.md, openspec/project.md, conductor/workflow.md | PRINCIPLES.md — **compare and report only**, never merge |
 
 ---
 
-## Constitution Sync
+## Spec-Driven-Development Artifacts: Compare, Never Merge
+
+Projects using an SDD framework carry a file of conventions alongside dockit's own. **Read it, compare it, report the delta — write to none of them.**
+
+| Framework | Artifact |
+|-----------|----------|
+| SpecKit | `.specify/memory/constitution.md` |
+| OpenSpec | `openspec/project.md` |
+| Conductor | `conductor/workflow.md`, `conductor/product-guidelines.md` |
+
+These files are themselves usually agent-generated from the same codebase, which puts them in the same epistemic class as a mined convention — no better evidenced, subject to the same drift. Neither side is authoritative, so neither may overwrite the other. Letting one win destroys the other's content on every sync and launders generated text into apparent authority.
+
+`conductor/code_styleguides/` is out of scope — a formatter enforces that content, so it fails the machine-enforced filter in [CHOICE-MINING.md](./references/guides/CHOICE-MINING.md).
+
+On sync, report the three-way delta and stop:
+
+```
+SDD artifact: .specify/memory/constitution.md
+
+  Only upstream:   "Prefer composition over inheritance"   → adopt as a Rule?
+  Only local:      "Handlers return Result[T]"             → missing upstream?
+  Conflict:        upstream requires 90% coverage; PRINCIPLES.md says 80%
+```
 
 | Scenario | Behavior |
 |----------|----------|
-| Constitution exists, no PRINCIPLES.md | Generate FROM constitution |
-| Both exist | Sync - constitution wins |
-| Only PRINCIPLES.md | Keep as-is |
+| Artifact exists, no PRINCIPLES.md | Generate PRINCIPLES.md from the codebase as usual; report the artifact's contents as adoption candidates |
+| Both exist | Compare, report the delta, change neither |
+| Only PRINCIPLES.md | Nothing to compare |
 | Neither | Generate from codebase |
 
 ---

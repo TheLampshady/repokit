@@ -3,6 +3,7 @@
 **Date:** 2026-05-08
 **Original request:** Review the dockit skill, look up best practices for repo maintenance / documentation, and write a reference doc backing what we built.
 **Goal:** Capture the practitioner consensus that dockit's design implements, plus the angle dockit explicitly takes on documentation as a context layer for AI agents — so future contributors and external readers can see *why* the skill is shaped the way it is.
+**Note (2026-08-01):** this document describes dockit as of May 2026 and refers throughout to an `audit` mode. That mode has since been removed — its deterministic reference checks run on every `sync`, and the whole-repo pass became a `sync --deep` flag. The reasoning below still holds; only the mode name changed. The recommendation for a "redundancy pass" was implemented as admission filters applied at write time, plus a re-check of existing docs inside the deep pass.
 
 ---
 

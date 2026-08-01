@@ -1,6 +1,6 @@
 ---
 name: repokit
-description: 'Hub for the context-in-sync toolkit. Check repo health, sync docs and project agents after changes, or bootstrap the docs+agents loop on a new project. Use when asked to: see repo status, check repo health, sync after changes, refresh docs and agents, check for drift, run maintenance, bootstrap repokit, what needs attention, list repokit tools, or check whether agents can find the project docs. Modes: status, sync, init.'
+description: 'Hub for the context-in-sync toolkit. Check repo health, sync docs and project agents after changes, resolve the doc decisions that need a human, or bootstrap the docs+agents loop on a new project. Use when asked to: see repo status, check repo health, sync after changes, refresh docs and agents, check for drift, run maintenance, bootstrap repokit, what needs attention, list repokit tools, check whether agents can find the project docs, answer open doc decisions, fill in missing rationale, or promote a convention to a rule. Modes: status, sync, init.'
 user-invocable: true
 ---
 
@@ -84,7 +84,9 @@ Install [tikkit](https://github.com/TheLampshady/tikkit) for ticket creation: `/
 ## Mode: `status`
 
 **Trigger:** `/repokit status`
-**Purpose:** Read-only dashboard of repo health. Quick, no prompts, no changes.
+**Purpose:** Dashboard of repo health. Quick, no prompts.
+
+Read-only by default. The one exception is the open-decisions walk (check 7): if the user opts in, `status` writes their answers back into the docs. Nothing is written unless they accept.
 
 ### What to check
 
@@ -130,7 +132,7 @@ Map the result into the dashboard:
 | 0 (current) | 🟢 Fresh |
 | 1 (stale) | 🟡 Stale — run `/repokit sync` |
 
-For a deeper inspection (broken refs, missing files referenced in docs, stale claims), point the user at `/dockit audit` separately — it's slower and more thorough than `check`.
+For a deeper inspection (broken refs, silently-passing predicates, code documented nowhere), point the user at `/repokit:dockit sync --deep` — a whole-repo pass, slower and more thorough than `check`. They can also just ask for a "deep scan" or "full scan".
 
 #### 3. Code Quality Infrastructure
 
@@ -212,6 +214,58 @@ grep -l "FOUNDATIONS.md" CLAUDE.md GEMINI.md AGENTS.md .github/copilot-instructi
 
 If several context files exist (a project targeting Claude *and* Antigravity), check each and name the ones missing the reference. One 🟢 file doesn't cover the others — each platform loads only its own.
 
+#### 7. Open Decisions
+
+dockit deliberately leaves work for humans rather than inventing answers: it never writes rationale, never promotes a Convention to a Rule, and never deletes a rule whose evidence decayed. That work accumulates in the docs as open markers. Without somewhere to process it, the `[TODO: why?]` slots become permanent and the docs read as half-finished forever.
+
+```bash
+# Missing rationale
+grep -rn '\[TODO: why?\]' docs/ 2>/dev/null | wc -l
+
+# Unanswered intent questions
+grep -rn '\[TODO:.*boundary\|\[TODO:.*gap' docs/ 2>/dev/null | wc -l
+
+# Mined rules carrying stored predicates
+grep -rc 'dockit:check\|dockit:conform' docs/PRINCIPLES.md docs/FOUNDATIONS.md 2>/dev/null
+
+# SDD artifacts present (compare-only — repokit and dockit never write these)
+ls .specify/memory/constitution.md openspec/project.md conductor/workflow.md 2>/dev/null
+```
+
+For the actual predicate results and decay flags, take them from the last `dockit sync` report rather than re-running the analysis here — same "orchestrate, never duplicate" rule that applies to `dockit check`.
+
+| State | Dashboard row |
+|-------|---------------|
+| No mined rules in `docs/` | Skip the row |
+| Open items exist | 🟡 N need your input |
+| Everything answered | 🟢 Nothing pending |
+
+**The walk is opt-in.** `status` stays read-only: report the count, then offer. Only if the user accepts do you walk the queue one item at a time and write their answers back. Never start walking unprompted, and never guess an answer to move things along — a fabricated reason is the one output worse than a blank one.
+
+When walking, present one item at a time with enough context to answer without opening files:
+
+```
+1 of 4 — Why is missing
+   "Query through the SQLAlchemy ORM." Rule since March, no reason recorded.
+   One sentence and I'll write it in. (skip / stop anytime)
+
+2 of 4 — Convention drafted
+   "API handlers return Result[T]" — 11/13 conform.
+   Exceptions: legacy_export.py, health.py
+   → keep as Convention · promote to Rule · drop it
+
+3 of 4 — Boundary question
+   SearchClient handles reads; 4 features write directly.
+   → deliberate boundary, or a gap?
+
+4 of 4 — Rule decayed
+   "All API routes require authentication" — predicate now fails.
+   New non-conformers: webhooks.py, health_v2.py
+   → doc wrong, or code drifting?
+```
+
+Write answers back into the docs as given: a reason fills the `<details><summary>Why</summary>` block, a promotion moves the line from Conventions to Rules, a drop removes it. Answers are the user's words — don't embellish them into prose.
+
 ### Output Format
 
 ```
@@ -224,6 +278,7 @@ If several context files exist (a project targeting Claude *and* Antigravity), c
 | Docs | 🟡 Stale | `dockit check` reports drift; last updated 2 days ago |
 | Agents | 🟡 Drifted | 2 of 5 agents reference renamed foundations |
 | Context handoff | 🟡 Not wired | CLAUDE.md doesn't reference docs/FOUNDATIONS.md |
+| Open decisions | 🟡 4 need you | 2 missing rationale, 1 promotion candidate, 1 decayed rule |
 | Pre-commit | 🟢 Installed | .pre-commit-config.yaml present |
 | Linting | 🟢 Configured | ruff |
 | Type checking | 🔴 Missing | No mypy/pyright config found |
@@ -237,6 +292,8 @@ If several context files exist (a project targeting Claude *and* Antigravity), c
 1. Run `/repokit sync` — refreshes docs and reconciles drifted agents in one pass
 2. Run `/repokit init` to wire docs/FOUNDATIONS.md into CLAUDE.md — or add the line yourself
 3. Address the open backlog items in order
+
+4 open decisions are waiting — want to walk through them now? (~2 min)
 ```
 
 Use 🟢 for healthy, 🟡 for needs attention, 🔴 for missing/broken. Adapt the checks to whatever project structure exists — not all projects will have all of these.
@@ -450,6 +507,7 @@ If a mode needs something that doesn't exist:
 - `status` with no `docs/` or `README.md`: suggest `init`
 - `status` with no `.backlog/`: omit the backlog rows, mention tikkit once
 - `status` with no `docs/FOUNDATIONS.md`: omit the context-handoff row — there's nothing to point at
+- `status` with no mined rules in `docs/`: omit the open-decisions row rather than showing zero
 - `sync` with no docs: suggest `init`
 
 ### Editing Context Files

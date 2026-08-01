@@ -59,7 +59,7 @@ None for default. Core templates only:
 | `.env*`, `config/` | ENVIRONMENTS.md |
 | `infra/`, `terraform/`, `.github/` | CLOUD.md, CONTRIBUTING.md |
 | `Makefile`, `scripts/` | README.md (commands) |
-| `.specify/memory/constitution.md` | PRINCIPLES.md |
+| `.specify/memory/constitution.md`, `openspec/project.md`, `conductor/workflow.md` | PRINCIPLES.md — compare and report only, never merge |
 
 ## Questions
 

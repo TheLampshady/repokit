@@ -133,7 +133,7 @@
 
 > See [PRINCIPLES.md](./docs/PRINCIPLES.md) for testing patterns.
 [IF_LARGE_TEST_SUITE]
-> See [TESTING.md](./docs/principles/TESTING.md) for detailed testing guide.
+> See [TESTING.md](./docs/TESTING.md) for the detailed testing guide.
 [ENDIF]
 
 ---

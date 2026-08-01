@@ -13,6 +13,30 @@ Every description has to do two jobs:
 
 A description with only positive scope over-triggers. A description with only negative scope under-triggers. You need both.
 
+## Start From `Use when`, Don't Re-Derive It
+
+For foundation-owner agents, the positive scope is already written. Each entry in `docs/FOUNDATIONS.md` opens with a `Use when` block — task-shaped trigger lines that exist precisely to answer "which tool for this job."
+
+**Take those lines as the description's positive scope.** Don't go back to the code and invent a second set of triggers.
+
+Two reasons. The routing content is the same content on a different surface — the entry's `Use when` and the agent's `description` are both answering "does this task belong to this foundation," so writing them independently produces two answers to one question. And once they're independent, they drift: `dockit sync` updates the entry, nothing updates the description, and the agent stops triggering on work it owns while the doc still claims it does.
+
+```markdown
+<!-- docs/FOUNDATIONS.md → core.auth -->
+### Use when
+- Adding or changing any route, WebSocket handshake, or background job that acts on behalf of a user
+- Gating something by role
+- Anything touching identity, tokens, or Firebase
+```
+
+becomes the positive half of the description, near-verbatim:
+
+> "Use this agent when adding or changing any route, WebSocket handshake, or background job that acts on behalf of a user; gating something by role; or touching identity, tokens, or Firebase."
+
+You still write the **negative** scope yourself — `Use when` says what the foundation is for, not what looks similar but isn't. That's the half that needs judgment, and it's where the effort belongs. `Doesn't cover` from the same entry is a good source for it: an uncovered case is exactly the kind of near-miss that shouldn't route here.
+
+If an entry has no `Use when` block (an older doc, or a foundation dockit hasn't re-synced), fall back to deriving triggers from the code — and flag it, because that entry is missing its most load-bearing line.
+
 ## Anatomy of a Good Description
 
 A description should answer four questions:

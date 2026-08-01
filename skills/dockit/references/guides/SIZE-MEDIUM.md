@@ -42,8 +42,8 @@ project/
     ├── ENVIRONMENTS.md          # Local setup, env vars, secrets, per-environment config
     ├── CLOUD.md                 # Cloud services, infrastructure, deployment
     ├── TROUBLESHOOTING.md       # Common issues by category
-    ├── CONTRIBUTING.md          # PR process, code review, brief testing note
-    └── PRINCIPLES.md            # Patterns, decisions, testing approach, AI-readable knowledge
+    ├── CONTRIBUTING.md          # PR process, code review, test organisation and commands
+    └── PRINCIPLES.md            # Mined conventions, human-authored rules, extension points
 ```
 
 ---
@@ -109,7 +109,7 @@ Brief context paragraph (2-3 sentences).
 
 ## Testing
 [Test command, brief description]
-> See [PRINCIPLES.md](./docs/PRINCIPLES.md) for testing patterns.
+> See [CONTRIBUTING.md](./docs/CONTRIBUTING.md) for test organisation and commands.
 
 ---
 

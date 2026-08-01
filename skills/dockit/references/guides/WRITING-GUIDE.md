@@ -52,7 +52,7 @@ When filling a section during `init` / `migrate` / `sync`:
    - `[TODO: Which integrations are critical-path vs best-effort?]`
 4. Surface the `[TODO:]` markers in the completion summary as "consider adding" prompts so the human knows what's still owed.
 
-A `[TODO:]` placeholder is more honest than a paragraph of synthesized filler — and it invites the human to contribute the part only they can write. The audit mode's redundancy check (see [AUDIT.md § Redundancy check](./AUDIT.md#step-5-redundancy-check)) is the back-stop that catches sections where this rule wasn't applied.
+A `[TODO:]` placeholder is more honest than a paragraph of synthesized filler — and it invites the human to contribute the part only they can write. [DEEP-SCAN.md](./DEEP-SCAN.md) is the back-stop that catches sections where this rule wasn't applied, by re-testing existing docs against the admission filters in [CHOICE-MINING.md](./CHOICE-MINING.md).
 
 ---
 

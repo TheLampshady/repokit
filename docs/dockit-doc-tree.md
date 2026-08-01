@@ -102,10 +102,8 @@ project/
     │   ├── STAGING.md            # Staging config
     │   └── PRODUCTION.md         # Production config
     │
-    ├── PRINCIPLES.md             # Patterns overview
-    ├── principles/
-    │   ├── CONVENTIONS.md        # Naming, file structure
-    │   └── TESTING.md            # Test strategy (if >100 tests)
+    ├── PRINCIPLES.md             # Conventions + rules — no sub-docs, links to code
+    ├── TESTING.md                # Test strategy (if >100 tests)
     │
     ├── CLOUD.md                  # Infrastructure overview
     ├── cloud/
@@ -141,7 +139,7 @@ Sub-docs are created on demand, not by default. Each trigger maps to a detection
 | IaC present | Terraform/Pulumi detected | `cloud/INFRASTRUCTURE.md` |
 | Monitoring setup | Alert configs exist | `cloud/MONITORING.md` |
 | Production ops | Production + SLAs | `cloud/RUNBOOK.md` |
-| Extensive tests | >100 tests | `principles/TESTING.md` |
+| Extensive tests | >100 tests | `TESTING.md` |
 | Large team | Multiple CODEOWNERS | `contributing/RELEASES.md` |
 | Many procedures | >5 multi-step tasks | `how-to/INDEX.md` |
 
@@ -158,8 +156,8 @@ Where different types of content land at each tier:
 | Data models | README | ARCHITECTURE.md | architecture/DATA-MODELS.md |
 | Foundational/shared code | (inline) | FOUNDATIONS.md | FOUNDATIONS.md + architecture/foundations/ |
 | Setup / config | README | ENVIRONMENTS.md | ENVIRONMENTS.md + environments/ |
-| Coding standards | README | PRINCIPLES.md | PRINCIPLES.md + principles/ |
-| Testing approach | README | PRINCIPLES.md | principles/TESTING.md |
+| Coding standards | README | PRINCIPLES.md | PRINCIPLES.md (no sub-docs — links to code) |
+| Testing approach | README | CONTRIBUTING.md | TESTING.md |
 | Infrastructure | README | CLOUD.md | CLOUD.md + cloud/ |
 | Deployment | README | CLOUD.md | cloud/DEPLOYMENT.md |
 | Operations | README | CLOUD.md | cloud/RUNBOOK.md |

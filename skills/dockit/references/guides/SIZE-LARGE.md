@@ -71,11 +71,8 @@ project/
     │   ├── WORKFLOW.md
     │   └── RELEASES.md
     │
-    ├── PRINCIPLES.md                # Overview + links to principles/
-    ├── principles/                  # Created when triggers fire
-    │   ├── PATTERNS.md              # Service patterns
-    │   ├── TESTING.md               # Now its own doc for large!
-    │   └── CONVENTIONS.md           # Code style details
+    ├── PRINCIPLES.md                # Conventions + rules. No sub-docs — links to code, not to more principles
+    ├── TESTING.md                   # Test strategy (created when triggers fire)
     │
     ├── how-to/                      # Created when many procedures needed
     │   ├── INDEX.md                 # List of all how-to guides
@@ -103,7 +100,7 @@ Dockit **automatically** creates sub-docs when these triggers are detected:
 | Production deployment | Production env with SLAs | `cloud/RUNBOOK.md` |
 | Security config | IAM policies, network rules | `cloud/SECURITY.md` |
 | Large team | CODEOWNERS, >5 contributors | `contributing/RELEASES.md` |
-| Extensive tests | >100 tests, multiple test types | `principles/TESTING.md` |
+| Extensive tests | >100 tests, multiple test types | `TESTING.md` |
 | IaC present | Terraform, Pulumi, CloudFormation | `cloud/INFRASTRUCTURE.md` |
 | Many procedures | >5 multi-step operational tasks | `how-to/INDEX.md` |
 
@@ -270,7 +267,7 @@ Recommend upgrading to large project structure:
   + docs/cloud/DEPLOYMENT.md (extracted from CLOUD.md)
   + docs/environments/STAGING.md (extracted from ENVIRONMENTS.md)
   + docs/environments/PRODUCTION.md (extracted from ENVIRONMENTS.md)
-  + docs/principles/TESTING.md (extracted from PRINCIPLES.md)
+  + docs/TESTING.md (test strategy — organisation, tiers, fixtures)
 
 Proceed with restructure? [Y/n]
 ─────────────────────────────────────────
@@ -287,7 +284,7 @@ Proceed with restructure? [Y/n]
 5. **Framework docs in named folders** - `wagtail/`, `react/`, `k8s/`
 6. **Monorepo shares docs** - Services link to root docs/
 7. **Migration prompts** - Detect growth on sync/migrate
-8. **TESTING.md becomes separate** - Extracted from PRINCIPLES.md for large projects
+8. **PRINCIPLES.md never gets sub-docs** - It links to code, never to a second level of principles: a rule an agent must follow shouldn't require two file hops to read. Test strategy therefore lives at `docs/TESTING.md`, not under a `principles/` directory. PRINCIPLES.md carries mined conventions and human-authored rules; test organisation and commands are derivable and belong in CONTRIBUTING.md
 
 ---
 
@@ -299,7 +296,7 @@ Proceed with restructure? [Y/n]
 - `templates/core/architecture/API.template.md` - API reference sub-doc
 - `templates/core/cloud/DEPLOYMENT.template.md` - Deployment sub-doc
 - `templates/core/cloud/RUNBOOK.template.md` - Operations runbook
-- `templates/core/principles/TESTING.template.md` - Testing sub-doc
+- `templates/core/TESTING.template.md` - Test strategy doc
 
 ## Sample
 

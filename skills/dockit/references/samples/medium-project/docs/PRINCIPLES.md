@@ -1,167 +1,106 @@
 # Principles
 
-Project patterns, architectural decisions, and guidelines for consistent development. This document serves both human developers and AI tools.
+Decisions this project has made that an agent or a new contributor would not guess.
+
+> **Convention** — how it's done here. Follow by default; deviating is fine if you say why.
+> **Rule** — deviating is a defect. Don't.
 
 ---
 
-## Service Patterns
+## Conventions
 
-**Rule: use the project's foundations instead of importing libraries directly.** Foundations exist for cross-cutting concerns (database access, authentication, caching, real-time fan-out) so consumers get consistent lifecycle, configuration, and test behaviour.
+**Import from `app/core/` rather than the underlying library.** Database access goes through `get_db()`, auth through `get_current_user()`, caching through `cache`. Exceptions: `alembic/env.py` constructs its own engine.
+<!-- dockit:check cmd="rg -l '^(from|import) (sqlalchemy|firebase_admin|redis)' app/ --glob '!app/core/**' --glob '!alembic/**' | wc -l" expect="0" last="2026-08-01" -->
 
-```python
-# YES — go through the foundation
-from app.core.database import get_db
-from app.core.auth import get_current_user
+<details><summary>Why</summary>
 
-async def list_tasks(
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-): ...
+Each foundation owns connection pooling, token validation, and cache fallback. Code that
+imports the library directly gets none of that and can't be swapped in tests.
+Rejected: a lint rule banning the imports — it can't catch aliased or deferred imports.
+</details>
 
-# NO — bypass it
-from sqlalchemy import create_engine
-import firebase_admin
-```
+**Business logic lives in `app/services/`; route handlers only translate HTTP.** A handler parses the request, calls one service function, and shapes the response.
+<!-- dockit:conform cmd="rg -l 'from app.services' app/api/routes/*.py | wc -l" total="ls app/api/routes/*.py | wc -l" min="80%" last="2026-08-01" -->
 
-**Why:** Foundations encapsulate the patterns this project depends on (connection pooling, token validation, cache fallback). Bypassing them creates parallel implementations that drift apart over time and break testability.
+[TODO: why?]
 
-**The catalog of foundations — with each one's public API, invariants, and refactor triggers — lives in [FOUNDATIONS.md](./FOUNDATIONS.md).** That document is the source of truth for what to import, what contract to honour, and when to refactor. This section states the rule; FOUNDATIONS.md owns the list.
+**Use `pydantic` models for request and response bodies, `SQLAlchemy` models for persistence.** The two stay separate even where the fields match.
+<!-- dockit:check cmd="rg -l 'response_model=[A-Za-z]*Model' app/api/routes/ | wc -l" expect="0" last="2026-08-01" -->
 
----
+<details><summary>Why</summary>
 
-## Testing Approach
+Serialising ORM objects directly leaked internal columns (`password_reset_token`,
+`deleted_at`) into two public endpoints before this split.
+Rejected: `orm_mode` on a single shared model — it defers the leak rather than preventing it.
+</details>
 
-Tests are organized by type and use fixtures for database state.
+**Every I/O function is `async`.** Database calls, cache reads, HTTP clients. Exceptions: `app/utils/slugify.py`, `app/utils/tokens.py` (pure functions).
+<!-- dockit:conform cmd="rg -l 'async def' app/services/*.py app/repositories/*.py | wc -l" total="ls app/services/*.py app/repositories/*.py | wc -l" min="80%" last="2026-08-01" -->
 
-### Test Organization
+[TODO: why?]
 
-```
-tests/
-├── conftest.py          # Shared fixtures
-├── unit/                # Pure function tests (no DB/network)
-│   └── test_services.py
-├── integration/         # Database and API tests
-│   ├── test_api.py
-│   └── test_models.py
-└── fixtures/            # Test data factories
-    └── factories.py
-```
+**Reach the database through a repository class, not a session query in a service.** One repository per model in `app/repositories/`.
+<!-- dockit:conform cmd="rg -l 'from app.repositories' app/services/*.py | wc -l" total="ls app/services/*.py | wc -l" min="80%" last="2026-08-01" -->
 
-### Testing Patterns
+<details><summary>Why</summary>
 
-- **Unit tests**: Mock all external dependencies, test business logic
-- **Integration tests**: Use test database with transaction rollback
-- **API tests**: Use `TestClient`, test full request/response cycle
-- **Fixtures**: Use factory functions, not static data
-
-### What to Test
-
-| Type | Coverage | Example |
-|------|----------|---------|
-| Service functions | All public methods | `test_create_task_assigns_to_user` |
-| API routes | Happy path + error cases | `test_get_tasks_requires_auth` |
-| Models | Validation, relationships | `test_task_requires_title` |
-| Auth | Token validation, permissions | `test_admin_can_delete_workspace` |
-
-### Running Tests
-
-```bash
-make test                    # All tests
-make test-unit               # Unit tests only
-make test-integration        # Integration tests only
-pytest -k "test_name"        # Specific test
-```
-
-| Marker | Purpose |
-|--------|---------|
-| `@pytest.mark.slow` | Long-running tests, skipped by default |
-| `@pytest.mark.integration` | Requires database |
+Lets service tests run without a database. Also kept the tenant filter in one place after
+it was forgotten in two hand-written queries.
+Rejected: query helpers on the model classes — nothing stops a caller bypassing them.
+</details>
 
 ---
 
-## Architectural Decisions
+## Rules
 
-Key decisions that shape the codebase.
+**All API routes require authentication.** The only exempt route is `GET /health`.
+<!-- dockit:check cmd="rg -L 'Depends\(get_current_user\)' app/api/routes/*.py --glob '!**/health.py' | wc -l" expect="0" last="2026-08-01" -->
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Async everywhere | Required | Better concurrency for I/O-bound API |
-| SQLAlchemy 2.0 | Async ORM | Type safety, async support |
-| Firebase Auth | External auth | No password management, easy mobile integration |
-| Redis for WebSockets | Pub/sub | Scalable real-time across instances |
+<details><summary>Why</summary>
 
-### Repository Pattern
+An unauthenticated `/workspaces` listing shipped in March 2025 and exposed workspace names
+across tenants for nine days.
+Rejected: middleware-level auth — routes that legitimately need anonymous access become
+invisible exceptions instead of explicit ones.
+</details>
 
-**Context:** Need to abstract database operations from business logic.
+**No raw SQL outside `alembic/`.** Query through the ORM.
+<!-- dockit:check cmd="rg -l 'execute\(text\(' app/ | wc -l" expect="0" last="2026-08-01" -->
 
-**Decision:** Use repository classes for each model, inject via dependencies.
+<details><summary>Why</summary>
 
-**Rationale:** Enables testing business logic without database, consistent query patterns.
-
-### Service Layer
-
-**Context:** API routes were getting complex with business logic.
-
-**Decision:** Extract business logic to service classes, routes only handle HTTP.
-
-**Rationale:** Testable business logic, reusable across routes and WebSockets.
+Two string-interpolated queries bypassed the tenant filter and returned rows belonging to
+other workspaces.
+Rejected: a query linter — it can't see interpolation built up across several statements.
+</details>
 
 ---
 
-## Code Conventions
+## Extending the codebase
 
-Standards for consistent, maintainable code.
-
-### General
-
-- Type hints required for all function parameters and returns
-- Async functions for all I/O operations
-- Dependency injection via FastAPI `Depends()`
-- No business logic in route handlers
-
-### Python-Specific
-
-- Use `pydantic` for all request/response models
-- Use `SQLAlchemy` models for database, `pydantic` for API
-- Prefer `asyncio.gather()` for concurrent operations
-
-### Documentation Format
-
-```python
-async def create_task(
-    title: str,
-    workspace_id: UUID,
-    assignee_id: UUID | None = None,
-) -> Task:
-    """
-    Create a new task in a workspace.
-
-    :param title: Task title (required, non-empty)
-    :param workspace_id: Workspace to create task in
-    :param assignee_id: Optional user to assign task to
-    :return: Created task with generated ID
-    :raises WorkspaceNotFoundError: If workspace doesn't exist
-    :raises PermissionDeniedError: If user can't create tasks in workspace
-    """
-```
+| Adding a... | Do this |
+|-------------|---------|
+| API endpoint | Add the route to `app/api/routes/<domain>.py`, include the router in `app/api/__init__.py`, add schemas to `app/schemas/<domain>.py` |
+| Model | `make migration name=<slug>` → edit the generated revision → add the repository class in `app/repositories/` |
+| Foundation | Create the module under `app/core/`, export its dependency function, then register it in [FOUNDATIONS.md](./FOUNDATIONS.md) |
+| Background job | Add the task to `app/workers/tasks.py` and register it in the `CELERY_ROUTES` map |
 
 ---
 
-## Non-Negotiables
+## Architectural decisions
 
-> These rules are mandatory. Violations should block PRs. Per-foundation invariants (e.g. "`Hub` is internal," "all DB access goes through `get_db()`") live in the foundation entries in [FOUNDATIONS.md](./FOUNDATIONS.md). The list below is for project-wide rules that span foundations.
-
-- [ ] All database operations must be async
-- [ ] All API routes must require authentication (except health check)
-- [ ] No secrets in code - use environment variables
-- [ ] Tests must pass before merge
-- [ ] No raw SQL - use SQLAlchemy ORM
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Auth provider | Firebase | [TODO: why?] |
+| Realtime transport | Redis pub/sub for WebSocket fan-out | Instances are load-balanced, so in-process fan-out reaches only a fraction of connected clients |
+| ORM | SQLAlchemy 2.0, async | [TODO: why?] |
+| Migrations | Alembic, one revision per PR | [TODO: why?] |
 
 ---
 
-## Related Documentation
+## Related documentation
 
-- [README.md](../README.md) - Project overview and quick start
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - System design and diagrams
-- [FOUNDATIONS.md](./FOUNDATIONS.md) - Catalog of shared/foundational code (the *what* behind the patterns above)
-- [CONTRIBUTING.md](./CONTRIBUTING.md) - Development workflow
+- [README.md](../README.md) — project overview and quick start
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — system design and diagrams
+- [FOUNDATIONS.md](./FOUNDATIONS.md) — the shared code these conventions apply to
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — development workflow, test commands, setup
