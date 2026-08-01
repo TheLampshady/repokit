@@ -98,7 +98,7 @@ Be concise and actionable.
 
 Optional frontmatter fields:
 - `disable-model-invocation: true` — expands the skill text directly without invoking the model (useful for routing menus)
-- `user-invocable: true` — marks the skill as directly user-invocable (Gemini compatibility flag)
+- `user-invocable: true` — marks the skill as directly user-invocable (cross-platform compatibility flag)
 
 Use `$ARGUMENTS` to accept arguments: `/my-plugin:greet Alice`
 
@@ -131,7 +131,7 @@ You are an expert code reviewer. Review the provided code for:
 Always provide specific line references and actionable suggestions.
 ```
 
-> **Cross-platform note**: Claude Code supports a `color` field in agent frontmatter for UI display. Gemini does not — omit `color` from agents you intend to ship cross-platform.
+> **Cross-platform note**: Claude Code supports a `color` field in agent frontmatter for UI display. Antigravity does not — omit `color` from agents you intend to ship cross-platform.
 
 ### Hooks (`hooks/hooks.json`)
 
@@ -414,7 +414,7 @@ The `contextFileName` field points to a Markdown file Gemini loads when the exte
 
 | Worth it | Skip it |
 |----------|---------|
-| Conventions the agent must follow but can't auto-discover (where to write tickets, naming rules, shared file locations) | Lists of available skills — Gemini auto-discovers them from their descriptions |
+| Conventions the agent must follow but can't auto-discover (where to write tickets, naming rules, shared file locations) | Lists of available skills — every platform auto-discovers them from their descriptions |
 | Cross-plugin contracts (e.g., "if tikkit is also installed, both write to `.backlog/`") | Lists of distributed agents — they auto-trigger from their own descriptions |
 | Architectural framing (one or two sentences) so the agent knows what your toolkit is for | Lists of active policies — `policies.toml` enforces them regardless of agent awareness |
 | | Anything already in `README.md` for human users |
@@ -620,24 +620,20 @@ my-toolkit/
 │   │   └── SKILL.md
 │   └── other-skill/
 │       └── SKILL.md
-├── .agents/
-│   └── skills -> ../skills ← symlink for Gemini cross-compatibility
-├── agents/                 ← distributed agents (Claude via plugin, Gemini optional)
+├── agents/                 ← optional: distributed agents (Claude plugin; Antigravity CLI)
 │   └── my-agent.md
+├── rules/                  ← optional: Antigravity markdown rules
 └── hooks/
     └── hooks.json
 ```
 
 ### Skills auto-discovery for cross-platform setups
 
-Claude auto-discovers skills from `skills/` at the plugin root. Gemini discovers from `.agents/skills/`. To support both without duplicating files, keep skills in `skills/` and create a symlink for Gemini:
+**Keep skills in `skills/` at the plugin root and do nothing else.** Claude, Copilot, and Antigravity all discover them there.
 
-```bash
-# Inside .agents/
-ln -s ../skills skills
-```
-
-> **Important**: Do not use a symlink at `skills/` pointing to `.agents/skills/` — Claude's remote plugin fetch does not resolve symlinks. The real files must live in `skills/`. Gemini installs via `git clone`, which resolves symlinks correctly, so `.agents/skills → ../skills` works fine for Gemini.
+> **Important**: Do not symlink `skills/` to anywhere — Claude's remote plugin fetch does not resolve symlinks, so the real files must live in `skills/`.
+>
+> Earlier versions of this guide recommended a `.agents/skills → ../skills` symlink for Gemini CLI cross-compatibility. That is obsolete: Antigravity reads plugin skills from `skills/`, and `.agents/skills/` is a *consumer workspace* location, not a plugin one. Repokit ships no such symlink.
 
 ### Platform Differences
 
@@ -689,11 +685,15 @@ hooks:  ## Install pre-commit hooks
         || pip install --quiet pre-commit
     pre-commit install
 
-gemini:  ## Link as Gemini extension (live reload)
-    gemini extensions link $(PWD)
+antigravity-ide:  ## Symlink into the Antigravity IDE global plugin dir
+    @mkdir -p $(HOME)/.gemini/config/plugins
+    @ln -sfn $(PWD) $(HOME)/.gemini/config/plugins/my-plugin
 
-un-gemini:  ## Uninstall Gemini extension
-    gemini extensions uninstall my-extension
+antigravity-cli:  ## Install into Antigravity CLI
+    agy plugin install $(PWD)
+
+gemini:  ## [legacy] Link as Gemini CLI extension (live reload)
+    gemini extensions link $(PWD)
 
 claude:  ## Install as Claude plugin (local scope)
     claude plugin marketplace add $(PWD) --scope local
@@ -750,9 +750,9 @@ ls ~/.claude/plugins/cache/
 
 > **Note:** Agents are loaded at session start. After adding a file manually, either restart your session or use `/agents` to reload immediately.
 
-**Skills** appear under `/help` with the plugin namespace prefix (e.g. `/repokit:dockit`). If a skill isn't showing up, check that the `skills/` directory (or symlink) exists at the plugin root.
+**Skills** appear under `/help` with the plugin namespace prefix (e.g. `/repokit:dockit`). If a skill isn't showing up, check that the `skills/` directory exists at the plugin root and that each skill has `name` and `description` frontmatter.
 
-**Commands** (`.md` files in `commands/`) also appear under `/help`. If a `.toml` command isn't showing — that's expected; `.toml` is Gemini-only.
+**Commands** (`.md` files in `commands/`) also appear under `/help`. Antigravity has no command component — `commands/*.toml` was Gemini CLI only, and the migration path is to make it a skill. Repokit ships no `commands/` directory.
 
 ---
 

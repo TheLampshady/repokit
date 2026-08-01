@@ -1,6 +1,6 @@
 ---
 name: component-reviewer
-description: "Use this agent when reviewing or optimizing any repokit plugin component — skills or agents. Triggers when you've just created or modified a SKILL.md or agent .md file, want to validate cross-platform compatibility (Claude vs Gemini), or need to check frontmatter correctness.\n\nExamples:\n\n<example>\nContext: The user just wrote a new agent definition.\nuser: \"I just created a security-auditor agent, can you review it?\"\nassistant: \"I'll use the component-reviewer agent to check the frontmatter, description quality, and cross-platform compatibility.\"\n<Task tool call to launch component-reviewer agent>\n</example>\n\n<example>\nContext: The user wants to validate a skill file.\nuser: \"Review my dockit skill\"\nassistant: \"I'll launch the component-reviewer agent to evaluate the skill for size, context, and platform compatibility.\"\n<Task tool call to launch component-reviewer agent>\n</example>"
+description: "Use this agent when reviewing or optimizing any repokit plugin component — skills or agents. Triggers when you've just created or modified a SKILL.md or agent .md file, want to validate cross-platform compatibility (Claude vs Antigravity vs Copilot), or need to check frontmatter correctness.\n\nExamples:\n\n<example>\nContext: The user just wrote a new agent definition.\nuser: \"I just created a security-auditor agent, can you review it?\"\nassistant: \"I'll use the component-reviewer agent to check the frontmatter, description quality, and cross-platform compatibility.\"\n<Task tool call to launch component-reviewer agent>\n</example>\n\n<example>\nContext: The user wants to validate a skill file.\nuser: \"Review my dockit skill\"\nassistant: \"I'll launch the component-reviewer agent to evaluate the skill for size, context, and platform compatibility.\"\n<Task tool call to launch component-reviewer agent>\n</example>"
 model: opus
 color: purple
 ---
@@ -142,25 +142,34 @@ commandExecutionPolicy: sandbox
 - [ ] `color` — add for internal/dev agents only; omit from distributed agents
 
 **Platform safety:**
-- [ ] No `color` field on distributed agents (in `agents/`, not `.claude/agents/`)
+- [ ] No `color` field on agents intended to ship cross-platform (Antigravity ignores it)
 
 ---
 
-### Agent Review (Gemini)
+### Agent Review (Antigravity)
 
 **Required fields:**
 - [ ] `name` present ← REQUIRED, block on missing
 - [ ] `description` present ← REQUIRED, block on missing
+- [ ] `tools` present ← **block on missing.** The default is `[]`, so an omitted list yields an agent that can do nothing
+
+**Block on these — retired Gemini CLI fields with no Antigravity equivalent:**
+- [ ] `kind: local`
+- [ ] `temperature`
+- [ ] `max_turns`
+- [ ] `timeout_mins`
+- [ ] `model` holding a model ID (`gemini-2.5-pro`) instead of a tier
 
 **Content quality:**
-- [ ] System prompt accounts for YOLO mode (no per-step confirmation)
+- [ ] `tools` uses Antigravity names (`view_file`, `grep_search`, `replace_file_content`, `run_command`) — **not** Claude's (`Read`, `Grep`, `Edit`, `Bash`). Misspelled or unmapped names can hang the subagent process
+- [ ] Foundation-owners include `replace_file_content` (to edit docs) and `run_command` (git log / grep checks) — without them the agent diagnoses correctly and then can't act
+- [ ] `commandExecutionPolicy` is `sandbox` — flag `off`, `auto`, or `eager` on a generated agent
+- [ ] Body scope note matches the allowlist (a read-only note over an editing allowlist is a mixed signal; the allowlist wins)
 
 **Optional fields to add if missing and appropriate:**
-- [ ] `kind: local` — add as explicit default
-- [ ] `model` — add appropriate Gemini model ID (e.g. `gemini-2.5-pro` for complex, `gemini-2.0-flash` for speed)
-- [ ] `temperature` — add for precision tasks (`0.1`–`0.3`) or creative tasks (`0.7`–`1.0`)
-- [ ] `max_turns` — add to bound execution; default is 15
-- [ ] `timeout_mins` — add if task has known time bounds; default is 5
+- [ ] `mainAgent: false` — keeps a generated SME agent out of the primary-agent picker while leaving it delegable
+- [ ] `model` — tier only: `inherit` (default), `flash`, or `pro`
+- [ ] `subagent: true` — already the default; include only for explicitness
 
 ---
 

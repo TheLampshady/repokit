@@ -1,6 +1,6 @@
 # Skills
 
-Repokit ships three cross-platform skills. Each lives in `skills/<name>/SKILL.md` and is invoked via slash command on Claude, Gemini, or Copilot.
+Repokit ships three cross-platform skills. Each lives in `skills/<name>/SKILL.md`. Claude and Copilot invoke them as slash commands; Antigravity's IDE auto-activates them from the `description` and its CLI compiles them into slash commands.
 
 | Skill | Command | Role | Summary | Details |
 |-------|---------|------|---------|---------|
@@ -60,4 +60,6 @@ skills/<name>/
     └── samples/          # Example outputs
 ```
 
-Skills are auto-discovered from `skills/` by Claude and Copilot. Gemini discovers them via the `.agents/skills/` symlink.
+All three platforms auto-discover skills from `skills/` at the plugin root — Claude, Copilot, and Antigravity alike. No symlink or per-platform copy is needed.
+
+> Do **not** add a `.agents/skills` symlink to this repo. Claude's remote plugin fetch doesn't resolve symlinks, so the real files must stay in `skills/`. (`.agents/skills/` is a *consumer workspace* path in Antigravity — unrelated to how this plugin ships.)

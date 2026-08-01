@@ -76,7 +76,7 @@ skills/
 
 ### Example
 
-**Claude Code / Gemini (shared `SKILL.md`):**
+**Claude Code / Antigravity (shared `SKILL.md`):**
 ```yaml
 ---
 name: review
@@ -198,7 +198,7 @@ model: Claude Sonnet 4
 ---
 ```
 
-> ⚠ **`tools` field conflict**: Claude uses a comma-separated string with Claude tool names (`Read, Grep`). Gemini uses a YAML list with Gemini tool names (`- read_file`). Copilot uses a JSON array. These are **not cross-platform compatible** — agents are platform-specific files.
+> ⚠ **`tools` field conflict**: Claude uses a comma-separated string with Claude tool names (`Read, Grep`). Antigravity uses a YAML list with its own names (`- view_file`). Copilot uses a JSON array. These are **not cross-platform compatible** — agents are platform-specific files. All three now *enforce* the list, so a copied-across `tools` value doesn't merely get ignored; it produces an agent that can't act, and on Antigravity an unmapped name can hang the subagent.
 
 ---
 
@@ -305,16 +305,17 @@ These files are always loaded — not invoked by slash command.
 
 ## Cross-Platform Compatibility Summary
 
-| Feature | Claude ↔ Gemini | Claude ↔ Copilot | Gemini ↔ Copilot |
-|---------|-----------------|------------------|------------------|
+| Feature | Claude ↔ Antigravity | Claude ↔ Copilot | Antigravity ↔ Copilot |
+|---------|----------------------|------------------|-----------------------|
 | Skill `SKILL.md` shared | ✓ `name` + `description` compatible | Partial — extra fields ignored | ✓ Minimal shared fields |
 | Agent files shared | ✗ Different dirs, `tools` format conflicts | ✗ Different dirs + fields | ✗ Different dirs + fields |
-| Command files shared | ✗ `.md` vs `.toml` — different formats | Partial — `.md` format similar | ✗ `.toml` vs `.prompt.md` |
-| `color` field | Claude only (Gemini ignores) | Copilot ignores | — |
-| `tools` field | ⚠ Incompatible format + names | ⚠ Incompatible values | ⚠ Incompatible |
-| `model` field | ⚠ Different value spaces | ⚠ Different value spaces | ⚠ Different value spaces |
-| `maxTurns` / `max_turns` | ✗ Different key names | ✗ | ✗ |
-| Hook event names | ✗ `Stop` vs `SessionEnd` (use `SessionEnd`) | ✗ | ✗ |
+| Command files shared | ✗ Antigravity has no command component | Partial — `.md` format similar | ✗ |
+| `color` field | Claude only (Antigravity ignores) | Copilot ignores | — |
+| `tools` field | ⚠ Incompatible format + names; **both enforce** | ⚠ Incompatible values | ⚠ Incompatible |
+| `model` field | ⚠ Aliases vs tiers (`inherit`/`flash`/`pro`) | ⚠ Different value spaces | ⚠ Different value spaces |
+| `maxTurns` / `max_turns` | ✗ Antigravity retired turn limits entirely | ✗ | ✗ |
+| Permission model | ✗ `permissionMode` vs `commandExecutionPolicy` | ✗ | ✗ |
+| Hook event names | ⚠ Antigravity event names undocumented — verify | ✗ | ✗ |
 
 **Safe cross-platform fields (Skills):** `name`, `description`, `user-invocable`, `disable-model-invocation`
 
