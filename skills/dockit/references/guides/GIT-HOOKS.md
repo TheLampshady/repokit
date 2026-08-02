@@ -165,9 +165,11 @@ claude /dockit sync
 
 Sync mode:
 - Adds or updates stale sections
-- Never removes content
+- Removes doc sections for code that no longer exists, and reports each removal in chat
 - Regenerates diagrams if architecture changed
-- Runs without prompts
+- Runs without prompts, except for prose-heavy deletions
+
+**Run sync by hand, never from a hook or CI job.** Sync deletes, and its only safeguard is the change report it prints at the end — which requires a human reading it. Automated, that report goes nowhere and content disappears unattended. Hooks and CI run `check` only.
 
 ---
 
@@ -192,32 +194,12 @@ PR opened → dockit check → Pass? → Merge
 
 ---
 
-## Auto-Sync Option
+## Why There Is No Auto-Sync
 
-For teams that prefer automatic updates, configure CI to run sync on the main branch:
+Automating `sync` in CI or a hook is deliberately not offered.
 
-```yaml
-# Only on main branch pushes
-on:
-  push:
-    branches: [main]
+Sync removes doc sections when the code behind them is gone. The safeguard is the change report it prints at the end — every move, removal, and untouched section named individually, closing with an offer to amend. That safeguard is a human reading it.
 
-jobs:
-  docs-sync:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+Run it from a bot and the report is written to a log nobody opens. Content gets deleted, the commit says `docs: auto-sync`, and the first person to notice is whoever needed the missing section.
 
-      - name: Sync documentation
-        run: claude /dockit sync
-
-      - name: Commit if changed
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/ README.md
-          git diff --staged --quiet || git commit -m "docs: auto-sync documentation"
-          git push
-```
-
-**Warning:** Auto-sync can create noise in commit history. Manual sync is recommended for most teams.
+Automate `check` instead. It's read-only, it fails the build when docs go stale, and a developer then runs `sync` locally where the report reaches someone who can act on it.

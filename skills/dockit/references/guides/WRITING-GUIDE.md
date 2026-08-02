@@ -277,25 +277,13 @@ Where the information goes instead:
 
 | Information | Destination |
 |-------------|-------------|
-| Where content moved during init/migrate | Chat completion report |
-| Which sections were left untouched | Chat completion report |
-| What sync removed and why | Chat completion report |
+| Where content moved during init/migrate | Chat completion report — `Moved` |
+| What sync removed and why | Chat completion report — `Removed` |
+| Content dockit deliberately didn't touch | Chat completion report — `Untouched` |
 | The durable record of any of the above | The commit |
 
-The report is what made a migration-notes file seem useful in the first place — the mistake was persisting it. Delivered in chat it's reviewable and answerable: the user scans it, spots anything unexpected, and asks for an amendment in the next turn. Name every item; a count can't be reviewed. See [dockit SKILL.md § Phase 5](../../SKILL.md#phase-5-validate--report) for the format and its three rules.
+The report is what made a migration-notes file seem useful in the first place — the mistake was persisting it. In chat it's reviewable and answerable: the user scans it, spots anything unexpected, and asks for an amendment next turn. A file can only be read.
 
-Report afterward, in chat, once:
+The block format and its rules live in [dockit SKILL.md § Phase 5](../../SKILL.md#phase-5-validate--report) — one home, so the two can't drift apart.
 
-```
-Redistributed 3 sections out of README.md:
-  System requirements  → ENVIRONMENTS.md
-  Architecture diagram → ARCHITECTURE.md
-  Env var docs         → ENVIRONMENTS.md
-
-Left untouched:
-  ENVIRONMENTS.md       "Local Development Setup" (existing custom section)
-  ARCHITECTURE.md       custom diagrams
-  README.md             "Notes from the 2024 audit" (no template destination)
-```
-
-If the team wants that summary durably, it belongs in the commit message — not in a doc that outlives its usefulness by years.
+If the team wants the summary durably, it belongs in the commit message, not in a doc that outlives its usefulness by years.

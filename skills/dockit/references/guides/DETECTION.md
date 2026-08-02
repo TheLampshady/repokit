@@ -46,3 +46,36 @@ Collect the actual variable names. If nothing in the project mentions `DATABASE_
 ### Fallback
 
 Only fall back to framework defaults (e.g., `DATABASE_URL`, `SECRET_KEY`) if **no env var sources exist at all** in the project, and mark each one with `[TODO: verify var name]` so the user knows it's a guess.
+
+---
+
+## Structural Integrity
+
+Whether the project's *existing* docs work as a structure. This decides whether `init` leads with additive or with restructure (SKILL.md Phase 1 step 9b → Phase 3), and it is a different question from whether docs exist at all.
+
+Dockit's doc structure is a research position, not a neutral container, so it applies by default. A project earns deference by demonstrating a working structure of its own — not by having files.
+
+Signals, in rough order of weight:
+
+| Signal | Integrity present | Integrity absent |
+|--------|-------------------|------------------|
+| Distribution | Content split across discrete topical files | One dump — a single README carrying everything |
+| Headings | Consistent enough to navigate | Ad hoc, duplicated, or absent |
+| Internal links | Resolve | Broken, or no cross-linking at all |
+| Duplication | Each topic has one home | The same content restated in several files |
+| README role | Delegates to other docs | Carries setup, architecture, deploy, and troubleshooting itself |
+
+**Judge what exists, never what's missing.** A repo documented in one well-organised README is missing most template files and is thoroughly documented; scoring absent files would mark it barren and shred it. Conversely a 3000-line unnavigable README is documentation and is exactly the case dockit exists to fix. Failing to match dockit's templates is not evidence of poor structure — plenty of teams have a good shape that isn't this one.
+
+**Ties go to restructure.** See SKILL.md Phase 3 for why the costs are asymmetric.
+
+### Relationship to generation posture (step 9)
+
+Two adjacent questions with different outputs — don't collapse them:
+
+| Question | Step | Drives |
+|----------|------|--------|
+| Do docs exist at all? | 9 — documented / doc-barren | Whether the overview ban applies |
+| Do the docs that exist work? | 9b — integrity present / absent | Whether `init` leads with additive or restructure |
+
+A 3000-line README is `documented` **and** `integrity absent`: the overview ban applies (they don't need generated orientation prose) and restructure leads (the shape isn't serving them). That combination is coherent, not a conflict.
