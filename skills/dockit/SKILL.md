@@ -110,7 +110,7 @@ Explicit user intent (e.g. "run sync", "migrate", "scan everything") always wins
 
 > Sync removes doc sections when the underlying code is gone — see "Syncing: Remove docs for removed code" above. Removals are reported in the chat summary, not left as tombstones in the docs.
 
-> **Predicates are executed code.** Before running any `dockit:check` / `dockit:conform` command, check it against the grammar allowlist and the `.dockit/predicates.lock` approval file — see [CHOICE-MINING.md § Predicates are executed code](./references/guides/CHOICE-MINING.md#predicates-are-executed-code--treat-them-as-such). A predicate is a shell command in a checked-in file, so a docs PR is an execution path. Grammar check first, then the lock file; a rejected command is flagged and left unverified, never run.
+> **Predicates follow a fixed grammar.** Before running any `dockit:check` / `dockit:conform` command, check it against the grammar in [CHOICE-MINING.md § Predicate grammar](./references/guides/CHOICE-MINING.md#predicate-grammar) — read-only commands, no shell operators, no interpreters. A command that fails the grammar is flagged and left unverified, never run. Dockit keeps no approval file; execution is the runtime's call.
 
 > **Mined rules are exempt from removal.** On sync, re-run every `dockit:check` / `dockit:conform` predicate in PRINCIPLES.md and the foundation entries. A failing predicate is **flagged, never deleted** — a decayed count means either the rule is wrong or the code is drifting away from a correct rule, and nothing in the evidence distinguishes those. Deleting on failure would quietly strip correct rules exactly when a codebase is going bad. Report the failure and let a human decide. See [CHOICE-MINING.md](./references/guides/CHOICE-MINING.md).
 
@@ -124,14 +124,13 @@ Explicit user intent (e.g. "run sync", "migrate", "scan everything") always wins
 2. Detect framework (see `frameworks/_index.md`)
 3. Detect project size (see [Project Scaling](#project-scaling))
 4. Detect project name and description — see [DETECTION.md](./references/guides/DETECTION.md)
-5. Check for custom templates (`.dockit/templates/`)
-6. Load framework module or `_default.md`
-7. Extract commands from package.json, Makefile, pyproject.toml
-8. Discover environment variables — see [DETECTION.md](./references/guides/DETECTION.md)
-9. Check for SDD artifacts — `.specify/memory/constitution.md`, `openspec/project.md`, `conductor/workflow.md`, `conductor/product-guidelines.md`. Read for comparison only; never write to them
-10. Decide the generation posture — **documented** (a `docs/` dir exists, or README is >~50 lines of real content) or **doc-barren**. Strict overview ban applies only to documented repos; on a barren repo, generated orientation prose is the measured-helpful case. See [CHOICE-MINING.md § The overview ban is conditional](./references/guides/CHOICE-MINING.md#the-overview-ban-is-conditional--check-before-applying-it)
-11. Mine choices for PRINCIPLES.md — see [CHOICE-MINING.md](./references/guides/CHOICE-MINING.md). Run both filters (name the rejected alternative; skip anything a linter enforces) before writing any line, attach a stored predicate to each one, and check the file against its size budget
-12. Scan for foundations (medium/large only) — see [FOUNDATIONS-DETECTION.md](./references/guides/FOUNDATIONS-DETECTION.md). Score every source file by fan-in × cross-feature × stability; categorise as foundation / hotspot / hidden / pretender. Skipped on small projects.
+5. Load framework module or `_default.md`
+6. Extract commands from package.json, Makefile, pyproject.toml
+7. Discover environment variables — see [DETECTION.md](./references/guides/DETECTION.md)
+8. Check for SDD artifacts — `.specify/memory/constitution.md`, `openspec/project.md`, `conductor/workflow.md`, `conductor/product-guidelines.md`. Read for comparison only; never write to them
+9. Decide the generation posture — **documented** (a `docs/` dir exists, or README is >~50 lines of real content) or **doc-barren**. Strict overview ban applies only to documented repos; on a barren repo, generated orientation prose is the measured-helpful case. See [CHOICE-MINING.md § The overview ban is conditional](./references/guides/CHOICE-MINING.md#the-overview-ban-is-conditional--check-before-applying-it)
+10. Mine choices for PRINCIPLES.md — see [CHOICE-MINING.md](./references/guides/CHOICE-MINING.md). Run both filters (name the rejected alternative; skip anything a linter enforces) before writing any line, attach a stored predicate to each one, and check the file against its size budget
+11. Scan for foundations (medium/large only) — see [FOUNDATIONS-DETECTION.md](./references/guides/FOUNDATIONS-DETECTION.md). Score every source file by fan-in × cross-feature × stability; categorise as foundation / hotspot / hidden / pretender. Skipped on small projects.
 
 ### Phase 2: Questions
 
@@ -199,26 +198,14 @@ See guides for detection logic and document structure details.
 
 ---
 
-## Custom Templates
+## Templates
 
-Projects can override default templates.
+Two sources, framework first:
 
-### Location
+1. `references/templates/[framework]/[file]` — framework-specific
+2. `references/templates/core/[file]` — default fallback
 
-```
-.dockit/
-└── templates/
-    ├── README.md           # Override core README
-    ├── ARCHITECTURE.md     # Override core ARCHITECTURE
-    └── wagtail/            # Override framework templates
-        └── MODELS.md
-```
-
-### Priority
-
-1. `.dockit/templates/[file]` — project custom (highest priority)
-2. `references/templates/[framework]/[file]` — framework-specific
-3. `references/templates/core/[file]` — default fallback
+**There is no per-project override, and dockit writes no config directory.** A template only shapes a doc's first generation; from then on sync preserves prose and updates code-derived sections in place, so editing the generated doc once achieves what an override would. A team wanting a house doc shape across many repos should ship its own `templates/core/`, not copy an override file into every project.
 
 ---
 

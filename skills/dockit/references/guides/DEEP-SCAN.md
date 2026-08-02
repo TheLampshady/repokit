@@ -80,8 +80,7 @@ For every `dockit:check` and `dockit:conform` comment in `PRINCIPLES.md` and `FO
 | Paths resolve | A directory or glob in the command matches nothing on disk | **Silently passing** — the predicate is dead |
 | Population non-zero | A `conform` predicate's `total` command returns 0 | **Silently passing** — dividing by an empty set |
 | Population reachable | `total` counts items that can never satisfy `cmd` | **Unreachable metric** — can never hit 100%, so it reports a healthy rule as decayed |
-| Grammar | Fails the allowlist in [CHOICE-MINING.md](./CHOICE-MINING.md#predicates-are-executed-code--treat-them-as-such) | **Unverifiable** — never run it |
-| Approval | Hash absent from `.dockit/predicates.lock` | **Unapproved** — show the command, ask |
+| Grammar | Fails the grammar in [CHOICE-MINING.md](./CHOICE-MINING.md#predicate-grammar) | **Unverifiable** — never run it |
 | Result | Runs, but `expect` / `min` not met | **Decayed** — doc wrong, or code drifting? |
 
 For the unreachable-metric check, the cheap heuristic is: if a `conform` predicate has never met its `min` since the `last=` stamp it was written with, suspect the denominator before suspecting the code. A rule that was true when someone wrote it down and has been failing ever since is more often mis-scoped than freshly violated.
@@ -130,7 +129,7 @@ Flag candidates; **never delete**. A rule that fails filter 1 today may have bee
 | Check | Result |
 |-------|--------|
 | References | 4 broken · 2 moved · 3 unverified |
-| Predicates | 18 healthy · 2 silently passing ⚠️ · 1 decayed · 2 unapproved |
+| Predicates | 18 healthy · 2 silently passing ⚠️ · 1 decayed · 2 unverifiable |
 | Undocumented | 3 modules · 1 likely foundation |
 | Filter re-check | 4 rules would not be written today |
 
