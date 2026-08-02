@@ -11,6 +11,8 @@ This doc is reference material for the design of:
 
 It does not specify implementation. It captures the terminology and prior art so design decisions have a paper trail.
 
+**Revised 2026-08-02** — added § 3's key-class-detection findings and the layer-foundation category, the ranking-tool wrap-vs-build resolution, and § 6's coverage-pressure counterweight. Positions from working discussions rather than published sources are marked **(repokit hypothesis)**: unmeasured, to be validated by experiment.
+
 ---
 
 ## 1. Terminology
@@ -66,6 +68,19 @@ Measurable indicators that a foundation has drifted away from "small, testable, 
 
 References: [Software package metrics — Wikipedia](https://en.wikipedia.org/wiki/Software_package_metrics), [Afferent / Efferent Coupling — coupling.dev](https://coupling.dev/posts/related-topics/afferent-and-efferent-coupling/), [Efferent coupling — Wikipedia](https://en.wikipedia.org/wiki/Efferent_coupling).
 
+### Not all dependency edges are the same edge (added 2026-08-02)
+
+Ca above treats every incoming dependency as one unit. The **key class detection** literature — a line running from Zaidman & Demeyer (2008) through Şora (2019) and the ranking-aggregation work since — converged on two positions that the plain-Ca framing above misses:
+
+- **Importance is a graph-centrality property.** These methods rank classes with PageRank, LeaderRank, or Markov-chain rank aggregation over the class-collaboration graph, not with raw counts and not with directory or filename conventions. No method in this literature uses filenames — the premise of the field is that naming is precisely the signal that fails in the codebases most in need of analysis.
+- **Edge types carry different weights.** Inheritance, instantiation, return-type, and method-call edges are weighted separately, because treating them uniformly demonstrably loses architecturally significant classes ([Structure Entropy Weighted LeaderRank](https://www.hindawi.com/journals/mpe/2020/9234042/)).
+
+The second point has a direct consequence for detection. A subclass declaration is a far stronger claim than an import: the subclass inherits the parent's whole contract, where an importer borrows one function. It also produces a specific and predictable miss — **the layer foundation.** A `BasePresenter` inherited by twelve presenters, or a `BaseDao` by fifteen DAOs, has cross-feature spread of exactly 1 by construction, since its consumers all live in the one directory whose shape it defines. Any filter that requires spread ≥ 2 deletes it before scoring, and it is precisely the class an agent most needs to know about.
+
+**Repokit's response (implemented 2026-08-02, unvalidated):** count subclass declarations as a separate signal, fold it in at 2× weight (`reach = fan_in + 2 × subclass_count`), and demote the spread requirement from a hard gate to a score penalty plus an explicit exemption at `subclass_count >= 5`. Filename conventions (`base.*`, `abstract.*`) are used only to break ties at the cut line, never to score. Layer foundations cap at Medium confidence so a human always confirms them. **(repokit hypothesis)** — the recall gain is untested, and the precision cost of admitting single-layer candidates is unmeasured.
+
+Supporting argument from an adjacent field: retrieval work on repository-level generation finds that *"failing to retrieve true dependencies is far more damaging than including some irrelevant context"* ([arXiv:2602.11671](https://arxiv.org/pdf/2602.11671)), and reports that similarity-based retrieval performs worst specifically on **class** dependencies. A spread filter is a precision filter on a task where the evidence favors recall.
+
 ### Size and complexity
 
 - **God class:** ~500 LOC and/or 20+ public methods is a common threshold.
@@ -101,6 +116,20 @@ Param count and conditional count growing over time on a single function indicat
 | Python | radon, vulture |
 | Go | gocyclo, deadcode |
 
+### Ranking tools, and why repokit doesn't wrap one (resolved 2026-08-02)
+
+The centrality ranking described above ships in production today: **aider** builds a tree-sitter symbol graph and ranks files with PageRank (`aider --show-repo-map` prints it and exits), and **RepoMapper** ([MIT](https://github.com/pdavis68/RepoMapper)) extracts that as a standalone tool with an MCP server mode. PageRank would surface a layer foundation for free — rank flows from twelve dependents regardless of which folder they occupy.
+
+Repokit uses neither as a dependency. Three reasons, in order of weight:
+
+1. **It answers a different question.** Aider's map decides *what goes in the prompt right now*: token-budgeted, personalized to chat context, output as a rendered signature tree. A foundation registry needs a stable ranking plus per-file evidence a human can check. Everything downstream of the rank — churn, cross-feature spread, consumer sets for conformance counting, hotspot/pretender classification — is absent from the map. Notably aider has **no stability signal at all**, so a hotspot and a healthy foundation rank identically.
+2. **The dependency cost breaches a standing constraint.** Wrapping means the *consuming* project needs Python plus networkx, tiktoken, grep-ast, and compiled tree-sitter grammars — or an MCP server registered separately on three platforms. Repokit's detection is Markdown instructing an agent to run `grep` and `git log`: zero install, identical behavior across Claude, Antigravity, and Copilot.
+3. **RepoMapper specifically is a single-maintainer port** (190 stars, no substantive commit since 2025-09; the later commits are a LICENSE file and a badge). Upstream aider is the better wrap target if one is ever wanted.
+
+**Sanctioned use: opportunistic cross-check, never a dependency.** If `aider` happens to be on `PATH`, a deep scan may run `aider --show-repo-map` and *reconcile* its top-N against dockit's own — two independent rankings disagreeing is a useful blindspot signal, and set membership suffices, so nothing needs parsing for numbers. Degrades silently to nothing when absent.
+
+**Left open:** implementing PageRank directly is ~30 lines of stdlib power iteration over import edges dockit already greps — no networkx, no tree-sitter, no tokenizer. Whether that counts as the retrieval layer repokit has committed not to build is genuinely unclear: dockit already ships a bespoke scoring formula, and this would replace a homegrown heuristic with a better-studied one for the same job. The distinction that seems to hold is **retrieval** (serving context per query) versus **ranking** (one-time doc generation) — but it has not been written into the charter's out-of-scope list, and it will come up again.
+
 ---
 
 ## 4. Ownership
@@ -126,6 +155,7 @@ Foundations without a named owner rot. The pattern that scales:
 | Health signal | Auditor agent dimension |
 | Action on signal | Modernizer ticket in tikkit |
 | Per-foundation expertise | Subagent generated by agentkit, possibly owning multiple rows (see § 6) |
+| Layer foundation (added 2026-08-02) | A registry row scoped to a *symbol* rather than a directory — a base class whose consumers are one layer. Carries the consuming directory so agentkit knows which agent should own it |
 
 The split keeps each tool focused: dockit *describes*, auditor *detects*, modernizer *plans the fix*, agentkit *equips agents to work on it*.
 
@@ -226,13 +256,21 @@ This is not yet implemented; the current AGENT-SIZING heuristic uses inferred si
 - [Refactoring.guru — Divergent Change](https://refactoring.guru/smells/divergent-change)
 - [DZone — The Common Closure Principle](https://dzone.com/articles/the-common-closure-principle)
 
+### Grouping pressure from the other direction (added 2026-08-02)
+
+Everything above answers "which foundations belong in one agent." A second force pushes on the same decision from outside the registry: **coverage.** Once a tool reports which directories no agent claims, the cheapest way to clear the report is to widen the nearest agent — and in the one field case observed, that meant expanding a single agent across four architectural layers at once.
+
+The Common Closure Principle already argues against this (those layers don't change for the same reason), but a coverage number is a more legible target than a principle, so the principle loses unless something enforces it. Repokit's answer, shipped 2026-08-02 and unvalidated: classify the uncovered directory's architectural layer against the candidate agent's existing layers, and propose a *new* agent rather than a fold when they differ and fewer than two change-coupling signals connect them — with the § 6 ceilings still binding above coverage. An uncovered directory the user has seen and accepted beats a covered one whose owner can't advise on it.
+
+**(repokit hypothesis, n=1.)** The behavioral claim — that coverage reporting induces scope inflation — rests on a single observation, and the guardrail's effect is unmeasured.
+
 ---
 
 ## 7. Open questions
 
-- **Granularity.** Is one foundation = one directory? One module? One class? Likely a mix; the registry should allow path *or* symbol scoping.
+- **Granularity.** Is one foundation = one directory? One module? One class? Likely a mix; the registry should allow path *or* symbol scoping. **Partially answered 2026-08-02:** a class is a legitimate foundation, and the layer-foundation category scopes by symbol — `subclass_count` is a symbol-level signal and the row records the consuming layer. What remains open is whether symbol-scoped rows need a distinct schema or just a `scope:` field on the existing one, and how sync detects the rename of a symbol as opposed to a path.
 - **Thresholds.** LOC, method-count, Ca/Ce thresholds are language- and project-dependent. Where do defaults live — modernizer's language reference files, or a per-project `foundations.config`?
-- **Detection without metrics tooling.** Many projects don't have SonarQube. How much can the auditor do with `git`, `grep`, and language-native tools alone?
+- **Detection without metrics tooling.** Many projects don't have SonarQube. How much can the auditor do with `git`, `grep`, and language-native tools alone? **Partially answered 2026-08-02:** further than assumed — subclass counting is a grep, and the whole four-signal score runs on `grep` + `git log`. The ceiling is real graph centrality, which needs a symbol graph and therefore compiled tree-sitter grammars; that's the line where the constraint bites, and § 3 records why repokit stops short of crossing it. Still open: whether ~30 lines of stdlib PageRank over grep-derived edges gets most of the benefit without the dependency.
 - **Lifecycle states.** Backstage uses `experimental | production | deprecated`. Do we need a fourth state for "under refactor"?
 - **Cross-plugin contract.** Auditor (repokit) emits signals; modernizer (tikkit) consumes them. What's the on-disk format — a JSON file in `.backlog/`? Backlog entries with a structured suffix?
 - **Cluster field in FOUNDATIONS.md.** Section 6 implies an optional `cluster: <name>` field per row would let teams override agentkit's grouping deterministically. Should dockit's template add it? When does the inferred-grouping path stop being good enough?
@@ -242,6 +280,12 @@ This is not yet implemented; the current AGENT-SIZING heuristic uses inferred si
 
 ## Sources
 
+- [Zaidman & Demeyer — Automatic identification of key classes using webmining (JSME 2008)](https://onlinelibrary.wiley.com/doi/abs/10.1002/smr.370) — founding paper of key-class detection
+- [Şora et al. — Finding key classes by static analysis (IST 2019)](https://www.sciencedirect.com/science/article/abs/pii/S0950584919301727) — graph ranking over static dependency structure
+- [Structure Entropy Weighted LeaderRank (MPE 2020)](https://www.hindawi.com/journals/mpe/2020/9234042/) — multi-type edge weighting; inheritance weighted separately from calls
+- [CRA — key classes via Markov-chain rank aggregation (Axioms 2022)](https://doi.org/10.3390/axioms11100491)
+- [arXiv:2602.11671 — Do Not Treat Code as Natural Language](https://arxiv.org/pdf/2602.11671) — recall-over-precision for dependency retrieval; class dependencies retrieved worst
+- [aider — building a better repository map](https://aider.chat/2023/10/22/repomap.html) and [RepoMapper](https://github.com/pdavis68/RepoMapper) — PageRank symbol-graph ranking in production; the wrap-vs-build case in § 3
 - [The Wrong Abstraction — Sandi Metz](https://sandimetz.com/blog/2016/1/20/the-wrong-abstraction)
 - [Backstage Software Catalog](https://backstage.io/docs/features/software-catalog/)
 - [Backstage System Model](https://backstage.io/docs/features/software-catalog/system-model/)

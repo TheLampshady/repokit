@@ -85,6 +85,69 @@ The foundation's `Status` (active / deprecated / sunset) or `Health` (healthy / 
 
 **Default action:** flag in the report only. Recommend (don't auto-trigger): *"FOUNDATIONS.md says `core.auth` was last reviewed 142 days ago. Invoke the owning agent for a review pass, or `tikkit:foundationtik` will write a `foundation-stale-review` ticket on its next pass."*
 
+### 7. Scope drift — Trigger Coverage Gaps
+
+Categories 1–6 all compare the agent against the catalog. This one compares the **agent set against the code**, and it catches the failure the others structurally cannot: `FOUNDATIONS.md` is entirely correct, every agent matches it, and a whole directory still triggers nothing.
+
+That gap is invisible from inside the agent set. Nothing errors. Work in the uncovered directory routes to a generic assistant, which writes plausible code that ignores conventions no one told it about. It shows up in the field as *"we refactored one module into a package and the agent kept editing the old file"* and *"nobody noticed `presenters/` was never in any agent's scope."*
+
+Detecting absence is the point. Run this pass on every sync.
+
+#### Building the covered set
+
+1. For each agent, collect its `Working Directories` paths, any file globs in its frontmatter description, and paths named in `Owned Foundations`.
+2. Normalize to directories. A path covers itself and everything beneath it.
+3. Union across **all** agents on all platforms — coverage is a property of the agent set, not of one agent.
+
+#### Finding what's outside it
+
+Use dockit's standard exclusions (`tests/`, `node_modules/`, `vendor/`, `dist/`, generated code, vendored code). Then flag three things:
+
+**a. Uncovered active directories.** A directory containing source files, none of whose ancestors are in the covered set:
+
+```bash
+find src -type d -not -path "*/node_modules/*" -not -path "*/tests/*" \
+  | while read d; do
+      n=$(find "$d" -maxdepth 1 -type f \( -name "*.py" -o -name "*.ts" \) | wc -l)
+      [ "$n" -ge 1 ] && echo "$n $d"
+    done | sort -rn
+```
+
+Threshold by project size — flag at **≥ 10 files** on small/medium projects, **≥ 20** on large ones. Below that, list under a single "also uncovered (small)" line rather than as findings.
+
+**b. Uncovered inheritance roots.** A type with **≥ 5 subclasses** in-repo whose defining file sits outside the covered set, or sits inside it but is named nowhere in any agent's hot memory.
+
+Count occurrences, not files — one file can define several subclasses of the same base, and each is a separate consumer of its contract:
+
+| Language | Recipe |
+|----------|--------|
+| Python | `grep -rhoE "class\s+\w+\([^)]*\b<Type>\b" src/ \| wc -l` |
+| JS / TS | `grep -rhoE "class\s+\w+\s+extends\s+<Type>\b" src/ \| wc -l` |
+| Java / Kotlin | `grep -rhoE "(extends\|implements\|:)\s+<Type>\b" --include="*.java" --include="*.kt" . \| wc -l` |
+| Go (embedding) | `grep -rhoE "^\s+\*?<Type>\s*$" --include="*.go" . \| wc -l` |
+| Rust | `grep -rhoE "impl\s+(<[^>]*>\s+)?<Type>\s+for\b" --include="*.rs" src/ \| wc -l` |
+
+Inlined deliberately: skills load independently, so agentkit can't rely on reading a guide that ships inside dockit. If these fall out of step with dockit's Signal 1b, dockit's copy is authoritative — but a wrong subclass count here costs a mis-prioritized finding, not a bad catalog row.
+
+An inheritance root inside a covered directory but absent from hot memory is still a finding. The agent will be *invoked*; it just won't know the base class exists, which is the hallucination case.
+
+**c. Module-split drift.** A catalog path or Working Directory row that names a single file which no longer exists, where a *package of the same stem* does:
+
+```bash
+# agent says: service/api/utils/discovery_utils.py
+[ ! -f service/api/utils/discovery_utils.py ] && ls service/api/utils/
+```
+
+This is the refactor that most reliably orphans an agent's scope while everything still looks superficially fine. Treat it as scope drift rather than path drift (category 3): the fix is usually "cover the package," not "repoint at one replacement file."
+
+#### A gap is a question, not a defect
+
+Plenty of directories *should* be uncovered — thin CRUD, config, glue, generated output, anything an AI gets right from framework knowledge alone. That's the Core Test in `AGENT-SIZING.md`, and it still governs. Report the gap, state what's in the directory, and let the user decide.
+
+**Default action:** per gap, offer `[f]old into <nearest agent>`, `[c]reate a new agent`, `[s]kip`.
+
+Before proposing a fold, run the **layer test** in [`AGENT-SIZING.md`](./AGENT-SIZING.md) § "Closing a coverage gap without inflating an agent." Folding four architectural layers into one agent to make a coverage report go green trades a blindspot for an agent that triggers on everything and knows each layer shallowly. Sync must not recommend that silently.
+
 ---
 
 ## Sync Output Format
@@ -124,6 +187,24 @@ Status drift:
   - .claude/agents/messaging.md
     `core.notifications` flipped: healthy → hotspot
     Action? [u]pdate
+
+Trigger coverage gaps:
+  - src/presenters/  (14 files, no agent covers it)
+    Nearest agent: `component-expert` (owns src/components/)
+    ⚠ Different layer — folding adds a 2nd layer to that agent. Recommend: new agent.
+    Action? [c]reate · [f]old anyway · [s]kip
+
+  - src/dao/base.py  →  BaseDao, 12 subclasses, named in no agent's hot memory
+    Nearest agent: `data-layer` (already covers src/dao/)
+    Recommend: add to hot memory — scope is fine, the invariant is missing.
+    Action? [u]pdate · [s]kip
+
+  - service/api/utils/discovery_utils.py  →  file gone, package exists
+    `schema-agent` still scoped to the single file; utils/ now has 3 modules
+    Recommend: rescope to service/api/utils/
+    Action? [u]pdate · [s]kip
+
+  Also uncovered (small, listed not flagged): src/glue/ (3), src/typing/ (2)
 
 Stale review (informational — dockit's Last reviewed dates):
   - core.notifications  (FOUNDATIONS.md: last reviewed 142 days ago)
@@ -172,7 +253,9 @@ The agent should never claim an invariant the catalog doesn't endorse.
 
 When a project has agents on multiple platforms (Claude + Antigravity, etc.), the same drift may appear in each platform's copy of an agent. Apply changes to **all platforms** in one pass — never let Claude and Antigravity agents drift apart.
 
-If only one platform has the agent (e.g., Claude has `auth.md` but Antigravity doesn't), flag it as a **coverage gap** rather than drift. Ask: *"`auth` agent exists for Claude only. Generate Antigravity and Copilot copies?"*
+If only one platform has the agent (e.g., Claude has `auth.md` but Antigravity doesn't), flag it as a **platform gap** rather than drift. Ask: *"`auth` agent exists for Claude only. Generate Antigravity and Copilot copies?"*
+
+(Distinct from a **trigger coverage gap**, category 7 — that's code no agent covers on *any* platform. A platform gap is the same agent missing a copy.)
 
 ---
 
@@ -186,7 +269,7 @@ agentkit status
 ─────────────────────────────────────────────────────
 
 Project: <project-name>
-Foundations: 6  |  Agents: 4  |  Coverage: 100%
+Foundations: 6/6 owned  |  Agents: 4  |  Source dirs covered: 11/14
 
 Agents:
   ✓ auth         owns: core.auth, core.permissions      in sync
@@ -198,6 +281,7 @@ Drift summary:
   - 1 orphaned agent
   - 0 missing agents
   - 1 invariant drift
+  - 3 trigger coverage gaps (src/presenters/, BaseDao, schema utils split)
   - 2 informational: dockit's Last reviewed > 90 days (core.notifications, core.auth)
 
 Run `/agentkit sync` to address drift.
@@ -222,7 +306,9 @@ Drift is detected by **content comparison** between the agent body and FOUNDATIO
 
 ## What Sync Does NOT Do
 
-- **Does not run dockit's foundation detection** — never re-scores fan-in/cross-feature/stability. That's dockit's job. If sync sees the catalog is stale, it tells the user to run `/dockit sync`.
+- **Does not run dockit's foundation detection** — never re-scores fan-in, cross-feature spread, or stability, and never writes a `FOUNDATIONS.md` row. That's dockit's job. If sync sees the catalog is stale, it tells the user to run `/dockit sync`.
+
+  The category-7 scan is deliberately on the near side of that line. It may **count** — files per directory, subclasses per type — because counting is what "is this covered?" requires. It may not **score** or **rank**, and when a coverage gap looks like an uncatalogued foundation, the recommendation is `/dockit sync`, not a row written by agentkit. Two scanners that both decide what a foundation is will drift; one that counts and one that scores will not.
 - **Does not silently rewrite invariants** — always prompts.
 - **Does not delete agents without confirmation** — even orphans require explicit user approval.
 - **Does not modify foundation source code** — only agent files and (with permission) doc files.

@@ -157,6 +157,41 @@ Custom-code findings from Phase 1.4 don't get their own agents when foundations 
 
 The goal: **fewer agents, each with broader ownership**. Two agents that both touch authentication will conflict on triggering. One auth agent that owns the foundation AND the custom middleware avoids that.
 
+### Closing a coverage gap without inflating an agent
+
+`agentkit sync` category 7 reports directories and inheritance roots that trigger no agent. The obvious fix — widen the nearest agent's `Working Directories` until the report goes green — is usually the wrong one, and it is what teams reach for first.
+
+Observed in the field: an agent scoped to `components/` was missing `presenters/`, so the remedy proposed was to expand it to `dao/`, `dtos/`, `presenters/`, **and** `services/`. That closes four gaps and creates a worse problem. One agent now owns four architectural layers, its description must trigger on all of them, and it knows each shallowly. The blindspot is gone; a permanently over-triggering, thinly-informed agent has replaced it.
+
+**A coverage report measures whether code has an owner. It does not measure whether the owner is any good.** Optimizing the first number at the expense of the second is a net loss.
+
+#### The layer test
+
+Before folding an uncovered directory into an existing agent, ask whether the new directory sits in the **same architectural layer** as what the agent already owns. Layer-denoting directory names, roughly:
+
+```
+controllers, routes, views, presenters, templates      → presentation
+services, handlers, usecases, domain                   → application
+dao, repositories, models, entities, dtos, schemas     → data
+clients, adapters, gateways, integrations              → integration
+utils, helpers, lib                                    → cross-cutting
+```
+
+| Situation | Action |
+|-----------|--------|
+| Same layer as the agent's existing dirs | **Fold.** This is the normal case. |
+| Different layer, but ≥ 2 change-coupling signals (see above) | **Fold**, and say in the prompt which signals justified crossing the layer. |
+| Different layer, 0–1 change-coupling signals | **Propose a new agent.** If that would breach the sanity ceiling, say so and let the user choose between a broader agent and a documented non-goal. |
+| Folding pushes the agent past 6 working dirs, 12 patterns, or 10,000 chars | **Split**, regardless of layer. The existing size budget wins. |
+
+#### Ceilings still bind
+
+Coverage never justifies exceeding the sanity ceiling. If every remaining gap needs a sixth agent, the honest report is *"these directories are uncovered and the agent budget is full"* — not a fifth agent stretched over three layers. An uncovered directory the user has seen and accepted is a better outcome than a covered one whose owner can't advise on it.
+
+#### Not every gap wants an owner
+
+Apply the Core Test at the top of this guide. If an AI assistant would get the directory right from framework knowledge alone — thin CRUD, config, glue, generated output — the correct resolution is `[s]kip`, and it should not be re-reported as new on the next sync.
+
 ### When No Foundations Exist
 
 If `docs/FOUNDATIONS.md` is absent, fall back to the original custom-code-driven grouping rules (the rest of this guide). But note: agentkit's preferred path is to ask the user to run `/dockit sync` (or `/dockit init`) first, since FOUNDATIONS.md is the durable source of truth that agents will sync against.

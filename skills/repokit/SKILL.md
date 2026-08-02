@@ -222,6 +222,9 @@ dockit deliberately leaves work for humans rather than inventing answers: it nev
 # Missing rationale
 grep -rn '\[TODO: why?\]' docs/ 2>/dev/null | wc -l
 
+# Unanswered hazard questions — knowledge no scan can produce
+grep -rn '\[TODO: known hazard?\]' docs/ 2>/dev/null | wc -l
+
 # Unanswered intent questions
 grep -rn '\[TODO:.*boundary\|\[TODO:.*gap' docs/ 2>/dev/null | wc -l
 
@@ -254,17 +257,24 @@ When walking, present one item at a time with enough context to answer without o
    Exceptions: legacy_export.py, health.py
    → keep as Convention · promote to Rule · drop it
 
-3 of 4 — Boundary question
+3 of 5 — Boundary question
    SearchClient handles reads; 4 features write directly.
    → deliberate boundary, or a gap?
 
-4 of 4 — Rule decayed
+4 of 5 — Known hazard
+   core.search entered the registry last sync.
+   What has broken here that a newcomer wouldn't predict?
+   → one rule, or "nothing" to close it
+
+5 of 5 — Rule decayed
    "All API routes require authentication" — predicate now fails.
    New non-conformers: webhooks.py, health_v2.py
    → doc wrong, or code drifting?
 ```
 
 Write answers back into the docs as given: a reason fills the `<details><summary>Why</summary>` block, a promotion moves the line from Conventions to Rules, a drop removes it. Answers are the user's words — don't embellish them into prose.
+
+The hazard item is the one to hold the line on. It asks for something no scan can produce — an invariant learned by breaking something — so a fabricated answer isn't a weak answer, it's a fiction the team will design around indefinitely. Write the user's rule as a Rule-tier invariant with their words in the `Why` block, add a predicate only if the check is an obvious one-liner, and take **"nothing comes to mind" as a complete answer**: delete the marker and don't raise it again. Never mine an answer out of commit messages or issue titles to avoid leaving it blank.
 
 ### Output Format
 
@@ -278,7 +288,7 @@ Write answers back into the docs as given: a reason fills the `<details><summary
 | Docs | 🟡 Stale | `dockit check` reports drift; last updated 2 days ago |
 | Agents | 🟡 Drifted | 2 of 5 agents reference renamed foundations |
 | Context handoff | 🟡 Not wired | CLAUDE.md doesn't reference docs/FOUNDATIONS.md |
-| Open decisions | 🟡 4 need you | 2 missing rationale, 1 promotion candidate, 1 decayed rule |
+| Open decisions | 🟡 5 need you | 2 missing rationale, 1 hazard question, 1 promotion candidate, 1 decayed rule |
 | Pre-commit | 🟢 Installed | .pre-commit-config.yaml present |
 | Linting | 🟢 Configured | ruff |
 | Type checking | 🔴 Missing | No mypy/pyright config found |
@@ -293,7 +303,7 @@ Write answers back into the docs as given: a reason fills the `<details><summary
 2. Run `/repokit init` to wire docs/FOUNDATIONS.md into CLAUDE.md — or add the line yourself
 3. Address the open backlog items in order
 
-4 open decisions are waiting — want to walk through them now? (~2 min)
+5 open decisions are waiting — want to walk through them now? (~2 min)
 ```
 
 Use 🟢 for healthy, 🟡 for needs attention, 🔴 for missing/broken. Adapt the checks to whatever project structure exists — not all projects will have all of these.

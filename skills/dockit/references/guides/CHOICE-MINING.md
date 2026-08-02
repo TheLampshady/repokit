@@ -151,12 +151,41 @@ If a project deliberately runs over, that's fine — it's their file. Say it onc
 Classified by evidence source, because evidence determines both confidence and failure mode.
 
 ### 1. Boundary choices
-A wrapper exists and the import graph favours it over the thing it wraps.
+One module is the only sanctioned door to a capability, and the import graph respects it.
 
-- **Detect:** find modules that import a third-party SDK, then count importers of the SDK elsewhere.
-- **Write:** "Use `A` for X operations."
-- **Predicate:** `check` — count direct imports outside the wrapper, expect 0.
-- **Fails when:** the wrapper is vestigial and the team abandoned it. The exception list catches this.
+A boundary is *about* negative space — where something may not appear — but **do not write it that way.** Negative phrasing is the weak spot of instruction-following: constraints opposing model defaults fail at 10–100% rates against 99%+ compliance for positively-phrased conventional ones ([arXiv:2604.07192](https://arxiv.org/abs/2604.07192)). Write the positive instruction, name the exceptions, and let the stored predicate carry the enforcement the wording can't. The predicate is not decoration on this family — it *is* the enforcement.
+
+Two shapes recur often enough to look for by name.
+
+**1a. Vendor boundary** — a project module wraps a third-party SDK.
+
+- **Detect:** for each module, list its third-party imports; for each of those packages, count importers elsewhere in the source tree.
+- **Concentration test:** every importer inside one directory, or all but a nameable few → boundary.
+- **Write:** "Use `SearchClient` for all vendor-search operations." Exceptions listed inline.
+- **Predicate:** `check` — direct imports outside the wrapper, expect 0.
+
+**1b. Ambient-capability boundary** — one module owns access to something globally reachable.
+
+Environment variables, the clock, randomness, direct DB connections, outbound HTTP. There's no vendor SDK here — the door is a project module like `settings.py` or `clock.py`, and the thing being confined is a language builtin. 1a's detection misses these entirely, because nothing appears in the dependency manifest.
+
+| Capability | Python | JS / TS | Go |
+|---|---|---|---|
+| Environment | `os.getenv`, `os.environ` | `process.env` | `os.Getenv` |
+| Clock | `datetime.now`, `time.time` | `Date.now`, `new Date(` | `time.Now` |
+| Randomness | `random.`, `uuid.uuid4` | `Math.random`, `crypto.randomUUID` | `rand.` |
+| Connections | `psycopg.connect`, `requests.` | `fetch(`, `new Pool(` | `sql.Open`, `http.Get` |
+
+- **Detect:** grep the whole source tree for the accessor, group hits by containing module.
+- **Concentration test:** ≥ 90% of hits in one module → Convention. Below that it's noise, not a boundary.
+- **Write:** "Read configuration through `settings`." Exceptions listed inline.
+- **Predicate:** `check` — accessor hits outside the owning module, expect 0.
+
+```
+<!-- dockit:check cmd="grep -rlE 'os\.getenv|os\.environ' src/ | grep -v src/settings.py | wc -l" expect="0" -->
+```
+
+- **Both shapes fail the same way:** the wrapper is vestigial and the team quietly abandoned it. The concentration test catches that — a boundary nobody respects doesn't reach the threshold, and gets reported as an observation instead of written as a rule.
+- **Neither may be promoted to Rule by mining**, however clean the count. "Deviating is a defect" is the team's call, not the import graph's.
 
 ### 2. Structural conventions
 A repeated shape: naming, return types, layering, registration.
@@ -306,10 +335,24 @@ Mining produces human-required work. Surface it in the completion report; `/repo
 |---|---|
 | Convention written at 80–99% | Real pattern, or should the exceptions be fixed? |
 | Empty `[TODO: why?]` | One sentence of reason. |
+| `[TODO: known hazard?]` | What has broken here that a newcomer wouldn't predict? |
 | `Doesn't cover:` observation | Intentional boundary, or a gap? |
 | Sustained 100% conformance | Promote to Rule? |
 | Failed predicate | Doc wrong, or code drifting? |
 | SDD-artifact discrepancy | Which side is right? |
+
+### The hazard question is the one worth interrupting someone for
+
+Every other row above asks a human to *adjudicate* something mining already found. This one asks for content mining cannot reach at all.
+
+Consider a real example, anonymized: *"exclude numeric and date fields from facet requests — the vendor returns 400."* No import graph implies it. No conformance count suggests it. It isn't in the type signatures, and the code that respects it looks like ordinary filtering. It exists because somebody shipped the obvious version and watched it fail in production, and it is worth more to the next agent than most of what scoring produces.
+
+Rules of engagement, because a question this open-ended turns into nagging fast:
+
+- **Asked once per foundation**, at registry entry or on the flip to `hotspot`. Not every sync.
+- **"Nothing" closes it.** Delete the marker. An unanswered marker is the only one that persists.
+- **Never inferred.** Not from issue titles, not from commit messages containing "fix", not from a `try/except` that looks defensive. A plausible hazard the team never actually hit is worse than no hazard, because it will be designed around forever.
+- **The answer is a Rule, not a Convention.** Somebody paid for it already.
 
 ---
 

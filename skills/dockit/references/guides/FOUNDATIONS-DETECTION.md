@@ -21,7 +21,7 @@ Skip this guide on **small projects** (one feature folder, < ~1k LOC of source).
 
 ## The signals
 
-Three signals, computed per source file. Combine into a score; rank; surface the top of the list.
+Four signals, computed per source file. Combine into a score; rank; surface the top of the list.
 
 ### Signal 1 — Afferent coupling (fan-in)
 
@@ -38,6 +38,35 @@ How many other files depend on this one. Foundations have many.
 | Rust | `grep -rlE "use\s+<path>" --include="*.rs" src/` |
 
 **Limits.** Misses re-exports, barrel files, dynamic imports, reflection-loaded modules, build-time codegen. A grep-based count is a *lower bound*. Flag anything with confidence < high if exact precision matters.
+
+### Signal 1b — Inheritance fan-in (subclass count)
+
+**Not all dependency edges mean the same thing.** An import says "this file calls that one." A subclass declaration says "this file *is* a specialization of that one, and every rule the parent enforces applies here." The second is a far stronger claim of foundational status, and counting it inside the import total buries it.
+
+Count it separately.
+
+**Step 1 — extract the types the candidate file defines:**
+
+```bash
+grep -oE "^\s*(class|abstract class|interface|trait|type)\s+\w+" <file> | awk '{print $NF}'
+```
+
+**Step 2 — for each type name, count declarations across the repo that specialize it:**
+
+| Language | Recipe |
+|----------|--------|
+| Python | `grep -rhoE "class\s+\w+\([^)]*\b<Type>\b" src/ \| wc -l` |
+| JS / TS | `grep -rhoE "class\s+\w+\s+extends\s+<Type>\b" src/ \| wc -l` |
+| TS interfaces | `grep -rhoE "(interface\s+\w+\s+extends\|implements)\s+<Type>\b" src/ \| wc -l` |
+| Java / Kotlin | `grep -rhoE "(extends\|implements\|:)\s+<Type>\b" --include="*.java" --include="*.kt" . \| wc -l` |
+| Go (struct/interface embedding) | `grep -rhoE "^\s+\*?<Type>\s*$" --include="*.go" . \| wc -l` |
+| Rust | `grep -rhoE "impl\s+(<[^>]*>\s+)?<Type>\s+for\b" --include="*.rs" src/ \| wc -l` |
+
+Use `-o` and count *occurrences*, not files — one file can define several subclasses of the same base, and each is a separate consumer of the base's contract.
+
+`subclass_count` is the maximum across the types the file defines. A file defining both a widely-inherited base and an unused helper scores on the base.
+
+**Why this signal exists.** The key-class-detection literature (Zaidman & Demeyer 2008 onward; see References) converged on multi-type edge weighting — inheritance, instantiation, return-type, and call edges each carry a different weight — because treating them uniformly demonstrably loses the architecturally significant classes. Signal 1b is the cheap version of that finding.
 
 ### Signal 2 — Cross-feature usage
 
@@ -62,7 +91,9 @@ grep -rlE "<import-pattern>" src/ \
 
 (Adjust `$2` to the column that holds the feature folder name for the project's layout.)
 
-A foundation typically scores **≥ 2** distinct features. Single-feature usage (= 1) is a strong signal that the file is *not* foundational, regardless of fan-in.
+A foundation typically scores **≥ 2** distinct features, and this used to be a hard filter. It no longer is, because it has a systematic blind spot: **a layer foundation.** A `BasePresenter` inherited by twelve presenters, or a `BaseDao` inherited by fifteen DAOs, has `distinct_features = 1` by construction — its consumers all live in the one directory whose shape it defines. Filtering on spread deletes exactly the class an agent most needs to know about.
+
+Single-feature usage is now a **penalty carried in the score**, not an exclusion, with one explicit exemption (see The score). The bias runs deliberately toward recall: a candidate the user rejects costs one line of a confirmation prompt, and a foundation never surfaced costs every future agent that writes code around it.
 
 ### Signal 3 — Stability (change frequency)
 
@@ -87,22 +118,33 @@ Result is the number of commits touching the file in the last year.
 A minimum-viable formula that ranks reasonably across project sizes:
 
 ```
-foundation_score = log(1 + fan_in)
+reach = fan_in + 2 * subclass_count
+
+foundation_score = log(1 + reach)
                  * log(1 + distinct_features)
                  * stability_factor
+                 * convention_boost
 
 where:
   stability_factor = 1 / (1 + change_count_last_year / 12)
                      # months-per-change, clamped
+  convention_boost = 1.2 if the file lives in core/ shared/ lib/ common/ internal/
+                     else 1.0
 ```
 
 **Why log.** Fan-in and feature counts are long-tailed. Without log, one mega-imported utility drowns everything else.
 
+**Why inheritance is weighted 2×.** A subclass inherits the parent's contract wholesale; an importer borrows one function. The weight is a coarse stand-in for the multi-type edge weighting the key-class literature uses. Note that a subclass also *imports* its parent, so it contributes to both terms — that double-count is intentional, not a bug.
+
 **Why divide by churn.** A file imported everywhere but rewritten weekly is an architectural hotspot, not a stable foundation. The division pushes hotspots down the foundation list — they get surfaced separately (see failure modes below).
 
-**Threshold.** Surface files with `foundation_score >= 1.0` *and* `distinct_features >= 2`. Tune by inspecting the top 20 on a sample project.
+**Threshold.** Surface files with `foundation_score >= 1.0` **and** (`distinct_features >= 2` **or** `subclass_count >= 5`).
 
-**Convention boost.** If the file lives in a conventional foundation directory (`core/`, `shared/`, `lib/`, `common/`, `internal/`), multiply the score by **1.2**. This nudges named-as-foundation files up the list without making naming a hard requirement.
+The second clause is the **layer-foundation exemption**. It admits a base class whose children all live in one directory, which the old `distinct_features >= 2` filter excluded outright. Worked case: a `BaseDao` with 12 subclasses in a single `dao/` package scores `reach = 12 + 24 = 36`, `log(37) × log(2) × 0.86 ≈ 2.15` — comfortably above threshold, and previously discarded by the gate before the score was ever consulted.
+
+Tune the threshold by inspecting the top 20 on a sample project.
+
+**Filename conventions are a tiebreaker, not a boost.** Files named `base.*`, `abstract.*`, `interface.*`, or `protocol.*` are usually foundational, and it is tempting to score them for it. Don't — the whole premise of this guide is that naming is the signal that fails in the projects most in need of help, and no key-class-detection method in the literature uses filenames. Use the name only to break a tie at the cut line: when two candidates score within ~10% of each other and only one fits in the top-N, prefer the conventionally-named one, and say in the prompt that the name broke the tie. A name may never put a file into the registry on its own.
 
 ---
 
@@ -110,22 +152,26 @@ where:
 
 The same three signals identify three categories worth surfacing. Compute these alongside the foundation list — they're the most useful output of the scan.
 
-| Category | fan_in | distinct_features | change_count | Action |
-|----------|--------|-------------------|--------------|--------|
+| Category | reach | distinct_features | change_count | Action |
+|----------|-------|-------------------|--------------|--------|
 | **Foundation (healthy)** | high | high (≥ 2) | low | Add to `FOUNDATIONS.md` as `status: active` |
 | **Architectural hotspot** | high | high (≥ 2) | high | Add to `FOUNDATIONS.md` as `status: active` with `health: hotspot`. Foundationtik (tikkit) will write a refactor ticket. |
 | **Hidden foundation** | high | high (≥ 2) | low | High score, but **does not live in a conventional foundation directory** and may have a domain-feature-style name (e.g. `helpers.py`, `misc.ts`, `shared_stuff.py`). Add to registry; flag in chat: *"this file is acting as a foundation but isn't named like one — consider relocating to `core/`."* |
-| **Pretender** | low | low (≤ 1) | any | Lives in `core/`/`shared/`/`lib/` but few or no cross-feature consumers. Surface as **out-of-band finding**, not a `FOUNDATIONS.md` row. Suggest inlining or moving back to a feature folder. |
+| **Layer foundation** | high, mostly inherited | 1 | low | Qualifies via the subclass exemption. Its consumers are one layer, and that layer's shape *is* what it defines. Add to `FOUNDATIONS.md` as `status: active`, `type: abstraction`, with the consuming directory in the `Consumers` column — that's what agentkit reads to decide which agent should own it. No new schema field: `abstraction` already means "interface / base class / pattern." |
+| **Pretender** | low | low (≤ 1) | any | Lives in `core/`/`shared/`/`lib/` but few or no cross-feature consumers **and no subclasses**. Surface as **out-of-band finding**, not a `FOUNDATIONS.md` row. Suggest inlining or moving back to a feature folder. |
 
 ### Detection rules
 
 ```
 hotspot:           score above threshold AND change_count > median(change_count_for_top_quartile) * 2
 hidden_foundation: score above threshold AND not in {core, shared, lib, common, internal, foundation*}
-pretender:         file in {core, shared, lib, ...} AND foundation_score < 0.5
+layer_foundation:  score above threshold AND distinct_features == 1 AND subclass_count >= 5
+pretender:         file in {core, shared, lib, ...} AND foundation_score < 0.5 AND subclass_count < 5
 ```
 
 Hotspot vs. healthy is a **continuous** distinction — pick the top quartile of churn within the foundation set. Hidden vs. healthy is a **categorical** distinction by directory.
+
+The `subclass_count < 5` clause on `pretender` matters: without it, an abstract base parked in `lib/` and inherited throughout one layer gets recommended for deletion. That is the most damaging false positive this guide can produce, because the suggestion sounds authoritative and the code is load-bearing.
 
 ---
 
@@ -136,23 +182,39 @@ For each scanned candidate, dockit produces an internal record:
 ```yaml
 - path: src/services/helpers.py
   fan_in: 23
+  subclass_count: 0
+  reach: 23
   distinct_features: 6
   change_count_12m: 3
   in_conventional_dir: false
   foundation_score: 4.21
   category: hidden_foundation
   confidence: high
+
+- path: src/dao/base.py
+  fan_in: 12
+  subclass_count: 12        # signal 1b — all in src/dao/
+  reach: 36
+  distinct_features: 1      # exempted via subclass_count >= 5
+  change_count_12m: 2
+  in_conventional_dir: false
+  foundation_score: 2.15
+  category: layer_foundation
+  consuming_layer: src/dao/
+  confidence: medium        # single-feature spread caps confidence
 ```
 
-The top-N records (where score ≥ threshold and category ∈ {foundation, hotspot, hidden_foundation}) become rows in `FOUNDATIONS.md`. Pretenders go into the dockit run report as **suggestions**, not registry rows.
+The top-N records (where score ≥ threshold and category ∈ {foundation, hotspot, hidden_foundation, layer_foundation}) become rows in `FOUNDATIONS.md`. Pretenders go into the dockit run report as **suggestions**, not registry rows.
 
 ### Confidence levels
 
 | Level | Conditions |
 |-------|------------|
-| High | Score above threshold; ≥ 12 months of git history; ≥ 3 distinct features; fan-in ≥ 5 |
-| Medium | Score above threshold but missing one of the above |
-| Low | Marginal score, or git history < 6 months, or fan-in ≤ 3 |
+| High | Score above threshold; ≥ 12 months of git history; ≥ 3 distinct features; reach ≥ 5 |
+| Medium | Score above threshold but missing one of the above — includes every `layer_foundation`, which by definition has one distinct feature |
+| Low | Marginal score, or git history < 6 months, or reach ≤ 3 |
+
+A `layer_foundation` caps at Medium and therefore always gets confirmed with the user before it becomes a row. That is the intended trade for relaxing the spread filter: more candidates surface, and the human does the final cut.
 
 Always show confidence to the user. Always ask before adding `Low`-confidence rows.
 
@@ -240,15 +302,18 @@ done
 
 Top results:
 
-| path | fan_in | features | changes | category |
-|------|--------|----------|---------|----------|
-| `src/core/database.py` | 28 | 4 | 2 | foundation |
-| `src/core/auth.py` | 24 | 4 | 1 | foundation |
-| `src/services/helpers.py` | 19 | 5 | 3 | **hidden_foundation** |
-| `src/core/notifications.py` | 22 | 3 | 14 | **hotspot** |
-| `src/core/legacy_session.py` | 1 | 1 | 0 | **pretender** |
+| path | fan_in | subclasses | features | changes | category |
+|------|--------|-----------|----------|---------|----------|
+| `src/core/database.py` | 28 | 0 | 4 | 2 | foundation |
+| `src/core/auth.py` | 24 | 0 | 4 | 1 | foundation |
+| `src/services/helpers.py` | 19 | 0 | 5 | 3 | **hidden_foundation** |
+| `src/core/notifications.py` | 22 | 0 | 3 | 14 | **hotspot** |
+| `src/dao/base.py` | 12 | 12 | 1 | 2 | **layer_foundation** |
+| `src/core/legacy_session.py` | 1 | 0 | 1 | 0 | **pretender** |
 
-dockit writes the first four into `FOUNDATIONS.md`. The pretender goes into the report as a finding: *"`src/core/legacy_session.py` lives in `core/` but is only imported once. Consider inlining or relocating."*
+dockit writes the first five into `FOUNDATIONS.md`, confirming `src/dao/base.py` with the user first (Medium confidence). The pretender goes into the report as a finding: *"`src/core/legacy_session.py` lives in `core/` but is only imported once and has no subclasses. Consider inlining or relocating."*
+
+`src/dao/base.py` is the row the previous version of this guide missed: it never reached the scoring step, because `distinct_features == 1` excluded it at the gate.
 
 ---
 
@@ -306,6 +371,9 @@ This is the same prompt-shape sync uses for prose-heavy section deletions — ke
 
 ## References
 
+- Zaidman & Demeyer — ["Automatic identification of key classes in a software system using webmining techniques"](https://onlinelibrary.wiley.com/doi/abs/10.1002/smr.370), *JSME* 2008. Founding paper of key-class detection; importance as a measured graph property.
+- Şora et al. — ["Finding key classes in object-oriented software systems by techniques based on static analysis"](https://www.sciencedirect.com/science/article/abs/pii/S0950584919301727), *IST* 2019. Graph-ranking over static dependency structure.
+- ["Structure Entropy Weighted LeaderRank"](https://www.hindawi.com/journals/mpe/2020/9234042/), *MPE* 2020. Multi-type edge weighting — inheritance, instantiation, return-type, and call edges weighted separately. Basis for Signal 1b.
 - Adam Tornhill — *Software Design X-Rays* (Pragmatic Bookshelf). Behavioural code analysis from git history. Methodology behind CodeScene.
 - Robert C. Martin — *Clean Architecture* and ["Granularity"](https://www.cs.umd.edu/class/spring2003/cmsc838p/Design/granularity.pdf) paper. Stable Abstractions Principle, Stable Dependencies Principle, the "main sequence."
 - Wikipedia — [Software package metrics](https://en.wikipedia.org/wiki/Software_package_metrics). Definitions of Ca, Ce, instability `I = Ce/(Ca+Ce)`.

@@ -8,12 +8,22 @@ Frame for research runs in this repo. Read for context; never cited as a source.
 
 A line of generated context earns its place when it is **novel** to the reader, **action-changing right now**, and **cheap to state**. Overview fails novelty — the reader could derive it. Rationale fails immediacy — it matters only when the decision is reopened. That test is the working definition of "high value" here, and it is the thing research should sharpen rather than replace.
 
+**What generated agents are for.** Two failure modes. Everything agentkit produces is judged against them, and a feature that serves neither doesn't ship.
+
+- **Architectural hallucination** — the agent invents structure the project doesn't have: a base class that was never written, a layer borrowed from the framework's documentation, an extension procedure that looks plausible and is wrong. Cured by hot memory that names real paths, real invariants, real extension procedures — measured from the code, not inferred from the stack.
+- **Delegation blindspot** — real code that no agent claims, so work on it routes to a generic agent with no context. Cured by coverage: every load-bearing area of the repo triggers some agent, or the absence is reported.
+
+Blindspots are the harder half. A hallucination announces itself the moment someone checks the claim; a blindspot produces work that merely lacks context, and nothing fails. So **detecting absence is a first-class requirement**, not a report-quality nicety — a tool that only validates what exists will pass a codebase it has half-covered.
+
+This cuts both ways across the two layers. Detection thresholds tuned to find *utilities* will silently drop other shapes of foundation — a base class inherited a dozen times inside one layer has no cross-feature spread and is foundational anyway. Any filter justified as noise reduction should be checked for what shape of code it structurally cannot surface.
+
 ## Objectives
 
 - What generation may write into a project's docs, and what must be left to a human.
 - How context drift is detected, and what detection costs.
 - Which context tooling to build, which to wrap, which to only recommend.
 - What generated agents should carry, and how work gets routed to them.
+- How an agent set proves it has no blindspots — what "covered" means, and what it costs to check.
 - What a human needs from these docs that an agent doesn't, and where the two readers conflict.
 - Whether surfacing a decision actually changes the action taken. Not "do docs help" — does *this* line, at *this* moment, prevent the reinvention it was written to prevent.
 

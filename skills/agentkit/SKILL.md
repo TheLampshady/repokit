@@ -816,21 +816,23 @@ But only mention these **if asked**. Don't list them unprompted.
 ### Flow
 
 1. **Inputs** — gather existing agents, current FOUNDATIONS.md, code state
-2. **Drift scan** — classify findings into five categories: orphaned, missing, path drift, invariant drift, stale review
+2. **Drift scan** — classify findings into seven categories: orphaned, missing, path drift, invariant drift, status drift, stale review, and **trigger coverage gaps**
 3. **Report** — present a structured drift report (see SYNC.md for the exact format)
 4. **Per-finding decisions** — prompt the user for each drifted item: update / replace / skip / delete
 5. **Apply** — update agent files in place, run cross-doc check if foundations changed; the `agentkit-managed` marker stays as-is (no timestamp)
 
+Categories 1–6 compare each agent against `FOUNDATIONS.md`. Category 7 compares the **agent set against the code** — directories, inheritance roots, and split modules that trigger no agent at all. That gap can't be seen from inside the agent set, so the scan runs every sync. When closing one, apply the layer test in AGENT-SIZING.md: widening an agent until the report goes green trades a blindspot for an over-triggering agent.
+
 ### What sync does NOT do
 
-- Re-run dockit's foundation detection (that's `/dockit sync`)
+- Re-run dockit's foundation detection (that's `/dockit sync`). Category 7 may **count** files and subclasses; it never scores, ranks, or writes a `FOUNDATIONS.md` row
 - Silently rewrite invariants
 - Auto-overwrite hand-authored agents (no `agentkit-managed` marker → warn and recommend, never replace)
 - Modify foundation source code
 
 ### Multi-platform sync
 
-When the same agent exists on multiple platforms, sync applies the same change to all platforms in one pass. If an agent exists on only one platform, sync flags it as a coverage gap and asks whether to extend.
+When the same agent exists on multiple platforms, sync applies the same change to all platforms in one pass. If an agent exists on only one platform, sync flags it as a **platform gap** and asks whether to extend. (Not to be confused with a trigger coverage gap — code no agent covers on any platform.)
 
 ---
 
@@ -839,7 +841,7 @@ When the same agent exists on multiple platforms, sync applies the same change t
 `/agentkit status` runs the drift scan in read-only mode — no actions, just a report. Use it to:
 
 - Inventory what agents exist and what they own
-- See which foundations are uncovered
+- See which foundations are uncovered, and which source directories trigger no agent
 - See drift before deciding to run sync
 
 Output format in [`references/guides/SYNC.md`](references/guides/SYNC.md) under "Status Mode."

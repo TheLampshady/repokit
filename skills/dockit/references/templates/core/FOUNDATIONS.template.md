@@ -80,6 +80,22 @@ Rejected: [REJECTED_ALTERNATIVE]
 [TODO: why?]
 [ENDIF]
 
+[IF_NEW_OR_HOTSPOT]
+[TODO: known hazard?]
+<!-- Emitted ONCE — when this foundation first enters the registry, or when it flips to
+     health: hotspot. Never generated content: this solicits an invariant no analysis can
+     reach, the kind learned by breaking something. "Numeric and date fields must be
+     excluded from facet requests — the vendor rejects them with a 400" is not in the
+     import graph, the git history, or the type signatures. Somebody hit it in production.
+
+     A human answers, and the answer becomes a normal Rule-tier invariant above with the
+     incident in its Why block. Human-authored Rules need no predicate (though this kind
+     often supports one — write it if the check is a one-liner).
+
+     "Nothing comes to mind" is a valid answer: delete the marker and don't re-emit it.
+     Unanswered is the only state that persists. Never fill this in by inference. -->
+[ENDIF]
+
 ### Canonical usage
 
 <!-- A real call site copied verbatim from the best-conforming consumer, with a path:line
