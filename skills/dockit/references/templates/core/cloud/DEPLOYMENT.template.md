@@ -135,10 +135,10 @@ flowchart LR
 [VERSION_FORMAT]
 <!-- e.g., Semantic versioning: MAJOR.MINOR.PATCH -->
 
-### Changelog
+### Changelog Process
 
 [CHANGELOG_PROCESS]
-<!-- How changelog is maintained -->
+<!-- How the changelog is maintained — the process, not the log itself. -->
 
 ---
 

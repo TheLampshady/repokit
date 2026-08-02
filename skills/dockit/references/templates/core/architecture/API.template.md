@@ -184,11 +184,14 @@ curl -X [METHOD] "[API_URL][ENDPOINT_PATH]" \
 
 **Current Version:** [CURRENT_VERSION]
 
-### Version History
+### Supported Versions
+
+<!-- Versions that still exist and can still be called. A version past its
+     end-of-life date is removed from this table, not struck through. -->
 
 | Version | Status | End of Life |
 |---------|--------|-------------|
-[VERSION_HISTORY_TABLE]
+[SUPPORTED_VERSIONS_TABLE]
 
 ### Specifying Version
 

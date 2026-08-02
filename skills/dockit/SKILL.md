@@ -41,15 +41,16 @@ Routing examples:
 - Security configurations → ENVIRONMENTS.md or CLOUD.md
 - Team-specific workflows → CONTRIBUTING.md or PRINCIPLES.md
 
-For one-time restructures, create `docs/MIGRATION-NOTES.md` showing where content moved (this is a transient hand-off doc, not a permanent log).
+**Write no migration log.** A `MIGRATION-NOTES.md` is a tombstone by another name: it describes a state the repo is no longer in, and the restructure commit already records every move. The move list is still valuable — it belongs in the conversation, reported in full once the work is done (see [Phase 5](#phase-5-validate--report)), where the user can review it and ask for an amendment. A report you can reply to beats a file you can only read.
 
 ### Syncing (sync): Remove docs for removed code
 
 When sync detects that a feature, module, command, env var, or service has been removed from the codebase:
 
 - **DELETE** the corresponding doc section. The feature is gone; documenting its absence is noise.
-- **DO NOT** leave tombstones like "*X was removed in v2*", "*deprecated*", or "*no longer supported*". That belongs in the changelog/git history.
-- **DO NOT** append to MIGRATION-NOTES.md from sync. Migration notes are for one-time restructures, not for routine code changes.
+- **DO NOT** leave tombstones like "*X was removed in v2*", "*no longer supported*", or "*this used to live in `foo/`*". The thing is gone; documenting its absence belongs in the changelog/git history.
+- **DO** keep status markers for things that still exist. "*Deprecated — use `NewClient` instead; removed in v3*" is **current state, not a tombstone**, and on a public API or a shared internal module it is often the most valuable line on the page. The test is existence, not tense: **still in the code → document its status. Gone from the code → delete the section.**
+- **DO NOT** write a removal or migration log anywhere under `docs/` — no "what changed" file, no notes doc, no appended table. Removals are reported in chat; git records the rest.
 - **REPORT** removals in the chat completion summary (see Phase 6) so the user can confirm. The conversation is the right place for "I removed X" — the docs are not.
 - **ASK FIRST** before deleting a section with substantial human-authored prose (multi-paragraph narrative, design notes, lessons-learned). Code-derived sections (command tables, env var lists, API endpoints) can be removed without prompting; prose-heavy sections may contain intentional context worth preserving even after the code is gone.
 
@@ -145,6 +146,8 @@ Show plan and offer options:
 - **Option 2**: Preserve existing doc structure, only add missing sections/files
 - **Option 3**: Exit without changes
 
+This is a coarse choice about approach, not a per-move gate. The detailed account of what happened comes after the work, in [Phase 5](#phase-5-validate--report).
+
 ### Phase 4: Execute & Generate
 
 Run the per-mode flow from the [Explicit Modes](#explicit-modes) table above. Generation is scaled to project size — see [Project Scaling](#project-scaling) below for which docs each tier produces.
@@ -157,12 +160,29 @@ When filling sections in `init` / `migrate` / `sync`, apply the **Earn the Headi
 2. Validate markdown syntax
 3. List remaining `[TODO:]` markers
 3b. **Report the review queue** — the human-required work this run produced: conventions written at 80–99% conformance, empty `[TODO: why?]` slots, `[TODO: known hazard?]` questions on foundations that are new or newly a hotspot, `Doesn't cover:` intent questions, failed predicates awaiting the doc-wrong-or-code-drifting call, and SDD-artifact discrepancies. `/repokit status` reads this list. Best-practice observations (no tests on a foundation, duplicated retry logic, no scaffold path) go here too — **in chat only, never written into the docs**, since a generic recommendation sitting in a project's own documentation reads to the next agent as a decision the team made
-4. **List removals in chat** (not in docs) — for sync runs that deleted sections, surface what was removed and why so the user can confirm. Format:
+4. **Report every change in chat** (never in docs). Changes are already applied — this is the review pass. The point is that the user can scan it, spot something they didn't expect, and ask for an amendment in the next turn. That only works if the report is specific enough to recognise a mistake in, so **name each item, never a count**. "Removed 4 stale sections" is not a report.
+
    ```
+   Moved:
+     README.md "System requirements"  → ENVIRONMENTS.md
+     README.md "Architecture diagram" → ARCHITECTURE.md
+
    Removed:
-     - ARCHITECTURE.md → "LDAP Auth" section (module deleted: src/auth/ldap.py)
-     - README.md → `--legacy-mode` flag (removed from CLI)
+     ARCHITECTURE.md → "LDAP Auth" section (module deleted: src/auth/ldap.py)
+     README.md       → `--legacy-mode` flag (removed from CLI)
+
+   Left untouched:
+     README.md            "Notes from the 2024 audit" (no template destination)
+     docs/scratch-perf.md (whole file — dockit didn't create it)
+
+   Anything here look wrong? Say so and I'll put it back or move it elsewhere.
    ```
+
+   Three rules for this report:
+   - **"Left untouched" is not filler.** It's how the user confirms their non-conforming content survived. Silence about it reads as loss.
+   - **Content with no template destination is reported as staying put, never as a move.** An unrecognized heading isn't a routing problem to solve — it stays where the human put it.
+   - **Close with the amendment offer.** A report the user can act on is the whole reason this isn't a file.
+
 5. Show completion report with next steps
 
 ---

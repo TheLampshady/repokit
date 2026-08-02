@@ -250,8 +250,9 @@ When sync detects a removed feature, module, command, or env var:
 1. Locate the corresponding doc section(s)
 2. **Code-derived sections** (command tables, env var lists, API endpoints, generated diagrams): delete without prompting
 3. **Prose-heavy sections** (multi-paragraph narrative, design notes, custom workflows): ask the user before deleting — they may contain intentional context worth keeping
-4. **Never** leave tombstones — no "*deprecated*", "*removed in v2*", or "*no longer supported*" markers. Git history and changelogs serve that purpose.
-5. Report each removal in the chat completion summary so the user can confirm
+4. **Never** leave tombstones — no "*removed in v2*", "*no longer supported*", or "*formerly at `old/path`*" markers for things that are gone. Git history and changelogs serve that purpose.
+5. **Do keep deprecation notices for things that still exist.** "*Deprecated — use `NewClient`; removed in v3*" describes current state and is frequently the most useful line in the doc. The test is existence, not tense: still in the code → document its status; gone from the code → delete the section.
+6. Report each removal in the chat completion summary so the user can confirm
 
 ### Content Routing
 
@@ -266,28 +267,35 @@ When sync detects a removed feature, module, command, or env var:
 
 ---
 
-## Migration Notes
+## No Migration or Removal Logs
 
-`docs/MIGRATION-NOTES.md` is a **one-time hand-off doc** created during init/migrate when content gets relocated across files. It exists so the team can find content that moved during a restructure.
+Dockit writes **no record of what moved or what went away** — not during restructure, not during sync, not in any file under `docs/`. No `MIGRATION-NOTES.md`, no "what changed" doc, no appended table of relocations.
 
-It is **not** a removal log. Sync must not append to it. Routine "X was removed" entries belong in chat output and git history, not in the docs.
+Such a file is a tombstone with a friendlier name. It describes a state the repo is no longer in, it goes stale the moment anything moves again, and nothing ever deletes it. Git already records every move with more precision than a hand-written table, and the restructure is a single commit.
 
-```markdown
-# Migration Notes
+Where the information goes instead:
 
-Content redistributed on [DATE]:
+| Information | Destination |
+|-------------|-------------|
+| Where content moved during init/migrate | Chat completion report |
+| Which sections were left untouched | Chat completion report |
+| What sync removed and why | Chat completion report |
+| The durable record of any of the above | The commit |
 
-| Original Location | Content | New Location |
-|-------------------|---------|--------------|
-| README.md | System requirements | ENVIRONMENTS.md |
-| README.md | Architecture diagram | ARCHITECTURE.md |
-| README.md | Env var documentation | ENVIRONMENTS.md |
+The report is what made a migration-notes file seem useful in the first place — the mistake was persisting it. Delivered in chat it's reviewable and answerable: the user scans it, spots anything unexpected, and asks for an amendment in the next turn. Name every item; a count can't be reviewed. See [dockit SKILL.md § Phase 5](../../SKILL.md#phase-5-validate--report) for the format and its three rules.
 
-## Preserved Content
+Report afterward, in chat, once:
 
-The following custom content was preserved in destination files:
-- ENVIRONMENTS.md: "Local Development Setup" section
-- ARCHITECTURE.md: Custom diagrams
+```
+Redistributed 3 sections out of README.md:
+  System requirements  → ENVIRONMENTS.md
+  Architecture diagram → ARCHITECTURE.md
+  Env var docs         → ENVIRONMENTS.md
+
+Left untouched:
+  ENVIRONMENTS.md       "Local Development Setup" (existing custom section)
+  ARCHITECTURE.md       custom diagrams
+  README.md             "Notes from the 2024 audit" (no template destination)
 ```
 
-Once the team has reviewed the migration, this file can be deleted — its job is done.
+If the team wants that summary durably, it belongs in the commit message — not in a doc that outlives its usefulness by years.
