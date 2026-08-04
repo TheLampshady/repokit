@@ -104,9 +104,9 @@ Out of scope:
 - Recommending framework upgrades (read the version, work with what's there)
 - Asking the user about future direction or where they'd like to take the project
 
-Why: agents are generated to support the team's **current** codebase. Speculation about future directions belongs in tickets (`tikkit:foundationtik`, `tikkit:modernizer`), not in the agent-generation conversation. Asking the user "where do you want to take this" wastes their time and produces agents that drift from reality.
+Why: agents are generated to support the team's **current** codebase. Speculation about future directions belongs in the team's planning process, not in the agent-generation conversation. Asking the user "where do you want to take this" wastes their time and produces agents that drift from reality.
 
-If the user asks agentkit a future-direction question (e.g., "what features should we add?"), redirect: *"That's a question for `/tikkit:modernizer` (stack audit + improvement tickets) or your team's planning process. Agentkit's job is to set up agents for what's in the codebase today — want me to proceed with that?"*
+If the user asks agentkit a future-direction question (e.g., "what features should we add?"), redirect: *"That's one for your team's planning process. Agentkit's job is to set up agents for what's in the codebase today — want me to proceed with that?"*
 
 ---
 
@@ -164,7 +164,7 @@ For each **major framework** detected (not every small library — focus on the 
 
 1. **Resolve library docs** — Use `context7` (resolve-library-id → query-docs) to pull current documentation
 2. **Identify extension points at the project's pinned version** — Where does this framework expect teams to customize at the version this project uses? This tells you what `core/`, `middleware/`, `blocks/`, etc. are *supposed* to contain, so you can spot custom code that diverges from convention.
-3. **Note the version, don't speculate about upgrades** — Record the framework version. Do NOT brainstorm what newer versions could offer or whether the team should upgrade — that's `tikkit:modernizer`'s job, not agentkit's. Stay grounded in what the codebase uses today.
+3. **Note the version, don't speculate about upgrades** — Record the framework version. Don't brainstorm what newer versions could offer or whether the team should upgrade — that's a planning question, not agentkit's. Stay grounded in what the codebase uses today.
 
 **What counts as a "major framework":**
 - Web frameworks (Django, FastAPI, Express, Rails, Spring, Gin, etc.)
@@ -515,7 +515,7 @@ Only ask questions that affect the **grouping plan above**. Don't ask the user a
 - **Borderline custom code** — "Your `CustomPaginator` adds only `max_page_size`. Skip this or include in the api agent?"
 - **Existing hand-authored agents** — present the per-agent review (scope / foundation overlap / gaps / recommendation) and ask: "For each, do you want to (k)eep alongside, (r)etire, or (m)erge content first then retire?" Default: leave them untouched until the user picks.
 
-**Don't ask the user about upgrade paths or native replacements.** If the agent's framework version has a known native replacement for one of its patterns (e.g., the project is on Wagtail 6.0 but 6.3 added `TableBlock`), put that in the generated agent's `Common Mistakes` or `Research` section as a *flag*, not as a question to the user during planning. Modernizer/foundationtik handle upgrade tickets — agentkit just records the fact.
+**Don't ask the user about upgrade paths or native replacements.** If the agent's framework version has a known native replacement for one of its patterns (e.g., the project is on Wagtail 6.0 but 6.3 added `TableBlock`), put that in the generated agent's `Common Mistakes` or `Research` section as a *flag*, not as a question to the user during planning. Upgrade decisions are the team's call — agentkit just records the fact.
 
 **Wait for user approval before proceeding to Phase 5.**
 
@@ -808,7 +808,7 @@ If the user asks what comes next, mention:
 - The agents will auto-trigger when their description matches a task. Nothing to do.
 - They can name-call an agent: *"have the data-layer agent look at this query"*
 - When the codebase changes meaningfully: `/dockit sync` then `/agentkit sync` — that's the maintenance loop
-- For new features: `/tikkit:tik`, `/tikkit:figtik`, `/tikkit:stitchtik` — agentkit doesn't plan features
+- Feature planning is out of scope — agentkit documents the codebase that exists
 
 But only mention these **if asked**. Don't list them unprompted.
 
@@ -888,7 +888,7 @@ Each tool owns its section of the instruction file. `/init` owns the foundation,
 - **Does not modify project source code** — only reads source code; writes agent files and (with foundation-owner permissions) doc files under `docs/`
 - **Does not create instruction files** — that is `/init`'s job; agentkit only enriches them
 - **Does not run dockit's foundation detection** — agentkit reads FOUNDATIONS.md but never re-scores foundations. If detection seems stale, recommend `/dockit sync`.
-- **Does not write tickets** — `tikkit:foundationtik` writes maintenance tickets; agentkit surfaces drift and recommends
+- **Does not write task files** — agentkit surfaces drift in its report; tracking it is the team's call and recommends
 - **Does not invoke or test the generated agents** — after Phase 5, agentkit stops. Agents activate during real feature work, not during a post-generation "verification" step. There's nothing to demo.
 
 ## Audience

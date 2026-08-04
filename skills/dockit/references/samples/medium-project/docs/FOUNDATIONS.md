@@ -1,6 +1,6 @@
 # Foundations
 
-Registry of shared, foundational code in the Task Manager API — the abstractions, services, and primitives that the rest of the codebase depends on. This document is the source of truth for `agentkit` (per-foundation subagents) and `foundationtik` in tikkit (maintenance tickets).
+Registry of shared, foundational code in the Task Manager API — the abstractions, services, and primitives that the rest of the codebase depends on. This document is the source of truth for `agentkit`, which generates a per-foundation subagent that owns each row.
 
 A "foundation" here means: code with high fan-in across multiple features, intended to be reused, and expected to remain stable. Regenerate this file with `/repokit:dockit sync`.
 
@@ -383,7 +383,7 @@ Delivery guarantees. Events are fire-and-forget — a client that reconnects mid
 
 **Refactor triggers — fired**
 
-- **`change_count_12m = 14` (top quartile).** This module is being actively redesigned. Expect a `foundation-wrong-abstraction` ticket from foundationtik.
+- **`change_count_12m = 14` (top quartile).** This module is being actively redesigned — the abstraction may be wrong.
 - **`Hub` leaks connection objects to consumers.** Encapsulate or split.
 - **Public API has 3 symbols with growing parameter counts.** See [Sandi Metz on the wrong abstraction](https://sandimetz.com/blog/2016/1/20/the-wrong-abstraction).
 
@@ -564,7 +564,7 @@ Surfaced by the most recent dockit foundation scan. These are flags for the main
 
 ### Hotspots
 
-Active foundations whose churn places them in the top quartile — likely the wrong abstraction or under active redesign. foundationtik (tikkit) will write refactor tickets.
+Active foundations whose churn places them in the top quartile — likely the wrong abstraction or under active redesign.
 
 | Foundation | Changes (12mo) | Note |
 |------------|----------------|------|
@@ -596,14 +596,14 @@ Reviews are triggered by **events, not by the calendar.** Nothing here fires bec
 
 | Trigger | Action |
 |---------|--------|
-| Health flips to `hotspot` | foundationtik writes a `foundation-wrong-abstraction` or `foundation-bloat` ticket |
+| Health flips to `hotspot` | Reported as a finding — the abstraction may be wrong or carrying too much |
 | New hidden foundation detected | dockit `sync` adds a row, flags for review |
-| Consumer count drops to zero **and the module is gone** | foundationtik writes a `foundation-deprecation-candidate` ticket |
+| Consumer count drops to zero **and the module is gone** | Remove the row; the foundation no longer exists |
 | The code an invariant governs is deleted | dockit `sync` removes the invariant and names it in the run report |
 | Someone works on the foundation | Validate the invariants while you're in there |
 
 Currently triggered:
-- `core.notifications` — hotspot, will get a refactor ticket on next foundationtik run.
+- `core.notifications` — hotspot; the abstraction may be carrying too much.
 - `services.helpers` — hidden foundation, needs an owner.
 - 8 open decisions across these entries — run `/repokit status` to walk them.
 

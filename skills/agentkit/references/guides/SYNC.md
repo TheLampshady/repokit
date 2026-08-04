@@ -71,7 +71,7 @@ Tier drift matters as much as text drift and is easier to miss: an agent enforci
 
 ### 5. Status drift
 
-The foundation's `Status` (active / intended / deprecated / sunset) or `Health` (healthy / hotspot / unknown) changed in FOUNDATIONS.md but the agent's `Owned Foundations` table still shows the old value.
+The foundation's `Status` (active / intended / experimental / deprecated / sunset) or `Health` (healthy / hotspot / unknown) changed in FOUNDATIONS.md but the agent's `Owned Foundations` table still shows the old value.
 
 **Detection:** compare each owned foundation's status/health in the catalog vs. the agent's Owned Foundations table.
 

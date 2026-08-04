@@ -9,7 +9,6 @@ Confirm with the user before running any command that deletes or overwrites work
 | Operation | Why |
 |-----------|-----|
 | `rm -rf` anything | No undo, and glob mistakes are silent |
-| Deleting `.backlog/` or files inside it | That's the project's ticket system — often the only record of pending work |
 | Deleting `.claude/agents/`, `.agents/agents/`, or `.github/agents/` | Generated project agents; regenerating loses hand-edits |
 | Deleting `docs/` or files inside it | The context layer other tools depend on |
 | `git push` | Outward-facing and hard to walk back |

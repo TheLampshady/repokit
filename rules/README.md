@@ -4,7 +4,7 @@ Markdown rules loaded by [Antigravity](https://antigravity.google/docs/rules-wor
 
 | Rule | Activation | Covers |
 |------|-----------|--------|
-| [destructive-operations.md](destructive-operations.md) | Always On | Confirm before `rm -rf`, deleting `.backlog/` / agent dirs / `docs/`, `git push`, hard resets |
+| [destructive-operations.md](destructive-operations.md) | Always On | Confirm before `rm -rf`, deleting agent dirs / `docs/`, `git push`, hard resets |
 | [secrets.md](secrets.md) | Always On | Don't read or write credential files; read keys not values |
 | [context-files.md](context-files.md) | Always On | Append-only edits to `GEMINI.md` / `AGENTS.md` / `CLAUDE.md`; keep them short |
 

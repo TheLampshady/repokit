@@ -23,8 +23,6 @@ There is no build system and no compiled code — Markdown, TOML, and JSON only.
 
 > **Gemini CLI → Antigravity.** Gemini CLI stopped serving Pro/Ultra/free tiers on **2026-06-18**; its extensions became Antigravity plugins. Gemini CLI support is retained for Code Assist Standard/Enterprise licenses, so `gemini-extension.json` and `policies/policies.toml` stay. Antigravity is the primary Google target — and it's **two products**, the IDE (v2.x) and the CLI (`agy`, v1.x), which share plugin contents but have separate install dirs. `make antigravity` handles both.
 
-> **Sibling plugin:** ticket creation (tik, figtik, stitchtik, modernizer + auditor agent) lives in [tikkit](https://github.com/TheLampshady/tikkit). Repokit reads `.backlog/backlog.md` for its dashboard; tikkit writes it.
-
 ## Directory Map
 
 | Path | Purpose |
@@ -33,7 +31,7 @@ There is no build system and no compiled code — Markdown, TOML, and JSON only.
 | `skills/agentkit/` | Agent generator skill — analyzes custom code, creates project-level agents for Claude/Antigravity/Copilot |
 | `skills/repokit/` | Maintenance hub — repo health dashboard, post-change sync, project bootstrap (status, sync, init) |
 | `docs/research/CHARTER.md` | Research charter — the rails. Objectives, what's already decided against, project terminology |
-| `docs/` | Hand-written reference material (platform matrices, doc-tree spec, this repo's own design backlog) |
+| `docs/` | Hand-written reference material (platform matrices, doc-tree spec, skill inventory) |
 | `.claude/agents/` | Internal dev-only agents — NOT distributed (component-reviewer only) |
 | `.claude-plugin/` | Claude plugin metadata (`plugin.json`) and marketplace catalog (`marketplace.json`) |
 | `plugin.json` | **Antigravity** plugin manifest (root) — separate file and schema from `.claude-plugin/plugin.json` |
@@ -42,7 +40,6 @@ There is no build system and no compiled code — Markdown, TOML, and JSON only.
 | `.mcp.json` | Claude MCP servers (context7 for library documentation) |
 | `policies/` | Gemini CLI policy engine rules (legacy; hard enforcement) |
 | `.config/` | `.pre-commit-config.yaml` and `.commit-message-template` (installed as `commit.template` by `make hooks`) |
-| `.backlog/` | Ticket system — read-only for repokit, written by tikkit; gitignored, and absent from this repo |
 | `GEMINI.md` | Workspace context file — read by Antigravity and Gemini CLI (tool docs, not project context) |
 | `gemini-extension.json` | Gemini CLI extension manifest (legacy) |
 
@@ -53,7 +50,7 @@ Generated and gitignored, so never hand-edit: `.cursorrules` (from `make cursorr
 ```bash
 make setup            # First-time setup: hooks + Antigravity (IDE+CLI) + Claude plugin
 make check            # Run all pre-commit hooks on all files (also: check-json / check-toml / check-yaml)
-make status           # Per-platform install status + open .backlog/ items
+make status           # Per-platform install status
 make antigravity      # Install for both Antigravity products (skips whichever is absent)
 make antigravity-ide  # IDE only — symlink into ~/.gemini/config/plugins/ (live reload)
 make antigravity-cli  # CLI only — `agy plugin install`
@@ -67,7 +64,7 @@ Each installer has an `un-` counterpart (`un-antigravity`, `un-claude`, `un-gemi
 
 **There is no test suite.** Validation is pre-commit (JSON/TOML/YAML syntax, EOF, trailing whitespace, private-key detection) plus the `component-reviewer` agent for skill and agent files. Behavior is verified by installing the plugin and running a skill against a real project — a syntactically valid `SKILL.md` can still be wrong.
 
-`make status` reads `.backlog/backlog.md`, which is gitignored and absent here, so it always prints "No open items". Open design questions for this repo live in `docs/research/` — as open-questions sections inside the relevant research doc, not a separate checklist.
+Open design questions for this repo live in `docs/research/` — as open-questions sections inside the relevant research doc, not a separate checklist.
 
 ## Architecture
 
@@ -120,25 +117,9 @@ The plugin distributes **no agents of its own** — there is no `agents/` direct
 |-------|---------|
 | `component-reviewer` | Reviews skills, agents, and commands for frontmatter correctness, description quality, and cross-platform compatibility — uses Opus, internal only |
 
-### Ticket System (`.backlog/`)
+### Repokit tracks nothing of its own
 
-Repokit **reads** a shared `.backlog/` directory in the consuming project and never writes to it. `/repokit status` surfaces open items so drift and open work appear in one dashboard; when a mode finds work worth a ticket, it says so and points at tikkit instead of creating the file.
-
-- `.backlog/backlog.md` — master checklist, one line per item, tagged by source
-- `.backlog/tickets/<slug>.md` or `.backlog/tickets/<slug>/ticket.md` — individual tickets with full context
-
-Format in `backlog.md` — position in the list IS the priority/dependency order:
-```
-- [ ] Migrate auth to the shared client [tik] → tickets/migrate-auth-client.md
-```
-
-Slugs are plain kebab-case — no numeric prefixes. Dependencies are expressed via position in the backlog and references inside each ticket. If `.backlog/` doesn't exist, repokit omits the backlog rows rather than creating the directory.
-
-### Cross-plugin contract with tikkit
-
-[tikkit](https://github.com/TheLampshady/tikkit) owns ticket *creation*; repokit owns ticket *awareness*. Repokit contributes no tags of its own — tikkit writes `[tik]`, `[figtik]`, `[stitchtik]`, `[modernizer]`, and repokit reports whatever tags it finds without assuming a fixed set.
-
-Neither plugin imports the other.
+No task files, no queue, no ticket format. When a mode surfaces work worth following up — an unowned foundation, a hotspot, a coverage gap — it says so in the report and stops. Whatever tracker a team uses is theirs to choose, and a second source of truth inside their docs starts drifting from the first immediately.
 
 ### Plugin Structure
 
@@ -191,7 +172,7 @@ Coverage in both:
 
 | Category | Rules |
 |----------|-------|
-| Destructive ops | Confirm `rm -rf`, confirm deleting `.backlog/`, agent dirs, or `docs/` |
+| Destructive ops | Confirm `rm -rf`, confirm deleting agent dirs or `docs/` |
 | Git | Confirm `git push`; never force-push or rewrite published history unasked |
 | Secrets | Deny reading `.env`/`id_rsa`/`passwd`, deny writing to `.env*`; read keys not values |
 | Context files | Confirm before writing `CLAUDE.md`/`GEMINI.md`/`AGENTS.md`; append only, never reformat |

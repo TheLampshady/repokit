@@ -1,6 +1,6 @@
 # Foundations
 
-Registry of shared, foundational code in this project — the abstractions, services, and primitives that the rest of the codebase depends on. This document is the source of truth for `agentkit` (per-foundation subagents) and `foundationtik` in tikkit (maintenance tickets).
+Registry of shared, foundational code in this project — the abstractions, services, and primitives that the rest of the codebase depends on. This document is the source of truth for `agentkit`, which generates a per-foundation subagent that owns each row.
 
 A "foundation" here means: code with high fan-in across multiple features, intended to be reused, and expected to remain stable. Regenerate this file with `/repokit:dockit sync`.
 
@@ -59,7 +59,7 @@ A "foundation" here means: code with high fan-in across multiple features, inten
      `intended` foundation whose module is deleted goes. One nobody has built on yet
      stays. -->
 
-**Suppressed for `intended` rows:** the pretender finding and the deprecation-candidate trigger. Both key off low consumer counts, which is what `intended` declares in advance.
+**Suppressed for `intended` rows:** the pretender and deprecation-candidate findings. Both key off low consumer counts, which is what `intended` declares in advance.
 
 **Health values:** `healthy` · `hotspot` (high churn — see findings below) · `unknown` (low confidence detection)
 
@@ -215,7 +215,7 @@ Surfaced by the most recent dockit foundation scan. These are **not** registry r
 ### Hotspots
 
 [HOTSPOTS_CONTEXT]
-<!-- Active foundations whose churn places them in the top quartile — likely the wrong abstraction or under active redesign. foundationtik will write refactor tickets. -->
+<!-- Active foundations whose churn places them in the top quartile — likely the wrong abstraction or under active redesign. -->
 
 | Foundation | Changes (12mo) | Note |
 |------------|----------------|------|
@@ -255,9 +255,9 @@ Reviews are triggered by **events, not by the calendar.** Nothing here fires bec
 
 | Trigger | Action |
 |---------|--------|
-| Health flips to `hotspot` | foundationtik writes a `foundation-wrong-abstraction` or `foundation-bloat` ticket |
+| Health flips to `hotspot` | Reported as a finding — the abstraction may be wrong or carrying too much |
 | New hidden foundation detected | dockit `sync` adds a row, flags for review |
-| Consumer count drops to zero **and the module is gone** | foundationtik writes a `foundation-deprecation-candidate` ticket |
+| Consumer count drops to zero **and the module is gone** | Remove the row; the foundation no longer exists |
 | The code an invariant governs is deleted | dockit `sync` removes the invariant and names it in the run report |
 | Someone works on the foundation | Validate the invariants while you're in there — the review that happens during real work is the one worth having |
 

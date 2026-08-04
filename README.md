@@ -9,7 +9,7 @@ Repokit treats your codebase's documentation as living context. `dockit` scans t
 
 The `/repokit` hub orchestrates the loop with `status`, `sync`, and `init`. Works with **Claude Code**, **Antigravity**, and **GitHub Copilot CLI**.
 
-> **Sibling plugin:** ticket creation lives in [tikkit](https://github.com/TheLampshady/tikkit) — `/tik`, `/figtik`, `/stitchtik`, `/modernizer`. Repokit reads `.backlog/backlog.md` for its health dashboard; tikkit writes it. Install both to have findings captured as work items.
+> **Sibling plugin:** if you also want findings turned into tickets, [tikkit](https://github.com/TheLampshady/tikkit) does that. The two are independent — neither requires the other.
 
 ## Install
 
@@ -135,27 +135,11 @@ Repokit ships **no agents of its own**. Agents are an output of the toolkit, not
 
 ---
 
-## Ticket System
-
-Repokit **reads** a shared backlog under `.backlog/` for its health dashboard. It never writes to it:
-
-```
-.backlog/
-├── backlog.md       ← master checklist, items tagged by source
-└── tickets/
-    ├── add-tests.md
-    └── stale-setup-docs.md
-```
-
-Ticket creation comes from [tikkit](https://github.com/TheLampshady/tikkit), which writes `[tik]`, `[figtik]`, `[stitchtik]`, and `[modernizer]` items. `/repokit status` reports whatever it finds there alongside doc and agent drift, so open work and stale context show up in one place. No `.backlog/`? Repokit just omits those rows.
-
----
-
 ## Keeping Docs in Sync
 
 The loop is **change code → sync → commit both together.**
 
-- `/repokit status` — read-only: is anything drifted? Docs, agents, and open tickets in one dashboard
+- `/repokit status` — read-only: is anything drifted? Docs, agents, and open decisions in one dashboard
 - `/repokit:dockit sync` — update stale sections; add `--deep` for a whole-repo pass
 - `/repokit sync` — sync docs *and* project agents in one go
 
@@ -228,7 +212,6 @@ graph TD
         direction TB
         Docs[("docs/<br/>README · ARCHITECTURE")]
         SME["SME Agents<br/>Custom-code experts<br/>generated per-project"]
-        Spec[(".backlog/<br/>backlog.md · tickets/")]
     end
 
     CA["Code Assist<br/>Claude · Antigravity · Copilot"]

@@ -316,6 +316,14 @@ Four rules keep this from becoming conformance measurement by another name:
 
 **Promotion is offered, never applied.** When consumers now exist for an `[intended]` rule, `sync --deep` raises it as a review-queue question — *"`Settings` now has 12 consumers; drop the `[intended]` marker?"* Normal sync says nothing, because normal sync doesn't look.
 
+#### The marker doubles as a migration work list
+
+Because an `[intended]` rule names the anti-pattern it displaces, the outstanding work is a grep for that pattern minus the sanctioned path and the exception list. `/repokit status` reports it per entry, grouped by directory ([shape](../../../repokit/SKILL.md#3-intended-paths--decided-not-yet-adopted)).
+
+This is the one place a "sites not following the rule" count is legitimate, and the reason is **consent, not mechanism**: marking something `intended` is a declaration that the code hasn't caught up, so a list of what's left is the answer to a question the marker asks. The identical grep run against an *unmarked* rule is the conformance audit this guide removes — that rule claims the code already reflects it, and re-litigating that claim unprompted is the treadmill.
+
+Two properties keep it a work list rather than a score: it's a **count of named sites, never a ratio**, and it's **reported only where the user asked** — never in a sync report. A grep is also a lower bound (aliased imports, dynamic access, re-exports slip through), so it plans a migration and never backs a compliance claim.
+
 ### Removal requires feature work, not decay
 
 | Situation | Action |

@@ -12,8 +12,6 @@ Hub for repokit's context-in-sync architecture: dockit keeps docs aligned with t
 
 > **Core principle:** repokit orchestrates, never duplicates. Each mode delegates to dockit and agentkit rather than reimplementing their logic.
 
-> **Sibling plugin:** ticket creation lives in [tikkit](https://github.com/TheLampshady/tikkit) (`/tik`, `/figtik`, `/stitchtik`, `/modernizer`). Repokit reads `.backlog/backlog.md` for its dashboard but never writes to it.
-
 ---
 
 ## Auto-Detection
@@ -23,7 +21,6 @@ When invoked bare (`/repokit` with no mode), detect what the user likely needs:
 | Condition | Suggest |
 |-----------|---------|
 | No `docs/` or `README.md` | → `init` |
-| `.backlog/backlog.md` has open items | → `status` (show what needs attention) |
 | Git changes since last doc sync | → `sync` |
 | User asks "what can repokit do" | → show tool menu |
 | Otherwise | → show tool menu with live status summary |
@@ -34,17 +31,11 @@ Always show the tool menu as a fallback, but lead with a recommendation when the
 
 ## Tool Menu (bare invocation or when guiding)
 
-When showing the menu, enhance it with live status if `.backlog/` or `docs/` exist.
+When showing the menu, enhance it with live status if `docs/` exists.
 
 ### Gather Status Counts
 
 ```bash
-# Open backlog items
-grep -c '^\- \[ \]' .backlog/backlog.md 2>/dev/null || echo "0"
-
-# Pending tickets
-ls .backlog/tickets/*.md 2>/dev/null | wc -l
-
 # Doc staleness (commits since last doc touch)
 git rev-list --count $(git log -1 --format=%H -- docs/ README.md 2>/dev/null || echo HEAD)..HEAD 2>/dev/null || echo "?"
 ```
@@ -67,15 +58,11 @@ git rev-list --count $(git log -1 --format=%H -- docs/ README.md 2>/dev/null || 
 **Hub modes:**
 | Mode | Invoke | Purpose |
 |------|--------|---------|
-| `status` | `/repokit status` | Dashboard — repo health, open tickets, doc freshness |
+| `status` | `/repokit status` | Dashboard — repo health, doc and agent freshness |
 | `sync` | `/repokit sync` | After code changes — refresh docs |
 | `init` | `/repokit init` | First-time setup — bootstrap the loop |
 
-### Sibling plugin: tikkit
-Install [tikkit](https://github.com/TheLampshady/tikkit) for ticket creation: `/tik`, `/figtik`, `/stitchtik`, `/modernizer`.
-
 [If status counts available:]
-📋 **Open items:** [N] in backlog | [M] pending tickets
 📄 **Docs:** [X] commits since last update
 ```
 
@@ -86,30 +73,50 @@ Install [tikkit](https://github.com/TheLampshady/tikkit) for ticket creation: `/
 **Trigger:** `/repokit status`
 **Purpose:** Dashboard of repo health. Quick, no prompts.
 
-Read-only by default. The one exception is the open-decisions walk (check 7): if the user opts in, `status` writes their answers back into the docs. Nothing is written unless they accept.
+Read-only by default. The one exception is the open-decisions walk (check 9): if the user opts in, `status` writes their answers back into the docs. Nothing is written unless they accept.
 
 ### What to check
 
 Run these checks and present a unified dashboard:
 
-#### 1. Backlog & Tickets (skip entirely if `.backlog/` is absent)
+#### 1. Doc shape
+
+Orientation first: **what does this project's context layer actually contain?** Read straight off the docs — no code analysis, no comparison against an expected schema.
 
 ```bash
-# Read backlog
-cat .backlog/backlog.md 2>/dev/null
+# Which docs exist
+ls docs/*.md README.md 2>/dev/null
 
-# Count by tag
-grep -o '\[.*\]' .backlog/backlog.md 2>/dev/null | sort | uniq -c
+# Foundations: count, and the catalog's actual columns
+grep -m1 '^| Name' docs/FOUNDATIONS.md 2>/dev/null
+grep -cE '^\| `' docs/FOUNDATIONS.md 2>/dev/null
 
-# Count open vs completed
-grep -c '^\- \[ \]' .backlog/backlog.md 2>/dev/null  # open
-grep -c '^\- \[x\]' .backlog/backlog.md 2>/dev/null  # done
+# Status vocabulary in use
+grep -oE '\| (active|intended|experimental|deprecated|sunset) \|' docs/FOUNDATIONS.md 2>/dev/null | sort | uniq -c
 
-# Pending ticket files
-ls .backlog/tickets/*.md 2>/dev/null
+# Invariants by tier, and how many name an anti-pattern
+grep -c 'dockit:tier="rule"' docs/FOUNDATIONS.md 2>/dev/null
+grep -c 'dockit:tier="convention"' docs/FOUNDATIONS.md 2>/dev/null
 ```
 
-This row is **read-only and conditional** — repokit writes no tickets. If `.backlog/backlog.md` doesn't exist, omit the Backlog and Tickets rows entirely rather than showing zeros, and mention tikkit once in Suggested Next Steps. Report whatever tags are present without assuming a fixed set; tikkit contributes `[tik]`, `[figtik]`, `[stitchtik]`, `[modernizer]`.
+```
+Docs shape
+  FOUNDATIONS.md   6 foundations
+                   catalog: Name · Type · Path · Owner · Status · Health · Consumers
+                   statuses in use: active (5) · intended (1)
+                   18 invariants — 12 rule, 6 convention · 9 name an anti-pattern
+  PRINCIPLES.md    14 conventions · 3 rules · 2 marked [intended]
+  Also present     README · ARCHITECTURE · ENVIRONMENTS · TROUBLESHOOTING
+  Not present      CLOUD.md · CONTRIBUTING.md
+```
+
+**Why this leads the dashboard.** It's the only check that answers *what do I have* rather than *what's wrong*. A human gets their bearings in one glance; an agent reading the report learns the project's vocabulary — which statuses are in use, which tiers exist, whether anti-patterns are being named — without opening either file. That's how something downstream acts on these docs without hardcoding a schema.
+
+**Report the shape you find, never the shape you expected.** This is a description, not a validation:
+
+- **An unfamiliar value is information, not an error.** `statuses in use: active (5) · staged (2) ⚪ not a dockit value` — a validator would reject `staged`; this surfaces it and lets the reader decide whether it's a typo or a vocabulary they extended deliberately. The team owns the vocabulary.
+- **A missing column is reported, not flagged.** If the catalog has six columns instead of seven, print the six. Dockit's own shape changes over time, and a status check that fails on a doc written by an older version is worse than useless.
+- **Absent docs are listed flatly.** `Not present: CLOUD.md` — no 🔴, no "missing". A project without cloud infrastructure shouldn't be told it's incomplete.
 
 #### 2. Documentation Freshness
 
@@ -135,7 +142,7 @@ Map recency into the dashboard:
 
 For an actual content verdict, point the user at `/repokit:dockit sync --deep` — a whole-repo pass that verifies every reference resolves and finds code documented nowhere. They can also just ask for a "deep scan" or "full scan". `status` never runs it itself: `--deep` writes, and `status` is read-only.
 
-#### 2b. Intended paths — decided, not yet adopted
+#### 3. Intended paths — decided, not yet adopted
 
 The one doc signal that needs no scan. Count what the docs *declare* rather than inspecting code:
 
@@ -150,13 +157,82 @@ grep -c '^\*\*\[intended\]\*\*' docs/PRINCIPLES.md 2>/dev/null
 | State | Dashboard row |
 |-------|---------------|
 | None marked | Skip the row entirely |
-| Some marked | ⚪ N intended — decided, code hasn't caught up |
+| Some marked | ⚪ N intended · M sites pending |
 
-Answers a question recency can't: *what have we committed to that the codebase hasn't adopted?* Useful on a scaffolded project, where it's most of the registry.
+Answers a question recency can't: *what have we committed to that the codebase hasn't adopted?* On a scaffolded project that's most of the registry.
 
-**Three things this row never does.** It's **not a warning** — use a neutral marker, since `intended` is a healthy state and a 🟡 would read as a defect. It **never counts adoption**, only declarations; how many files follow a rule is a linter's question ([why](../dockit/references/guides/CHOICE-MINING.md#on-sync-a-choice-is-not-re-litigated)). And it **never ages an entry** — an `intended` path from a year ago reports identically to one from yesterday. If the user wants to know whether any of these have since been adopted, that's `sync --deep`, which offers promotions.
+##### The pending-sites list
 
-#### 3. Code Quality Infrastructure
+Each `intended` entry already names the anti-pattern it displaces, which makes the outstanding work a grep. Run it **only for `intended` entries**, and report a short block under the dashboard:
+
+```
+Intended paths — declared, code hasn't caught up
+
+  core.settings → app/core/settings.py                    15 sites
+    app/api/routes/    4    os.environ
+    app/services/      7    os.environ · os.getenv
+    app/workers/       4    os.environ
+    repair    add a field to Settings and read it from there
+    excluded  app/core/settings.py · alembic/env.py
+
+  core.search → app/core/search_client.py                  4 sites
+    app/services/      4    import vendor_sdk
+    repair    call through SearchClient
+
+  Counts are directory-level and grep-based — a lower bound, since aliased
+  imports and dynamic access don't match. Ask for file paths on any entry.
+```
+
+Group by directory, never list files by default — file-level detail on request keeps the dashboard readable. Show the repair, because a work list without the sanctioned next move makes the reader go find it.
+
+**`intended` entries only, and this is the boundary that matters.** A pending-sites count on an *unmarked* rule is the conformance metric this design removed ([why](../dockit/references/guides/CHOICE-MINING.md#on-sync-a-choice-is-not-re-litigated)). The difference isn't the grep, it's consent: marking something `intended` *is* the request for a migration list. An unmarked rule claims the code already reflects it, and auditing that claim unprompted is the treadmill. If the user asks about a specific unmarked rule, answer — that's a question, not a dashboard row.
+
+**Five things this block never does:**
+
+- **Never a percentage.** "15 sites" is a work list. "88% conforming" is a score, and a score invites tracking it over time.
+- **Never a warning colour.** Neutral marker only — `intended` is a healthy state, and 🟡 would read as a defect. Zero pending is not "good"; it means the migration is done, so mention that `sync --deep` can offer to drop the marker.
+- **Never a trend.** No comparison to a previous run, no "up from 12". Nothing stores a prior value, and nothing should start.
+- **Never ages an entry.** An `intended` path from a year ago reports identically to one from yesterday.
+- **Never written to a file.** Chat only, like the rest of `status`. Writing a migration list into the docs would create a checklist that goes stale the moment someone migrates one file.
+
+#### 4. Boundary observations
+
+Each foundation's invariants name the anti-pattern they displace. Grep for those patterns outside the sanctioned path and the exception list, and you learn something no other check can tell you: **where the codebase routes around its own foundations.**
+
+This is not a conformance audit, and the difference is not cosmetic — it's what the finding *asks*. Every foundation entry already carries this field:
+
+```
+### Doesn't cover
+Read replicas and connection routing. `get_db()` returns the primary unconditionally.
+
+[TODO: intentional boundary, or a gap?]
+```
+
+That `[TODO:]` has always asked "code bypasses this — deliberate or not?" with no evidence behind it; a human had to spot the bypasses unaided. **This check populates a field the design already has.** It's discovery, not grading.
+
+```
+Boundary observations
+  core.cache      3 files construct redis.Redis( directly
+                  app/workers/{digest,export,cleanup}.py
+                  → undocumented exception, or is the boundary eroding?
+
+  core.settings   nothing routes through Settings yet — see Intended paths
+
+  core.database   clean — all access via get_db()
+```
+
+Four rules keep it informing rather than grading:
+
+- **Sites, never a ratio.** "3 files" is a discovery a person can go look at. "81% conforming" is a grade, and a grade invites tracking it over time — which is the treadmill this design removed ([why](../dockit/references/guides/CHOICE-MINING.md#on-sync-a-choice-is-not-re-litigated)).
+- **Every finding ends in a question, never a verdict.** *Exception or erosion?* And **"deliberate exception" is a complete answer** — it gets written into `Doesn't cover:` and the same sites are never raised again. A finding that can't be closed becomes a nag.
+- **Say "clean" once, plainly.** No checkmarks, no score, one word.
+- **A grep is a lower bound.** Aliased imports, dynamic access, and re-exports don't match, so this surfaces observations to look into and never backs a claim about coverage.
+
+**Skip a foundation with no named anti-pattern** — there's nothing to grep for, and its absence is itself worth noticing in the shape report rather than here.
+
+For the opposite arrow — a foundation nothing uses while a rival path gets adopted — the same grep answers it, and that case belongs with the `intended` entry in check 3, since it's the migration question rather than the boundary question.
+
+#### 5. Code Quality Infrastructure
 
 ```bash
 # Pre-commit hooks installed?
@@ -176,7 +252,7 @@ grep -l "mypy\|pyright" pyproject.toml 2>/dev/null
 ls .github/workflows/*.yml 2>/dev/null
 ```
 
-#### 4. Last Tool Runs
+#### 6. Last Tool Runs
 
 ```bash
 # When was dockit last run? (proxy: last docs/ change)
@@ -186,7 +262,7 @@ git log -1 --format="%cr" -- docs/ 2>/dev/null || echo "never"
 git log -1 --format="%cr" -- .claude/agents/ .agents/agents/ .github/agents/ 2>/dev/null || echo "never"
 ```
 
-#### 5. Agent-to-Doc Drift
+#### 7. Agent-to-Doc Drift
 
 If agentkit has been initialized on this project, the agents reference foundation names, file paths, and component names from the docs. When dockit changes any of those (foundation demoted, file moved, component renamed), the agents become stale — and unlike doc drift, this is invisible until someone reads a wrong agent.
 
@@ -206,7 +282,7 @@ Map the result into the dashboard:
 | Drift detected | 🟡 Drifted — run `/repokit sync` (or `/agentkit sync` directly) |
 | No agents found | Skip the row, or note "Not adopted" |
 
-#### 6. Context Handoff
+#### 8. Context Handoff
 
 Synced docs only pay off if agents *find* them. The project's context file (`CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `.github/copilot-instructions.md`) is the one artifact loaded on every turn without anyone asking for it — so it's the handoff point between "docs exist" and "docs get used." If it never names `docs/FOUNDATIONS.md`, agents re-derive the architecture from scratch on every task and the foundation registry sits unread.
 
@@ -236,7 +312,7 @@ grep -l "FOUNDATIONS.md" CLAUDE.md GEMINI.md AGENTS.md .github/copilot-instructi
 
 If several context files exist (a project targeting Claude *and* Antigravity), check each and name the ones missing the reference. One 🟢 file doesn't cover the others — each platform loads only its own.
 
-#### 7. Open Decisions
+#### 9. Open Decisions
 
 dockit deliberately leaves work for humans rather than inventing answers: it never writes rationale, never promotes a Convention to a Rule, and never deletes a rule whose evidence decayed. That work accumulates in the docs as open markers. Without somewhere to process it, the `[TODO: why?]` slots become permanent and the docs read as half-finished forever.
 
@@ -300,12 +376,13 @@ The hazard item is the one to hold the line on. It asks for something no scan ca
 ```
 ## Repo Health Dashboard
 
+Docs shape · 6 foundations (5 active, 1 intended) · 18 invariants (12 rule, 6 convention) · PRINCIPLES: 14 conventions, 3 rules
+
 | Area | Status | Details |
 |------|--------|---------|
-| Backlog | 🟡 3 open | tags: 2 `[tik]`, 1 `[modernizer]` |
-| Tickets | 📋 2 pending | .backlog/tickets/ |
 | Docs | 🟡 May be behind | code changed 2 days after docs (`src/api/`, `src/core/`) |
-| Intended paths | ⚪ 2 declared | `core.settings`, `core.search` — decided, code hasn't caught up |
+| Intended paths | ⚪ 2 · 19 sites | `core.settings` (15), `core.search` (4) — list below |
+| Boundaries | ⚪ 1 observation | `core.cache` — 3 direct `redis.Redis(` sites |
 | Agents | 🟡 Drifted | 2 of 5 agents reference renamed foundations |
 | Context handoff | 🟡 Not wired | CLAUDE.md doesn't reference docs/FOUNDATIONS.md |
 | Open decisions | 🟡 4 need you | 2 missing rationale, 1 hazard question, 1 promotion candidate |
@@ -314,14 +391,9 @@ The hazard item is the one to hold the line on. It asks for something no scan ca
 | Type checking | 🔴 Missing | No mypy/pyright config found |
 | CI | 🟢 Present | 2 workflows |
 
-### Open Backlog Items
-- [ ] Migrate auth to the shared client [tik] → tickets/migrate-auth-client.md
-- [ ] Add type checking [modernizer] → tickets/type-checking.md
-
 ### Suggested Next Steps
 1. Run `/repokit sync` — refreshes docs and reconciles drifted agents in one pass
 2. Run `/repokit init` to wire docs/FOUNDATIONS.md into CLAUDE.md — or add the line yourself
-3. Address the open backlog items in order
 
 5 open decisions are waiting — want to walk through them now? (~2 min)
 ```
@@ -389,8 +461,6 @@ No further action needed.
 
 If nothing needs syncing, say so: "Everything is up to date — no sync needed."
 
-> **Note:** Ticket maintenance (refreshing modernizer/tik/figtik/stitchtik tickets) lives in tikkit. If tikkit is installed, the user can run `/modernizer status` separately.
-
 ---
 
 ## Mode: `init`
@@ -413,9 +483,6 @@ ls README.md docs/ 2>/dev/null
 # Quality infrastructure
 ls .pre-commit-config.yaml Makefile 2>/dev/null
 ls .ruff.toml eslint.config.js biome.json 2>/dev/null
-
-# Existing repokit/tikkit artifacts
-ls .backlog/backlog.md .backlog/tickets/ 2>/dev/null
 
 # AI instruction files — and whether they already route to the foundation registry
 ls CLAUDE.md GEMINI.md AGENTS.md .github/copilot-instructions.md 2>/dev/null
@@ -453,10 +520,6 @@ This is the foundation everything else builds on. Run dockit first.
     Your context file is loaded on every turn; the foundation registry isn't.
     Without the pointer, agents re-derive the architecture each time.
     I'll add a two-line section — say the word.
-
-### Optional: Install tikkit for ticket creation
-For text/Figma/Stitch designs and code-quality audits as tickets,
-install the [tikkit](https://github.com/TheLampshady/tikkit) sibling plugin.
 
 Run the foundation now, or pick a different starting point?
 ```
@@ -520,22 +583,20 @@ If the user declines, don't re-ask later in the same run. Note it in the summary
 - Review generated docs and fill [TODO] markers
 - Run `/repokit status` anytime to check progress
 - Run `/repokit sync` after code changes — keeps the foundation current
-- For ticket creation, install [tikkit](https://github.com/TheLampshady/tikkit)
 ```
 
 ---
 
 ## Cross-Cutting Concerns
 
-### Backlog is Read-Only
+### Work Worth Tracking Goes in Chat
 
-Repokit never writes to `.backlog/`. When a mode surfaces work that deserves a ticket, say so and point at tikkit — don't create the file. Ticket deduplication is tikkit's concern, handled internally by its ticket-writing skills.
+When a mode surfaces work that deserves following up — an unowned foundation, a hotspot worth refactoring, a gap in coverage — **say it in the report and stop there.** Repokit writes no task files and maintains no queue of its own. A tracker is the user's to choose, and inventing one inside their docs makes a second source of truth that immediately starts drifting from the first.
 
 ### Missing Infrastructure
 
 If a mode needs something that doesn't exist:
 - `status` with no `docs/` or `README.md`: suggest `init`
-- `status` with no `.backlog/`: omit the backlog rows, mention tikkit once
 - `status` with no `docs/FOUNDATIONS.md`: omit the context-handoff row — there's nothing to point at
 - `status` with no mined rules in `docs/`: omit the open-decisions row rather than showing zero
 - `sync` with no docs: suggest `init`

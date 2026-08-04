@@ -8,7 +8,7 @@
     {
       "name": "repokit",
       "source": "./",
-      "description": "Keep your project's context in sync, then put it to work. dockit scans the codebase and generates living docs; agentkit turns those docs into project-specific AI agents that own your foundations and understand your custom code. The /repokit hub orchestrates the loop with status, sync, and init. Ticket creation lives in the sibling tikkit plugin."
+      "description": "Keep your project's context in sync, then put it to work. dockit scans the codebase and generates living docs; agentkit turns those docs into project-specific AI agents that own your foundations and understand your custom code. The /repokit hub orchestrates the loop with status, sync, and init."
     }
   ]
 }

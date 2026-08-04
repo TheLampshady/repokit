@@ -269,7 +269,7 @@ Never silently rewrite. Always list hits and prompt — match the UX dockit `syn
 - **Does not run foundation detection** — that's `/dockit sync`. If the agent suspects a new foundation, it recommends `/dockit sync`.
 - **Does not create new foundations** — only updates rows that already exist.
 - **Does not delete foundations** — only flags candidates (e.g., `health: pretender`) for the user.
-- **Does not write tickets** — `tikkit:foundationtik` owns ticket creation.
+- **Does not write task files** — report findings; tracking is the team's creation.
 - **Does not modify other foundations** — strict scope; only the foundations listed in `Owned Foundations`.
 - **Does not modify foundation source code** — read-only on `{{WORKING_DIRECTORIES}}`; edits limited to `docs/`.
 - **Does not promote a Convention to a Rule** — that's a human call. Recommend it and let `/repokit status` collect the decision.

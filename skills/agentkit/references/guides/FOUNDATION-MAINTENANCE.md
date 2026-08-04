@@ -16,7 +16,7 @@ When agentkit assigns a foundation to an agent, the agent becomes the canonical 
 The agent does **not** own:
 - The foundation's source code itself (that's still the team's)
 - The detection methodology (that's dockit's; agents read the output, not re-run scoring)
-- Maintenance tickets (that's `tikkit:foundationtik`'s)
+- Deciding what gets worked on next — the agent surfaces findings; prioritising them is the team's call
 
 ---
 
@@ -35,7 +35,7 @@ The agent updates its foundation's docs when invoked for any of these reasons:
 | Status change (active → deprecated, active → sunset) | Update catalog row + run cross-doc check |
 | Path moved or renamed | Update **Path**, all refs in PRINCIPLES.md / ARCHITECTURE.md, sub-doc filename |
 | New consumer added (a feature folder starts importing) | Update **Consumers** table |
-| Refactor trigger fired (e.g., consumer count crossed threshold, tests broke an invariant) | Update **Refactor triggers**; consider opening a foundationtik ticket |
+| Refactor trigger fired (e.g., consumer count crossed threshold, tests broke an invariant) | Update **Refactor triggers** and name the trigger in the report |
 | **You're working on the foundation anyway** | Validate the invariants while you're in the code. This is the only review trigger that isn't a specific change — the review that happens during real work is the one worth having, and it needs no schedule |
 
 If the agent is invoked for general work (not a doc-maintenance request) and notices doc drift, it should **flag** rather than silently update — only act on doc maintenance when explicitly asked or when the user accepts a recommendation.
@@ -134,5 +134,5 @@ Git already holds it and can't disagree with itself. The `Owner` column stays �
 - **Does not run foundation detection** — that's dockit's `sync` mode. Re-scoring fan-in / cross-feature / stability is dockit's job. The agent only updates the rows that already exist.
 - **Does not create new foundations** — if the agent suspects a new file deserves foundation status, it recommends running `/dockit sync` and explains the suspicion. It doesn't add rows on its own.
 - **Does not delete foundations** — only flags candidates (e.g., `health: pretender`) for the user. Removal is a deliberate human decision.
-- **Does not write tickets** — `tikkit:foundationtik` owns ticket creation. The agent surfaces the trigger, tikkit writes the ticket.
+- **Does not write task files** — findings go in the report; what gets tracked and where is the team's call.
 - **Does not modify other foundations** — strict scope; only touches the foundations it owns. Other foundations' agents handle their own.

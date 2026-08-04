@@ -133,13 +133,7 @@ check-yaml: ## Validate all YAML files (pre-commit config, frontmatter)
 # ── Status ────────────────────────────────────────────────────────────────────
 
 .PHONY: status
-status: ## Show open backlog items and installed extension status
-	@echo ""
-	@echo "── Backlog ──────────────────────────────────────────────"
-	@open=$$(grep -c '\- \[ \]' .backlog/backlog.md 2>/dev/null || echo 0); \
-		[ "$$open" -gt 0 ] \
-		&& grep '\- \[ \]' .backlog/backlog.md \
-		|| echo "  No open items"
+status: ## Show per-platform install status
 	@echo ""
 	@echo "── Antigravity IDE Plugin ───────────────────────────────"
 	@test -L $(ANTIGRAVITY_PLUGINS)/repokit \

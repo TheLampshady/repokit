@@ -10,8 +10,6 @@ Repokit ships three cross-platform skills. Each lives in `skills/<name>/SKILL.md
 
 The plugin ships no agents of its own — agents are what `agentkit` *produces*, generated into the consuming project rather than distributed from here.
 
-For ticket creation (`/tik`, `/figtik`, `/stitchtik`, `/modernizer`), install the [tikkit](https://github.com/TheLampshady/tikkit) sibling plugin.
-
 ---
 
 ## Recommended Flow
@@ -42,8 +40,6 @@ The architecture is **one foundation feeding one consumer**, with the hub keepin
 1. **dockit first** — `/dockit init` bootstraps the context layer; `/dockit sync` keeps it current
 2. **agentkit** — reads `FOUNDATIONS.md` and custom code to generate project-specific agents
 3. **repokit** — `/repokit status` reports doc drift, agent drift, and whether your context file points at `FOUNDATIONS.md`; `/repokit sync` reconciles docs and agents
-
-For tooling audits and modernization tickets, install [tikkit](https://github.com/TheLampshady/tikkit) and run `/modernizer analyze`.
 
 ---
 

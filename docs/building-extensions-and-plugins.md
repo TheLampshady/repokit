@@ -415,7 +415,7 @@ The `contextFileName` field points to a Markdown file Gemini loads when the exte
 | Worth it | Skip it |
 |----------|---------|
 | Conventions the agent must follow but can't auto-discover (where to write tickets, naming rules, shared file locations) | Lists of available skills — every platform auto-discovers them from their descriptions |
-| Cross-plugin contracts (e.g., "if tikkit is also installed, both write to `.backlog/`") | Lists of distributed agents — they auto-trigger from their own descriptions |
+| Cross-plugin contracts — a shared file two toolkits both write to, and which one owns what | Lists of distributed agents — they auto-trigger from their own descriptions |
 | Architectural framing (one or two sentences) so the agent knows what your toolkit is for | Lists of active policies — `policies.toml` enforces them regardless of agent awareness |
 | | Anything already in `README.md` for human users |
 | | Self-evident facts derivable from project shape |
@@ -439,13 +439,13 @@ There's an open [bug (#15519)](https://github.com/google-gemini/gemini-cli/issue
 
 **Brief tagline.** One sentence on what the toolkit does.
 
-> Sibling extension: [other-tool](url) — both write to the same shared backlog if installed together.
+> Sibling extension: [other-tool](url) — both write `config/shared.yml` if installed together.
 
 ## Shared Conventions
 
-Tickets go to `.backlog/backlog.md`. Tag yours with `[my-toolkit]` to distinguish from sibling tools.
+Write generated output under `build/my-toolkit/`. Never edit another toolkit's directory.
 
-Check `.backlog/backlog.md` before creating a ticket — avoid duplicates.
+Check whether an entry already exists before appending — sibling tools share the file.
 ```
 
 Skills, agents, and policies all auto-discover or auto-enforce — listing them in `GEMINI.md` is paid token cost without behavioral payoff.
