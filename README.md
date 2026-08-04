@@ -124,7 +124,7 @@ gemini extensions uninstall https://github.com/TheLampshady/repokit
 | Skill | Command | Purpose | Status |
 |-------|---------|---------|--------|
 | **agentkit** | `/agentkit` | Generate project-level AI agents tailored to your codebase's custom code patterns. Supports Claude, Antigravity, and Copilot. | WIP |
-| **dockit** | `/dockit` | Generate, sync, check, migrate, and refresh diagrams in project documentation. `sync --deep` runs a whole-repo scan. Scales by project size, auto-detects frameworks. | Ready |
+| **dockit** | `/dockit` | Generate, sync, migrate, and refresh diagrams in project documentation. `sync --deep` runs a whole-repo scan. Scales by project size, auto-detects frameworks. | Ready |
 | **repokit** | `/repokit` | Hub — repo health dashboard, post-change sync, project bootstrap. | Ready |
 
 ### Agents
@@ -153,12 +153,13 @@ Ticket creation comes from [tikkit](https://github.com/TheLampshady/tikkit), whi
 
 ## Keeping Docs in Sync
 
-After making code changes, run dockit to check for documentation drift:
+The loop is **change code → sync → commit both together.**
 
-- `/repokit:dockit check` — detect stale docs (read-only, exit codes)
-- `/repokit:dockit sync` — auto-update stale sections (non-destructive)
+- `/repokit status` — read-only: is anything drifted? Docs, agents, and open tickets in one dashboard
+- `/repokit:dockit sync` — update stale sections; add `--deep` for a whole-repo pass
+- `/repokit sync` — sync docs *and* project agents in one go
 
-Run `check` before releases or PRs. Run `sync` when docs fall behind.
+**Run these yourself; don't wire them into a hook or CI.** `sync` removes doc sections whose code is gone, and its only safeguard is the change report it prints for you to review. Automated, that report goes to a log nobody reads. There's deliberately no gate mode to automate instead — a pass/fail exit code from a language model isn't a gate you can trust, and blocking a commit because docs lag the code it documents punishes the normal order of work.
 
 ---
 
@@ -313,7 +314,7 @@ graph LR
 graph LR
     Changed["Code changed"]
     Status["/repokit status"]
-    Check["dockit check<br/>agentkit status"]
+    Check["last dockit sync report<br/>agentkit status"]
     Sync["/repokit sync"]
 
     Changed -->|"run"| Status -->|"delegates to"| Check -->|"drift found"| Sync
@@ -326,7 +327,7 @@ graph LR
     style Changed fill:#e2e8f0,stroke:#94a3b8,color:#1e293b
 ```
 
-> Docs drift from code, and agents drift from docs. `status` delegates both checks to the tools that own them — `dockit check` for doc drift, `agentkit status` for agent drift — then `sync` reconciles both in one pass. The hub orchestrates; it never reimplements either check.
+> Docs drift from code, and agents drift from docs. `status` reads both — doc drift from the last `dockit sync` report, agent drift from `agentkit status` — then `sync` reconciles both in one pass. The hub orchestrates; it never reimplements either analysis.
 >
 > `status` also checks the **context handoff**: whether your `CLAUDE.md` / `AGENTS.md` / `GEMINI.md` / `copilot-instructions.md` actually references `docs/FOUNDATIONS.md`. That file is loaded on every turn; the foundation registry isn't. Without the pointer, agents re-derive your architecture from scratch each time. `status` reports the gap; `/repokit init` offers to append a two-line section — always asking first, always appending, never rewriting.
 

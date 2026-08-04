@@ -9,8 +9,7 @@ Decisions this project has made that an agent or a new contributor would not gue
 
 ## Conventions
 
-**Import `db` from `@ecom/utils/db`.** Don't construct a `PrismaClient`. Exceptions: `packages/utils/src/db.ts`, `scripts/seed.ts`.
-<!-- dockit:check cmd="grep -rlE 'new PrismaClient' apps/ packages/ | grep -v 'packages/utils/src/db.ts' | wc -l" expect="0" last="2026-08-01" -->
+**Import `db` from `@ecom/utils/db`.** A `new PrismaClient()` opens its own connection pool — import the shared `db` instead. Exceptions: `packages/utils/src/db.ts`, `scripts/seed.ts`.
 
 <details><summary>Why</summary>
 
@@ -19,13 +18,11 @@ exhausted Postgres connections under normal load.
 Rejected: a max-clients env cap — it turns the failure into a slow one rather than removing it.
 </details>
 
-**Return API responses through `success()` / `error()` from `@ecom/utils/response`.** Not bare `res.json()`.
-<!-- dockit:conform cmd="grep -lE 'from .@ecom/utils/response' apps/backend/src/routes/*.ts | wc -l" total="grep -lE 'router\.(get|post|put|delete)' apps/backend/src/routes/*.ts | wc -l" min="80%" last="2026-08-01" -->
+**Return API responses through `success()` / `error()` from `@ecom/utils/response`.** A bare `res.json()` skips the envelope every client parses — wrap the payload in `success()` instead.
 
 [TODO: why?]
 
-**Read environment variables through `config` from `@ecom/utils/config`.** Not `process.env`. Exceptions: `packages/utils/src/config.ts`, `*.config.ts` build files.
-<!-- dockit:check cmd="grep -rlE 'process\.env\.' apps/ packages/ | grep -v '*.config.ts' | grep -v 'packages/utils/src/config.ts' | wc -l" expect="0" last="2026-08-01" -->
+**Read environment variables through `config` from `@ecom/utils/config`.** A direct `process.env.X` read skips startup validation and fails on the first request that needs it — add the variable to `config` and read it from there. Exceptions: `packages/utils/src/config.ts`, `*.config.ts` build files.
 
 <details><summary>Why</summary>
 
@@ -34,18 +31,15 @@ container immediately instead of throwing on the first request that needs it.
 Rejected: runtime `??` defaults — they mask a misconfigured deploy as working.
 </details>
 
-**Import shared domain types from `@ecom/types`.** Don't redeclare them locally.
-<!-- dockit:check cmd="grep -rlE 'interface (Product|Order|User|Cart)\b' apps/ | grep -v 'packages/types' | wc -l" expect="0" last="2026-08-01" -->
+**Import shared domain types from `@ecom/types`.** A local `interface Product` / `Order` / `User` / `Cart` drifts from the shared one silently — import from `@ecom/types` and extend it if you need more fields.
 
 [TODO: why?]
 
-**API routes are kebab-case under a `/api/v1/` prefix.** Pagination is `?page=&limit=`.
-<!-- dockit:conform cmd="grep -rhoE '/api/v1/[a-z0-9-]+' apps/backend/src | wc -l" total="grep -rhoE 'router\.(get|post|put|delete)' apps/backend/src | wc -l" min="80%" last="2026-08-01" -->
+**API routes are kebab-case under a `/api/v1/` prefix.** Pagination is `?page=&limit=`. A route registered without the version prefix can't be deprecated independently — mount it under `/api/v1/`.
 
 [TODO: why?]
 
-**Server state goes through React Query.** Don't fetch in `useEffect`.
-<!-- dockit:check cmd="grep -rlE 'useEffect\(\(\) => \{[^}]*fetch\(' apps/frontend/src | wc -l" expect="0" last="2026-08-01" -->
+**Server state goes through React Query.** A `fetch(` inside `useEffect` gets no caching, deduplication, or retry — move it into a `useQuery` hook.
 
 [TODO: why?]
 
@@ -53,8 +47,7 @@ Rejected: runtime `??` defaults — they mask a misconfigured deploy as working.
 
 ## Rules
 
-**Every non-public endpoint requires authentication.** Public routes are listed explicitly in `apps/backend/src/middleware/public-routes.ts`.
-<!-- dockit:check cmd="grep -LE 'requireAuth|isPublicRoute' apps/backend/src/routes/*.ts | wc -l" expect="0" last="2026-08-01" -->
+**Every non-public endpoint requires authentication.** A route file with neither `requireAuth` nor `isPublicRoute` is unguarded — add `requireAuth`, or list the route in `apps/backend/src/middleware/public-routes.ts` where someone reviews it.
 
 <details><summary>Why</summary>
 
@@ -64,8 +57,7 @@ Rejected: auth-by-default middleware — public routes then become invisible omi
 instead of an explicit list someone reviews.
 </details>
 
-**Validate every request body with a Zod schema before it reaches a service.**
-<!-- dockit:conform cmd="grep -lE 'z\.object' apps/backend/src/routes/*.ts | wc -l" total="grep -lE 'router\.(get|post|put|delete)' apps/backend/src/routes/*.ts | wc -l" min="80%" last="2026-08-01" -->
+**Validate every request body with a Zod schema before it reaches a service.** A route reading `req.body` without a `z.object` parse hands unvalidated input to the service layer — define the schema alongside the route and parse first.
 
 [TODO: why?]
 

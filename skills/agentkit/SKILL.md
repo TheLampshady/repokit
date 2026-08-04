@@ -122,7 +122,7 @@ Extract from FOUNDATIONS.md:
 
 | Field | Source within doc | Used for |
 |-------|-------------------|----------|
-| Catalog rows | The `## Catalog` table | Names, paths, status, health, owner, last reviewed |
+| Catalog rows | The `## Catalog` table | Names, paths, status, health, owner |
 | Per-foundation entries | `## <Foundation Name>` sections | Agent payload — `Use when`, tiered invariants, canonical usage, `Extend by`, `Doesn't cover` — plus the change checklist. Everything under the entry's `Reference` heading is read on demand, not extracted |
 | Findings | `## Findings` (hotspots, hidden, pretenders) | Inform priority — hotspots get their own agent |
 | Sub-doc presence | Existence of `docs/architecture/foundations/<slug>.md` | Marks the foundation as "heavy" — own agent |
@@ -347,14 +347,19 @@ For each foundation from Phase 1.0, build:
 Foundation: [name]
 Slug: [kebab-case]
 Path: [path]
-Status: [active/deprecated/etc.]
+Status: [active/intended/deprecated/etc.]
 Health: [healthy/hotspot/unknown]
 Owner: [team/person from FOUNDATIONS.md]
-Consumers: [count] across [N] feature folders
+Consumers: [count] across [N] feature folders  — or "none yet (intended)"
 Invariants: [count]
 Sub-doc: [path or none]
 Custom code in same tree: [list areas + file counts]
 ```
+
+**`status: intended` changes how you scope, never whether you generate.** The catalog is declaring a sanctioned path the code hasn't adopted yet, so its `Consumers` column is empty by design. Two rules follow:
+
+- **Never skip an `intended` foundation for having no consumers.** Zero adoption is what the status means. Skipping it leaves the team's most recent architectural decision with no agent that knows about it — the delegation blindspot, arriving at the worst possible moment.
+- **Scope it by where consumers are *meant* to go**, not by the empty column: the foundation's own directory, the layer it exists to serve, directories a scaffold generates into, and — for a wrapper — the directories where the wrapped SDK is reachable. Include destination directories that are currently empty; being present the first time someone writes there is the entire job. `foundation-agent.template.md` carries the full sourcing note.
 
 Then apply the **Grouping Principle: Change-coupling beats domain-tidiness** from `references/guides/AGENT-SIZING.md`. Default to merging:
 
@@ -611,7 +616,7 @@ Keep the full description under 1024 characters. Full pattern guide with example
 
 11. **Owned Foundations** — table of foundations this agent owns (name, path, status, sub-doc).
 
-12. **Invariants (hot memory)** — copied verbatim from FOUNDATIONS.md per foundation, **including each one's `tier`** (Convention or Rule). Drop the `dockit:` predicate comments — those belong to sync. An agent that defends a Convention as though it were a Rule blocks legitimate work.
+12. **Invariants (hot memory)** — copied verbatim from FOUNDATIONS.md per foundation, **including each one's `tier`** (Convention or Rule) and its **named anti-pattern and repair**. The anti-pattern is the operational half — an agent can't recognise a violation it can't name — so never trim it as detail. An agent that defends a Convention as though it were a Rule blocks legitimate work.
 
 13. **Canonical usage (hot memory)** — the real call site from FOUNDATIONS.md per foundation, with its `path:line` comment. Not a signature list.
 
@@ -816,12 +821,12 @@ But only mention these **if asked**. Don't list them unprompted.
 ### Flow
 
 1. **Inputs** — gather existing agents, current FOUNDATIONS.md, code state
-2. **Drift scan** — classify findings into seven categories: orphaned, missing, path drift, invariant drift, status drift, stale review, and **trigger coverage gaps**
+2. **Drift scan** — classify findings into six categories: orphaned, missing, path drift, invariant drift, status drift, and **trigger coverage gaps**
 3. **Report** — present a structured drift report (see SYNC.md for the exact format)
 4. **Per-finding decisions** — prompt the user for each drifted item: update / replace / skip / delete
 5. **Apply** — update agent files in place, run cross-doc check if foundations changed; the `agentkit-managed` marker stays as-is (no timestamp)
 
-Categories 1–6 compare each agent against `FOUNDATIONS.md`. Category 7 compares the **agent set against the code** — directories, inheritance roots, and split modules that trigger no agent at all. That gap can't be seen from inside the agent set, so the scan runs every sync. When closing one, apply the layer test in AGENT-SIZING.md: widening an agent until the report goes green trades a blindspot for an over-triggering agent.
+Categories 1–5 compare each agent against `FOUNDATIONS.md`. Category 6 compares the **agent set against the code** — directories, inheritance roots, and split modules that trigger no agent at all. That gap can't be seen from inside the agent set, so the scan runs every sync. When closing one, apply the layer test in AGENT-SIZING.md: widening an agent until the report goes green trades a blindspot for an over-triggering agent.
 
 ### What sync does NOT do
 

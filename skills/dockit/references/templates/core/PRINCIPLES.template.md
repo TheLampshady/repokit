@@ -19,8 +19,8 @@ Two filters before any line is written:
 dockit writes only into Conventions. Rules are human-authored.
 
 Size budget: ~200 lines, ~40 rules across both tiers. Over budget is a report, never a
-silent drop — rank weakest-first (lowest conformance, longest-unanswered [TODO: why?],
-no predicate) and surface those for review.
+silent drop — rank weakest-first (lowest conformance as recorded when written,
+longest-unanswered [TODO: why?], no named alternative) and surface those for review.
 
 This file has no sub-docs. It links to code, never to a second level of principles —
 a rule an agent must follow shouldn't take two file hops to read.
@@ -32,12 +32,25 @@ a rule an agent must follow shouldn't take two file hops to read.
 
 <!--
 Observed in the code, written by dockit, revisable by anyone.
-Each carries a hidden predicate that sync re-runs. Exceptions stay visible.
+Measured once when written, never re-measured — these direct future work, they don't
+track current state. Every convention that displaces something names the anti-pattern
+it displaces plus the repair. Exceptions stay visible.
+
+STATUS MARKER: a rule the code already reflects carries no marker — that's the default,
+and marking it would tax every read for nothing. Mark ONLY the exception:
+
+  **[intended]** prefix — decided, and the code hasn't caught up yet.
+
+Follow it like any other rule: `intended` describes the code's state, not the rule's
+force. A Convention is deviable with a reason whether or not the code has caught up.
+
+Declared, never measured. Nothing computes adoption to set or change this marker, no
+marker is ever added because usage fell, and nothing changes because time passed. If
+the team's goals change, the team edits the marker — sync leaves it alone.
 -->
 
 [REPEAT_FOR_EACH_CONVENTION]
-**[CONVENTION_INSTRUCTION]**[IF_HAS_EXCEPTIONS] Exceptions: [EXCEPTION_LIST].[ENDIF]
-<!-- dockit:[check|conform] cmd="[VERIFY_COMMAND]" [expect="0"|total="[TOTAL_COMMAND]" min="80%"] last="[YYYY-MM-DD]" -->
+[IF_INTENDED]**[intended]** [ENDIF]**[CONVENTION_INSTRUCTION]**[IF_DISPLACES_SOMETHING] [ANTI_PATTERN] [WHY_IT_HURTS] — [REPAIR].[ENDIF][IF_HAS_EXCEPTIONS] Exceptions: [EXCEPTION_LIST].[ENDIF]
 
 [IF_HAS_RATIONALE]
 <details><summary>Why</summary>
@@ -64,6 +77,14 @@ Rejected: [REJECTED_ALTERNATIVE]
 <!--
 Human-authored only. dockit never writes, edits, or removes anything in this section.
 Conventions get promoted here after a human confirms them.
+
+The **[intended]** prefix works here too, and this is where it's most useful: a team can
+decide a Rule before any code satisfies it — "all new endpoints are versioned" on a
+codebase where none are yet. Deviating is still a defect; the marker only says there is
+no precedent to copy.
+
+Nothing computes whether an [intended] Rule has been adopted, and dockit never adds,
+removes, or edits a marker in this section. Drop it yourself when the code has caught up.
 -->
 
 [EXISTING_RULES_PRESERVED_VERBATIM]
@@ -72,6 +93,9 @@ Conventions get promoted here after a human confirms them.
 > None yet. Promote a Convention here once you've confirmed that deviating from it
 > is a defect rather than a judgment call — `/repokit status` will prompt you when
 > one has held steady long enough to be worth considering.
+>
+> You can also write a Rule here directly, including one prefixed **[intended]** for a
+> decision the codebase hasn't caught up to yet.
 [ENDIF]
 
 ---

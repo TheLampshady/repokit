@@ -1,6 +1,6 @@
 ---
 name: dockit
-description: 'Generate, update, and maintain project documentation. Use when asked to: create/write/add docs, generate/make/write a README, setup documentation, document this/my project/codebase, fill in docs, check doc freshness, explain doc structure, sync docs with code, verify docs against code, cross-reference docs with codebase, or run a deep/full scan of everything. Modes: init, sync (add --deep for a whole-repo scan), check, migrate, diagrams. Auto-detects frameworks and scales by project size.'
+description: 'Generate, update, and maintain project documentation. Use when asked to: create/write/add docs, generate/make/write a README, setup documentation, document this/my project/codebase, fill in docs, check doc freshness, find stale docs, explain doc structure, sync docs with code, verify docs against code, cross-reference docs with codebase, or run a deep/full scan of everything. Modes: init, sync (add --deep for a whole-repo scan), migrate, diagrams. Auto-detects frameworks and scales by project size.'
 user-invocable: true
 ---
 
@@ -8,7 +8,7 @@ user-invocable: true
 
 Generate and maintain project documentation that humans read and that downstream AI tools (agentkit, plus any agent that loads the project's docs as context) consume as their context layer.
 
-**Modes:** `init` | `sync` (`--deep`) | `check` | `migrate` | `diagrams`
+**Modes:** `init` | `sync` (`--deep`) | `migrate` | `diagrams`
 
 **Frameworks:** Wagtail (dedicated module), others use `_default.md` (auto-detected)
 
@@ -110,7 +110,6 @@ Explicit user intent (e.g. "run sync", "migrate", "scan everything") always wins
 | Condition | Action |
 |-----------|--------|
 | No docs/ or README.md | → init |
-| CI environment | → check |
 | Git changes since docs | → sync |
 | Docs exist, wrong structure | → suggest migrate |
 | User asks to verify/cross-reference docs, or for a deep/full scan or "everything" | → `sync --deep` |
@@ -121,23 +120,27 @@ Explicit user intent (e.g. "run sync", "migrate", "scan everything") always wins
 | Mode | Flow | Prompts? | Destructive? |
 |------|------|----------|--------------|
 | `init` | Questions → Plan → Confirm → Generate all docs from templates | Yes | Can restructure — **additive only when existing docs show structural integrity** |
-| `sync` | Git diff → update stale sections → re-run stored predicates → regenerate diagrams if needed; removes docs for removed code | Only for prose-heavy deletions | Removes code-derived sections for removed features — **never a mined rule** (see below) |
-| `check` | Detect drift → exit 0 (current) or exit 1 (stale) | No | Read-only |
-| `sync --deep` | Everything `sync` does, plus a whole-repo pass: verify every doc reference resolves · catch silently-passing predicates · find code documented nowhere · re-apply the mining filters to existing rules. See [DEEP-SCAN.md](./references/guides/DEEP-SCAN.md) | Same as sync | Same as sync — the four extra checks are report-only |
+| `sync` | Git diff → update stale sections → regenerate diagrams if needed; removes docs for removed code | Only for prose-heavy deletions | Removes code-derived sections for removed features — **a mined rule only when the code it governs is gone** (see below) |
+| `sync --deep` | Everything `sync` does, plus a whole-repo pass: verify every doc reference resolves · find code documented nowhere · re-apply the mining filters to existing rules. See [DEEP-SCAN.md](./references/guides/DEEP-SCAN.md) | Same as sync | Same as sync — the extra checks are report-only |
 | `migrate` | Questions → Plan → Confirm → merge into existing files | Yes | Can restructure |
 | `diagrams` | Generate/update mermaid diagrams only | No | Updates diagrams only |
 
-**Read-only modes:** `check`
 **Auto-write modes** (no prompts for routine changes): `sync`, `diagrams`
 **Interactive modes** (prompts, can restructure): `init`, `migrate`
 
-> **`--deep` is a flag, not a mode.** Normal `sync` is diff-scoped and fast enough to run after every change; `--deep` reads every doc, every predicate, and every source file. Four checks only work at whole-repo scope — a broken path appears when *code* moves rather than when a doc changes; a silently-passing predicate is indistinguishable from a working one; undocumented code never shows up in a doc diff; and docs predating a filter were never tested against it. Trigger it on an explicit flag or on words like "deep", "full", "everything", "scan the whole repo". Never run it implicitly — it's slow, and normal sync is the right default.
+> **There is no gate mode, deliberately.** dockit has no `check`, no exit code, and no pre-commit hook. Three reasons. **A gate here would be fake:** the exit code of `claude /dockit …` depends on a model choosing to exit non-zero, and CI would treat that as authoritative fact — a probabilistic gate behind a deterministic interface fails open silently. **A gate contradicts the evidence:** hard gates on documentation breed institutionalised bypasses, so the mechanism worth having warns rather than fails. **And it inverts the working order:** code changes first, docs follow, so at commit time the docs are *supposed* to be briefly behind — failing the commit punishes the only sequence that exists.
+>
+> The loop is **change code → `sync` → commit both together.** When someone asks whether their docs are stale without wanting a write, that's `/repokit status` — read-only, human-facing, and already built. Route freshness questions there.
+
+> **`--deep` is a flag, not a mode.** Normal `sync` is diff-scoped and fast enough to run after every change; `--deep` reads every doc and every source file. These checks only work at whole-repo scope — a broken path appears when *code* moves rather than when a doc changes; undocumented code never shows up in a doc diff; and docs predating a filter were never tested against it. Trigger it on an explicit flag or on words like "deep", "full", "everything", "scan the whole repo". Never run it implicitly — it's slow, and normal sync is the right default.
 
 > Sync removes doc sections when the underlying code is gone — see "Syncing: Remove docs for removed code" above. Removals are reported in the chat summary, not left as tombstones in the docs.
 
-> **Predicates follow a fixed grammar.** Before running any `dockit:check` / `dockit:conform` command, check it against the grammar in [CHOICE-MINING.md § Predicate grammar](./references/guides/CHOICE-MINING.md#predicate-grammar) — read-only commands, no shell operators, no interpreters. A command that fails the grammar is flagged and left unverified, never run. Dockit keeps no approval file; execution is the runtime's call.
+> **Dockit measures to decide, then lets go.** A mined rule is measured against its family threshold *before* it's written — that measurement is what earns dockit the right to invent a rule at all. The command is then discarded: nothing is stored in the docs, and **sync never re-measures a line that already exists.** What the measurement knew gets harvested into the visible line instead, as the named anti-pattern the rule displaces. Ongoing conformance enforcement is a linter's job — recommend [ArchUnit](https://www.archunit.org/) / [import-linter](https://import-linter.readthedocs.io/) / [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) and don't reimplement it. See [CHOICE-MINING.md § Measure to decide, then let go](./references/guides/CHOICE-MINING.md#measure-to-decide-then-let-go).
 
-> **Mined rules are exempt from removal.** On sync, re-run every `dockit:check` / `dockit:conform` predicate in PRINCIPLES.md and the foundation entries. A failing predicate is **flagged, never deleted** — a decayed count means either the rule is wrong or the code is drifting away from a correct rule, and nothing in the evidence distinguishes those. Deleting on failure would quietly strip correct rules exactly when a codebase is going bad. Report the failure and let a human decide. See [CHOICE-MINING.md](./references/guides/CHOICE-MINING.md).
+> **A decision can precede the code — mark it `intended`.** A foundation written to be the sanctioned path with nothing routing through it yet, or a rule the team has committed to going forward, is recorded at `status: intended` (foundations) or with an `[intended]` prefix (rules). **Zero adoption is what the marker declares, never evidence against the entry** — so the `pretender` finding and the deprecation trigger are suppressed for these, and a scaffolded project is mostly `intended` rows by construction. The marker is **declared, never measured**: nothing computes adoption to set it, nothing adds it because usage fell, nothing changes on elapsed time, and sync never overwrites it. Only `sync --deep` offers to *remove* one, as a question, once consumers exist. See [CHOICE-MINING.md § Status](./references/guides/CHOICE-MINING.md#status-intended-vs-the-unmarked-default) and [FOUNDATIONS-DETECTION.md § Intent signals](./references/guides/FOUNDATIONS-DETECTION.md#intent-signals-scoring-cant-see-them).
+
+> **A mined rule is removed only when feature work requires it.** The trigger is the *subject of the sentence disappearing* — the module deleted, the capability removed — never the rule becoming unpopular. `SearchClient` deleted → the rule about using it goes. `SearchClient` still there and bypassed in four new files → the rule stays exactly as written, because a directive being ignored is an argument for keeping it. Fewer files following a rule is not measured, not reported, and not a signal. See [CHOICE-MINING.md § On sync](./references/guides/CHOICE-MINING.md#on-sync-a-choice-is-not-re-litigated).
 
 ---
 
@@ -156,7 +159,7 @@ Explicit user intent (e.g. "run sync", "migrate", "scan everything") always wins
 9. Decide the generation posture — **documented** (a `docs/` dir exists, or README is >~50 lines of real content) or **doc-barren**. Strict overview ban applies only to documented repos; on a barren repo, generated orientation prose is the measured-helpful case. See [CHOICE-MINING.md § The overview ban is conditional](./references/guides/CHOICE-MINING.md#the-overview-ban-is-conditional--check-before-applying-it)
 
 9b. Assess **structural integrity** — do the docs that exist actually work as a structure? Judge what exists, never what's missing; a repo documented in one well-organised README is fully documented. Sets the Phase 3 default. Signals and the distinction from step 9 are in [DETECTION.md § Structural Integrity](./references/guides/DETECTION.md#structural-integrity)
-10. Mine choices for PRINCIPLES.md — see [CHOICE-MINING.md](./references/guides/CHOICE-MINING.md). Run both filters (name the rejected alternative; skip anything a linter enforces) before writing any line, attach a stored predicate to each one, and check the file against its size budget
+10. Mine choices for PRINCIPLES.md — see [CHOICE-MINING.md](./references/guides/CHOICE-MINING.md). Run both filters (name the rejected alternative; skip anything a linter enforces) before writing any line, measure each one against its family threshold, name the anti-pattern it displaces in the line itself, and check the file against its size budget
 11. Scan for foundations (medium/large only) — see [FOUNDATIONS-DETECTION.md](./references/guides/FOUNDATIONS-DETECTION.md). Score every source file by fan-in × cross-feature × stability; categorise as foundation / hotspot / hidden / pretender. Skipped on small projects.
 
 ### Phase 2: Questions
@@ -206,35 +209,41 @@ When filling sections in `init` / `migrate` / `sync`, apply the **Earn the Headi
 1. Cross-link all docs
 2. Validate markdown syntax
 3. List remaining `[TODO:]` markers
-3b. **Report the review queue** — the human-required work this run produced: conventions written at 80–99% conformance, empty `[TODO: why?]` slots, `[TODO: known hazard?]` questions on foundations that are new or newly a hotspot, `Doesn't cover:` intent questions, failed predicates awaiting the doc-wrong-or-code-drifting call, and SDD-artifact discrepancies. `/repokit status` reads this list. Best-practice observations (no tests on a foundation, duplicated retry logic, no scaffold path) go here too — **in chat only, never written into the docs**, since a generic recommendation sitting in a project's own documentation reads to the next agent as a decision the team made
-4. **Report the run in chat** (never in docs), on **every mode that writes** — `init`, `migrate`, `sync`, `diagrams`. Changes are already applied, so this is the review pass: the user scans it, spots something they didn't expect, and asks for an amendment next turn. It's also the only place tier-3 content surfaces, which is what keeps "never delete it" from meaning "never mention it."
+3b. **Report the review queue** — the human-required work this run produced: conventions written at 80–99% conformance, conventions measured at 100% that a human might want promoted to Rule, empty `[TODO: why?]` slots, `[TODO: known hazard?]` questions on foundations that are new or newly a hotspot, `Doesn't cover:` intent questions, and SDD-artifact discrepancies. Every item is produced by the run that *wrote* the line — never by re-examining a line that already existed. `/repokit status` reads this list. Best-practice observations (no tests on a foundation, duplicated retry logic, no scaffold path) go here too — **in chat only, never written into the docs**, since a generic recommendation sitting in a project's own documentation reads to the next agent as a decision the team made
+4. **Report the run in chat** (never in docs), on **every mode that writes** — `init`, `migrate`, `sync`, `diagrams`. Changes are already applied, so this is the review pass: the user scans it, spots something they didn't expect, and asks for an amendment next turn. It's also the only place tier-3 content is reachable at all — as a count with an offer to expand, which is what keeps "never delete it" from meaning "never mention it."
 
-   Three blocks. `Moved` appears on restructures only; `Removed` and `Untouched` appear on every run, and say "none" rather than being omitted — an absent block is indistinguishable from a block nobody generated.
+   Three named blocks and one closing count. `Updated` and `Removed` appear on every run and say "none" rather than being omitted — an absent block is indistinguishable from a block nobody generated. `Moved` appears on restructures only.
 
    ```
+   Updated:
+     FOUNDATIONS.md   "Search Orchestration" → consumers 8 → 11 (added SearchIndexer, BulkReindexer)
+     ARCHITECTURE.md  "Request flow" → inserted tracing middleware step (src/mw/trace.py)
+     README.md        CLI table → added `--dry-run`
+
    Moved:
-     README.md "System requirements"  → ENVIRONMENTS.md
-     README.md "Architecture diagram" → ARCHITECTURE.md
+     README.md "System requirements" → ENVIRONMENTS.md
 
    Removed:
      ARCHITECTURE.md → "LDAP Auth" section (module deleted: src/auth/ldap.py)
      README.md       → `--legacy-mode` flag (removed from CLI)
 
-   Untouched (no checkable claim — yours to keep or cut):
-     README.md            "Notes from the 2024 audit"
-     docs/scratch-perf.md (whole file — dockit didn't create it)
-     + 14 more across docs/architecture/ — ask to list them
+   Left alone: 12 docs unchanged · 3 items dockit doesn't own — ask to list either.
 
    Anything here look wrong? Say so and I'll put it back or move it elsewhere.
    ```
 
-   Four rules for this report:
-   - **Name every change, never a count.** "Removed 4 stale sections" can't be reviewed, and reviewing it is the entire point. This binds `Moved` and `Removed` without exception — they're actions dockit took, and the user can only catch a mistake they can see.
-   - **Group the `Untouched` block once it exceeds ~10 lines.** Counts are acceptable *here* and nowhere else, because this block lists things dockit deliberately did nothing to. A wall of untouched content trains the user to skip the whole report, which would cost them the two blocks that matter. Show the most recently modified, collapse the rest by directory, offer the full list on request.
-   - **`Untouched` is not filler.** It's how the user confirms their non-conforming content survived, and how tier-3 content gets a chance to be deliberately cut rather than quietly accumulating. Silence about it reads as loss.
+   Five rules for this report:
+   - **`Updated` is the block the report exists for, and it is never optional.** It answers the only question the user actually has — *what did you just do to my docs?* A run that wrote files and reports no `Updated` block has hidden its own work behind two blocks about what it didn't do. Name the doc, the section, and what changed in it: a count of edited files is not reviewable.
+   - **Name every change, never a count.** "Updated 4 sections" can't be reviewed, and reviewing it is the entire point. This binds `Updated`, `Moved`, and `Removed` without exception — they're actions dockit took, and the user can only catch a mistake they can see.
+   - **`Left alone` is a count, never a list.** One line, two numbers, and an offer to expand. This is the one block where a count is the whole content, because it's the one block listing things dockit did *nothing* to. A screen of filenames dockit didn't edit trains the user to skim past the report, which costs them the blocks that matter — and it looks like work was done where none was.
+   - **Keep the two `Left alone` numbers distinct.** *Unchanged* means dockit owns the doc and nothing drifted this run. *Doesn't own* means content with no checkable claim, or a file dockit didn't create — the user's to keep or cut. Merging them into one number loses the second, which is how the user confirms their non-conforming content survived and how tier-3 content gets deliberately cut rather than quietly accumulating. Never list a dockit-owned doc under *doesn't own* just because it didn't change this run.
    - **Close with the amendment offer.** A report the user can act on is the whole reason this isn't a file.
 
-5. Show completion report with next steps
+4b. **Report newly written rules, never re-verified ones.** A rule dockit wrote this run is a change the user should review, so it belongs in `Updated` with its measurement: `PRINCIPLES.md → new convention "handlers return Result[T]" (11/13 conforming)`. A rule that already existed gets **no line at all** — sync didn't measure it, has nothing to say about it, and a report that lists rules it merely left alone is the wall of `100%` noise this block exists to prevent.
+
+   There is no "invariants re-verified" summary, because nothing is re-verified. If the user wants current conformance, that's a linter's output, not a docs report.
+
+5. Show the completion report, then next steps — see [Next Steps Output](#next-steps-output). Every next step is either unconditional or conditioned on something *this run* did; never emit a step that asks the user to re-derive state the report above it already names
 
 ---
 
@@ -262,12 +271,11 @@ See guides for detection logic and document structure details.
 | [SIZE-MEDIUM.md](./references/guides/SIZE-MEDIUM.md) | Medium project documentation structure |
 | [SIZE-LARGE.md](./references/guides/SIZE-LARGE.md) | Large project documentation structure |
 | [WRITING-GUIDE.md](./references/guides/WRITING-GUIDE.md) | How to write explanatory documentation |
-| [CHOICE-MINING.md](./references/guides/CHOICE-MINING.md) | What may be written into PRINCIPLES.md and foundation entries — the three bands, the Convention/Rule tiers, the two filters, stored predicates |
+| [CHOICE-MINING.md](./references/guides/CHOICE-MINING.md) | What may be written into PRINCIPLES.md and foundation entries — the three bands, the Convention/Rule tiers, the two filters, measure-then-let-go, naming the anti-pattern |
 | [DIAGRAMS.md](./references/guides/DIAGRAMS.md) | Mermaid diagram standards |
-| [DEEP-SCAN.md](./references/guides/DEEP-SCAN.md) | The `sync --deep` whole-repo pass — reference verification, predicate quality, undocumented code, filter re-application |
+| [DEEP-SCAN.md](./references/guides/DEEP-SCAN.md) | The `sync --deep` whole-repo pass — reference verification, undocumented code, filter re-application |
 | [DETECTION.md](./references/guides/DETECTION.md) | Project name, description, and env var discovery; structural-integrity signals for the Phase 3 default |
 | [FOUNDATIONS-DETECTION.md](./references/guides/FOUNDATIONS-DETECTION.md) | How to find foundational code via fan-in, cross-feature usage, and git stability |
-| [GIT-HOOKS.md](./references/guides/GIT-HOOKS.md) | CI/pre-commit integration |
 
 ---
 
@@ -284,7 +292,11 @@ Two sources, framework first:
 
 ## Git Integration
 
-See [GIT-HOOKS.md](./references/guides/GIT-HOOKS.md) for full CI/pre-commit integration.
+**Every mode is run by a human, on purpose. Nothing here is automatable, and that's the design.**
+
+`sync` deletes — doc sections whose code is gone, mined rules whose subject disappeared. Its only safeguard is the change report it prints at the end: every update, move, and removal named individually, closing with an offer to amend. **That safeguard is a person reading it.** Run from a bot, the report goes to a log nobody opens, content vanishes, the commit says `docs: auto-sync`, and the first person to notice is whoever needed the missing section.
+
+There is nothing to automate *instead*, either — see the no-gate note under [Explicit Modes](#explicit-modes). Wire nothing into pre-commit or CI. When someone wants to know whether docs have gone stale without writing anything, that's `/repokit status`.
 
 ### Change Detection
 
@@ -385,24 +397,28 @@ Use `frameworks/_default.md` as template.
 
 ## Next Steps Output
 
-After completion, recommend actionable next steps:
+Next steps are **doc follow-ups only**, and every one of them is either always true or conditioned on something this run actually did. Three candidates, in this order:
 
-```
-Next steps:
-  1. Review generated docs for accuracy
-  2. Fill in [TODO] markers
-  3. Run setup commands:
+| # | Step | When |
+|---|------|------|
+| 1 | Review what was written for accuracy — the changed docs on `sync`, the generated docs on `init`/`migrate` | **Always.** The user is the only one who can confirm a claim dockit inferred |
+| 2 | `Run /agentkit sync to reconcile project agents against the updated foundations.` | **Only if `docs/FOUNDATIONS.md` changed this run** *and* project agent files exist |
+| 3 | Fill in `[TODO:]` markers | Only if this run left `[TODO:]` markers — name the docs they're in |
 
-     [FRAMEWORK_INIT_COMMANDS]
-```
+### Rule for #2: you already know the answer
 
-### Framework-specific commands
+Whether `FOUNDATIONS.md` changed is not something to ask the user about. You wrote the file (or didn't) three phases ago, and the [Phase 5](#phase-5-validate--report) report already names the change. So:
 
-| Framework | Commands |
-|-----------|----------|
-| Django/Wagtail | `python manage.py migrate`, `createsuperuser`, `collectstatic` |
-| Node | `npm install`, `npm run dev` |
-| Python (general) | `pip install -e ".[dev]"`, `pytest` |
+- **Foundations changed → recommend the sync flatly.** "Foundations changed (2 added, 1 retired) — run `/agentkit sync` to reconcile project agents."
+- **Foundations unchanged → omit the step entirely.** Not "if you changed foundations, consider…" — omit it. A conditional the user has to evaluate is a step dockit failed to resolve.
+
+Never phrase a next step as a question the run's own output already answers. `If you made custom foundation modifications, run…` is the failure mode: it contradicts the report printed directly above it and makes the user re-derive state dockit was holding.
+
+Skip #2 when no agent files exist under `.claude/agents/`, `.agents/agents/`, or `.github/agents/` — there is nothing to reconcile. Mention agentkit once as available instead.
+
+### Never suggest running the project
+
+No test commands, no build commands, no framework setup commands, no `make test`. dockit reads code and writes documentation; it has no basis for claiming a doc edit affects test health, and "run your test suite" is filler the user already knows. Setup and verification commands belong **in** the docs dockit generates (CONTRIBUTING.md, ENVIRONMENTS.md), not in its chat output.
 
 ---
 

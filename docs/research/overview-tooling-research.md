@@ -75,7 +75,7 @@ The actionable roll-up of everything marked **(repokit hypothesis)** — each wi
 
 | Source | Type | Why it matters |
 |--------|------|----------------|
-| [arXiv 2602.11988 — Evaluating AGENTS.md (ETH Zurich/LogicStar)](https://arxiv.org/abs/2602.11988) | Controlled study | The category's only controlled test: static overviews don't help, cost >20%; gap-filler exception |
+| [Evaluating AGENTS.md (ETH Zurich SRI Lab / LogicStar)](https://www.sri.inf.ethz.ch/publications/gloaguen2026agentsmd) | Controlled study | The category's only controlled test: static overviews don't help, cost >20%; gap-filler exception. **Provenance checked 2026-08-04:** publisher page confirms authors (Gloaguen, Mündler, Müller, Raychev, Vechev), venue MemAgents @ ICLR 2026 (Oral & Runner-up Best Paper), and the headline claim. The arXiv ID `2602.11988` used in inline citations throughout this repo's research docs **could not be confirmed against the publisher page** — not disproven, just unconfirmed. Prefer the publisher link |
 | [ManoMano Serena benchmark](https://medium.com/manomano-tech/project-aegis-benchmarking-ai-agents-and-why-serena-is-our-new-must-have-311673db35dd) | Independent benchmark (n=1 repo) | Pull tooling's clearest win: large-repo refactoring; 4x lookup penalty |
 | [Cursor semantic search ablation](https://cursor.com/blog/semsearch) | Vendor ablation + A/B | Strongest pro-index data; value concentrates at 1,000+ files |
 | [HarrisonSec — agent retrieval cost curve](https://harrisonsec.com/blog/agent-retrieval-cost-curve-claude-code-grep-vs-rag/) | Analytical blog | The crossover math; small/mid repos never reach it |

@@ -11,17 +11,20 @@ A "foundation" here means: code with high fan-in across multiple features, inten
 
 ## Catalog
 
-5 foundations detected across `app/`. Last sync: 2026-08-01.
+6 foundations across `app/` — 5 in use, 1 intended.
 
-| Name | Type | Path | Owner | Status | Health | Consumers | Last Reviewed |
-|------|------|------|-------|--------|--------|-----------|---------------|
-| `core.database` | service | `app/core/database.py` | platform | active | healthy | 28 (4 features) | 2026-04-12 |
-| `core.auth` | abstraction | `app/core/auth.py` | platform | active | healthy | 24 (4 features) | 2026-04-12 |
-| `core.cache` | service | `app/core/cache.py` | platform | active | healthy | 11 (3 features) | 2026-03-18 |
-| `core.notifications` | service | `app/core/notifications.py` | platform | active | **hotspot** | 22 (3 features) | 2026-02-04 |
-| `services.helpers` | primitive | `app/services/helpers.py` | _unowned_ | active | healthy | 19 (5 features) | _never_ |
+| Name | Type | Path | Owner | Status | Health | Consumers |
+|------|------|------|-------|--------|--------|-----------|
+| `core.database` | service | `app/core/database.py` | platform | active | healthy | 28 (4 features) |
+| `core.auth` | abstraction | `app/core/auth.py` | platform | active | healthy | 24 (4 features) |
+| `core.cache` | service | `app/core/cache.py` | platform | active | healthy | 11 (3 features) |
+| `core.notifications` | service | `app/core/notifications.py` | platform | active | **hotspot** | 22 (3 features) |
+| `services.helpers` | primitive | `app/services/helpers.py` | _unowned_ | active | healthy | 19 (5 features) |
+| `core.settings` | service | `app/core/settings.py` | platform | **intended** | healthy | none yet |
 
 > The `services.helpers` row is a **hidden foundation** — see Findings below.
+>
+> `core.settings` is **intended**: it's the sanctioned path for configuration and nothing routes through it yet. Zero consumers is what that status means, not a problem to fix — the 15 direct `os.environ` reads still in `app/` are what it exists to replace.
 
 ---
 
@@ -31,7 +34,6 @@ A "foundation" here means: code with high fan-in across multiple features, inten
 **Type:** service
 **Owner:** platform
 **Status:** active
-**Last reviewed:** 2026-04-12
 
 ### Use when
 
@@ -41,8 +43,8 @@ A "foundation" here means: code with high fan-in across multiple features, inten
 
 ### Invariants
 
-**Reach the database through `get_db()`.** `engine` is exported for Alembic only. Exceptions: `alembic/env.py`.
-<!-- dockit:check cmd="grep -rlE 'from app.core.database import engine' app/ | grep -v 'alembic' | wc -l" expect="0" tier="rule" last="2026-08-01" -->
+**Reach the database through `get_db()`.** Importing `engine` from `app.core.database` skips commit-on-success and rollback-on-exception, which left transactions open under load — depend on `get_db()` instead. `engine` is exported for Alembic only. Exceptions: `alembic/env.py`.
+<!-- dockit:tier="rule" -->
 
 <details><summary>Why</summary>
 
@@ -52,13 +54,13 @@ Rejected: a session context manager per call site — same guarantees, but every
 to remember to use it.
 </details>
 
-**Sessions are request-scoped.** Background tasks open their own; never pass one across a request boundary.
-<!-- dockit:check cmd="grep -lE 'Depends\(get_db\)' app/workers/*.py | wc -l" expect="0" tier="convention" last="2026-08-01" -->
+**Sessions are request-scoped.** A `Depends(get_db)` in `app/workers/` binds a worker to a request lifecycle that has already ended — open a session inside the task with `async with session_scope()`. Background tasks own theirs; a session never crosses a request boundary.
+<!-- dockit:tier="convention" -->
 
 [TODO: why?]
 
-**Query through the ORM.** `text()` requires platform-team review. Exceptions: `alembic/versions/`.
-<!-- dockit:check cmd="grep -rlE 'execute\(text\(' app/ | wc -l" expect="0" tier="rule" last="2026-08-01" -->
+**Query through the ORM.** An `execute(text(` call bypasses the tenant filter and can return other workspaces' rows — express the query with ORM constructs. `text()` requires platform-team review. Exceptions: `alembic/versions/`.
+<!-- dockit:tier="rule" -->
 
 <details><summary>Why</summary>
 
@@ -124,7 +126,6 @@ Read replicas and connection routing. `get_db()` returns the primary uncondition
 
 - [ ] Update consumers in the same PR if `get_db` signature changes.
 - [ ] Re-run integration tests against PostgreSQL 14, 15, 16.
-- [ ] Update this row's `Last reviewed` date.
 - [ ] Notify platform-team channel.
 
 ---
@@ -135,7 +136,6 @@ Read replicas and connection routing. `get_db()` returns the primary uncondition
 **Type:** abstraction
 **Owner:** platform
 **Status:** active
-**Last reviewed:** 2026-04-12
 
 ### Use when
 
@@ -145,8 +145,8 @@ Read replicas and connection routing. `get_db()` returns the primary uncondition
 
 ### Invariants
 
-**Every route declares `Depends(get_current_user)`.** Exceptions: `GET /health`.
-<!-- dockit:check cmd="grep -LE 'Depends\(get_current_user\)' app/api/routes/*.py | grep -v 'health.py' | wc -l" expect="0" tier="rule" last="2026-08-01" -->
+**Every route declares `Depends(get_current_user)`.** A route file without it is unauthenticated — add the dependency to the router or the individual route. Exceptions: `GET /health`.
+<!-- dockit:tier="rule" -->
 
 <details><summary>Why</summary>
 
@@ -156,13 +156,13 @@ Rejected: middleware-level auth — routes that legitimately need anonymous acce
 invisible exceptions instead of explicit ones.
 </details>
 
-**Validate tokens through the Firebase Admin SDK.** No hand-rolled JWT parsing.
-<!-- dockit:check cmd="grep -rlE 'jwt.decode|base64.*\.split\(.\..\)' app/ | wc -l" expect="0" tier="rule" last="2026-08-01" -->
+**Validate tokens through the Firebase Admin SDK.** A `jwt.decode` call or a base64 split on the token skips signature and revocation checks — call `verify_id_token()` via `app/core/auth.py`.
+<!-- dockit:tier="rule" -->
 
 [TODO: why?]
 
-**Treat `User` as read-only.** Mutations go through `UserRepository`.
-<!-- dockit:check cmd="grep -rlE 'user\.[a-z_]+ = ' app/api/ app/services/ | wc -l" expect="0" tier="convention" last="2026-08-01" -->
+**Treat `User` as read-only.** Assigning to an attribute (`user.email = ...`) in a route or service mutates an object the session may flush unexpectedly — call the matching `UserRepository` method instead.
+<!-- dockit:tier="convention" -->
 
 [TODO: why?]
 
@@ -218,7 +218,6 @@ Service-to-service auth. The two internal endpoints in `app/api/routes/internal.
 
 - [ ] Update consumers in the same PR if dependency return type changes.
 - [ ] Test against expired and revoked tokens.
-- [ ] Update this row's `Last reviewed` date.
 
 ---
 
@@ -228,7 +227,6 @@ Service-to-service auth. The two internal endpoints in `app/api/routes/internal.
 **Type:** service
 **Owner:** platform
 **Status:** active
-**Last reviewed:** 2026-03-18
 
 ### Use when
 
@@ -238,13 +236,13 @@ Service-to-service auth. The two internal endpoints in `app/api/routes/internal.
 
 ### Invariants
 
-**Go through `cache`.** No direct `redis.Redis()` construction.
-<!-- dockit:check cmd="grep -rlE 'redis\.Redis\(|from redis import' app/ | grep -v 'app/core/cache.py' | wc -l" expect="0" tier="rule" last="2026-08-01" -->
+**Go through `cache`.** A `redis.Redis(` construction or a bare `from redis import` outside `app/core/cache.py` opens its own connection and loses the down-Redis fallback — import `cache` and use it.
+<!-- dockit:tier="rule" -->
 
 [TODO: why?]
 
-**Read paths work when Redis is down.** Treat misses and errors identically.
-<!-- dockit:conform cmd="grep -rlE 'except.*RedisError|cache\.get.*or ' app/services/*.py | wc -l" total="grep -lE 'cache\.get' app/services/*.py | wc -l" min="80%" tier="rule" last="2026-08-01" -->
+**Read paths work when Redis is down.** A `cache.get` whose result is used without an `except RedisError` or an `or <fallback>` turns a cache outage into an API outage — fall through to the database on both a miss and an error. Treat the two identically.
+<!-- dockit:tier="rule" -->
 
 <details><summary>Why</summary>
 
@@ -254,8 +252,8 @@ Rejected: a circuit breaker — it adds a failure mode of its own for a cache th
 optional by design.
 </details>
 
-**Every `set` passes a `ttl`.** No unbounded keys.
-<!-- dockit:check cmd="grep -rE 'cache\.set\(' app/ | grep -v 'ttl=' | wc -l" expect="0" tier="convention" last="2026-08-01" -->
+**Every `set` passes a `ttl`.** A `cache.set(` without `ttl=` writes a key nothing will ever evict — pass an explicit `ttl`, even a long one.
+<!-- dockit:tier="convention" -->
 
 [TODO: why?]
 
@@ -312,7 +310,6 @@ Write-through and read-through caching — every call site does its own get/set 
 
 - [ ] Update consumers if signature changes.
 - [ ] Run failover test (Redis killed mid-request).
-- [ ] Update this row's `Last reviewed` date.
 
 ---
 
@@ -322,7 +319,6 @@ Write-through and read-through caching — every call site does its own get/set 
 **Type:** service
 **Owner:** platform
 **Status:** active
-**Last reviewed:** 2026-02-04
 
 ### Use when
 
@@ -332,13 +328,13 @@ Write-through and read-through caching — every call site does its own get/set 
 
 ### Invariants
 
-**Publish through `publish()`.** No direct WebSocket sends from route handlers.
-<!-- dockit:check cmd="grep -rlE 'websocket\.send_(json|text)' app/api/routes/ | wc -l" expect="0" tier="rule" last="2026-08-01" -->
+**Publish through `publish()`.** A `websocket.send_json` / `send_text` call in a route handler reaches only the one connected socket, skipping fan-out across instances — call `publish()` instead.
+<!-- dockit:tier="rule" -->
 
 [TODO: why?]
 
-**Events are JSON-serialisable dicts carrying a `type` field.**
-<!-- dockit:conform cmd="grep -lE 'publish\(.{0,40}type' app/services/*.py | wc -l" total="grep -cE 'publish\(' app/services/*.py | wc -l" min="80%" tier="convention" last="2026-08-01" -->
+**Events are JSON-serialisable dicts carrying a `type` field.** A `publish()` payload without `type` can't be dispatched by the client, and an ORM object or `datetime` in it fails to serialise — send a plain dict with `type` set.
+<!-- dockit:tier="convention" -->
 
 [TODO: why?]
 
@@ -395,7 +391,6 @@ Delivery guarantees. Events are fire-and-forget — a client that reconnects mid
 
 - [ ] Coordinate with consumers — high churn means high blast radius.
 - [ ] Update integration tests for any pub/sub semantics change.
-- [ ] Update this row's `Last reviewed` date.
 
 ---
 
@@ -405,7 +400,6 @@ Delivery guarantees. Events are fire-and-forget — a client that reconnects mid
 **Type:** primitive
 **Owner:** _unowned — needs assignment_
 **Status:** active
-**Last reviewed:** never
 
 ### Use when
 
@@ -418,8 +412,8 @@ _None recorded. This foundation accumulated rather than being designed, so nothi
 
 Candidates observed in the code, unconfirmed:
 
-**Functions are pure — no I/O, no global state.** Currently 11/11.
-<!-- dockit:conform cmd="grep -LE 'open\(|requests\.|await ' app/services/helpers.py | wc -l" total="1" min="80%" tier="convention" last="2026-08-01" -->
+**Functions are pure — no I/O, no global state.** 11/11 when observed. An `open(`, `requests.`, or `await` in here makes a helper untestable without a fixture and pulls a dependency into every caller.
+<!-- dockit:tier="convention" -->
 
 [TODO: intentional rule, or just how it happens to be?]
 
@@ -481,6 +475,89 @@ Partial — `tests/unit/test_helpers.py` covers `slugify` and money math. `forma
 
 ---
 
+## `core.settings`
+
+**Path:** `app/core/settings.py`
+**Type:** service
+**Owner:** platform
+**Status:** intended
+
+> **Sanctioned path, no precedent yet.** Nothing routes through `Settings` so far. You may be writing the first call site — follow the contract below rather than copying the surrounding `os.environ` reads, which are what this exists to replace.
+
+### Use when
+
+- Reading any configuration value, secret, or feature flag
+- Adding a new environment variable
+- Deciding how a module gets an environment-dependent value
+
+### Invariants
+
+**All config comes from the `Settings` object** (`app/core/settings.py`). Direct `os.environ` / `os.getenv` reads skip type coercion and startup validation, so a missing variable surfaces as an `AttributeError` on the first request that needs it rather than a failure at boot — add a field to `Settings` and read it from there.
+<!-- dockit:tier="convention" -->
+
+<details><summary>Why</summary>
+
+A mistyped `REDIS_TIMEOUT` shipped as the string `"5"` and silently disabled the cache
+timeout for a week — `int` coercion at load time makes that a startup failure instead.
+Rejected: a `python-dotenv` + module-level constants pattern — no validation, and no
+single place to see what the service actually reads.
+</details>
+
+**`Settings` is instantiated once, at import, and injected.** Constructing a second `Settings()` inside a function re-reads the environment and drops the validation cache — import the module-level `settings` instance instead.
+<!-- dockit:tier="convention" -->
+
+[TODO: why?]
+
+### Canonical usage
+
+_None yet — no consumers. The intended shape:_
+
+```python
+# app/core/settings.py defines:
+#   class Settings(BaseSettings): redis_timeout: int = 5
+from app.core.settings import settings
+
+timeout = settings.redis_timeout
+```
+
+### Extend by
+
+New config value → add a typed field to `Settings` with a default, document it in `ENVIRONMENTS.md`, then read `settings.<field>` at the call site. No `os.environ` at any point.
+
+### Doesn't cover
+
+Runtime-mutable configuration. `Settings` is validated once at import, so feature flags that flip without a restart need a different mechanism.
+
+[TODO: intentional boundary, or a gap?]
+
+---
+
+#### Reference
+
+**Consumers**
+
+_None yet._ Intended consumers are the 15 modules under `app/api/`, `app/services/`, and `app/workers/` that currently read `os.environ` directly — those are the call sites this replaces.
+
+**Dependencies**
+
+- `pydantic-settings`
+
+**Test coverage**
+
+_None yet._ [TODO: add a test asserting a missing required variable fails at import]
+
+**Refactor triggers**
+
+- **Exceeds ~30 fields.** Split into nested settings models by domain (`settings.db`, `settings.cache`).
+- **Any consumer constructs its own `Settings()`.** Tighten to a module-level singleton export.
+
+**Change checklist**
+
+- [ ] Migrate the 15 direct `os.environ` readers in the same PR or a tracked follow-up.
+- [ ] Every new field documented in `ENVIRONMENTS.md`.
+
+---
+
 ## Findings
 
 Surfaced by the most recent dockit foundation scan. These are flags for the maintainer.
@@ -513,22 +590,21 @@ Files in `core/`/`shared/`/`lib/` with low fan-in. Consider inlining back into a
 
 ## Maintenance
 
-### Review schedule
+### Review triggers
 
-Foundations are reviewed on a rolling cadence. A foundation's `Last reviewed` date should be no more than **90 days** old.
+Reviews are triggered by **events, not by the calendar.** Nothing here fires because time passed, and no date is stamped into this file — for "how long since anyone touched this", ask git: `git log -1 --format=%cr -- app/core/cache.py`.
 
 | Trigger | Action |
 |---------|--------|
-| `Last reviewed` > 90 days | foundationtik writes a `foundation-stale-review` ticket |
 | Health flips to `hotspot` | foundationtik writes a `foundation-wrong-abstraction` or `foundation-bloat` ticket |
 | New hidden foundation detected | dockit `sync` adds a row, flags for review |
-| Consumer count drops below threshold | foundationtik writes a `foundation-deprecation-candidate` ticket |
-| Invariant predicate fails | dockit `sync` flags it; `/repokit status` asks whether the doc is wrong or the code is drifting |
+| Consumer count drops to zero **and the module is gone** | foundationtik writes a `foundation-deprecation-candidate` ticket |
+| The code an invariant governs is deleted | dockit `sync` removes the invariant and names it in the run report |
+| Someone works on the foundation | Validate the invariants while you're in there |
 
 Currently triggered:
 - `core.notifications` — hotspot, will get a refactor ticket on next foundationtik run.
 - `services.helpers` — hidden foundation, needs an owner.
-- `core.cache` — `Last reviewed = 2026-03-18`, past the 90-day threshold.
 - 8 open decisions across these entries — run `/repokit status` to walk them.
 
 ### Re-running detection
@@ -537,9 +613,9 @@ Currently triggered:
 /repokit:dockit sync
 ```
 
-Refreshes the catalog from current code state, and re-runs every stored predicate. Manual edits to invariants, refactor triggers, and change checklists are preserved.
+Refreshes the catalog from current code state. Manual edits to invariants, refactor triggers, and change checklists are preserved.
 
-**Nothing here is auto-removed on a failed predicate.** A decayed count means either the invariant is wrong or the code is drifting away from a correct invariant, and the evidence doesn't distinguish those. Sync flags; a human decides.
+**Invariants are not re-measured.** Each one was measured once, when it was written; after that it's a directive about what future work should do. Fewer files following it isn't counted and isn't reported — a directive being bypassed is a reason to keep it, not to cut it. The only removal trigger is the code it governs disappearing. For enforcement on every commit, use a linter: ArchUnit, import-linter, and dependency-cruiser run where enforcement actually works.
 
 ---
 

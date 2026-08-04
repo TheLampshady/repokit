@@ -123,16 +123,38 @@ git log -1 --format="%cr (%h)" -- docs/ README.md 2>/dev/null
 git log -1 --format="%cr (%h)" -- src/ lib/ app/ *.py *.ts *.js *.go *.rs 2>/dev/null
 ```
 
-For the actual drift verdict, delegate to **`dockit check`** — that's its purpose-built read-only drift detection. Don't reinvent it inline with a "commits since" proxy; that tells you something happened, not what's wrong.
+Map recency into the dashboard:
 
-Map the result into the dashboard:
+| Signal | Dashboard row |
+|--------|---------------|
+| Docs changed at or after the last code change | 🟢 Fresh |
+| Code changed after docs | 🟡 Docs may be behind — run `/repokit sync` |
+| Findings in the last `dockit sync` report still open | 🟡 with the named findings |
 
-| `dockit check` exit | Dashboard row |
-|---------------------|---------------|
-| 0 (current) | 🟢 Fresh |
-| 1 (stale) | 🟡 Stale — run `/repokit sync` |
+**Say "may be behind", never "stale".** This is a *recency* signal: it establishes that code moved after docs did, which is not the same as any specific doc being wrong. Overstating it trains the user to ignore the row, and there is no read-only verdict to delegate to — dockit ships no gate mode ([why](../dockit/SKILL.md#explicit-modes)). Two honest sources beyond recency: open findings from the last `dockit sync` report, and whatever a `--deep` pass last turned up.
 
-For a deeper inspection (broken refs, silently-passing predicates, code documented nowhere), point the user at `/repokit:dockit sync --deep` — a whole-repo pass, slower and more thorough than `check`. They can also just ask for a "deep scan" or "full scan".
+For an actual content verdict, point the user at `/repokit:dockit sync --deep` — a whole-repo pass that verifies every reference resolves and finds code documented nowhere. They can also just ask for a "deep scan" or "full scan". `status` never runs it itself: `--deep` writes, and `status` is read-only.
+
+#### 2b. Intended paths — decided, not yet adopted
+
+The one doc signal that needs no scan. Count what the docs *declare* rather than inspecting code:
+
+```bash
+# Foundations declared as the sanctioned path but not yet built on
+grep -c 'intended' docs/FOUNDATIONS.md 2>/dev/null
+
+# Rules marked as decided-but-not-yet-reflected
+grep -c '^\*\*\[intended\]\*\*' docs/PRINCIPLES.md 2>/dev/null
+```
+
+| State | Dashboard row |
+|-------|---------------|
+| None marked | Skip the row entirely |
+| Some marked | ⚪ N intended — decided, code hasn't caught up |
+
+Answers a question recency can't: *what have we committed to that the codebase hasn't adopted?* Useful on a scaffolded project, where it's most of the registry.
+
+**Three things this row never does.** It's **not a warning** — use a neutral marker, since `intended` is a healthy state and a 🟡 would read as a defect. It **never counts adoption**, only declarations; how many files follow a rule is a linter's question ([why](../dockit/references/guides/CHOICE-MINING.md#on-sync-a-choice-is-not-re-litigated)). And it **never ages an entry** — an `intended` path from a year ago reports identically to one from yesterday. If the user wants to know whether any of these have since been adopted, that's `sync --deep`, which offers promotions.
 
 #### 3. Code Quality Infrastructure
 
@@ -228,14 +250,14 @@ grep -rn '\[TODO: known hazard?\]' docs/ 2>/dev/null | wc -l
 # Unanswered intent questions
 grep -rn '\[TODO:.*boundary\|\[TODO:.*gap' docs/ 2>/dev/null | wc -l
 
-# Mined rules carrying stored predicates
-grep -rc 'dockit:check\|dockit:conform' docs/PRINCIPLES.md docs/FOUNDATIONS.md 2>/dev/null
+# Mined rules present at all
+grep -rc '^\*\*' docs/PRINCIPLES.md 2>/dev/null
 
 # SDD artifacts present (compare-only — repokit and dockit never write these)
 ls .specify/memory/constitution.md openspec/project.md conductor/workflow.md 2>/dev/null
 ```
 
-For the actual predicate results and decay flags, take them from the last `dockit sync` report rather than re-running the analysis here — same "orchestrate, never duplicate" rule that applies to `dockit check`.
+Take open items from the last `dockit sync` report rather than re-deriving them here — the "orchestrate, never duplicate" rule. **Never measure conformance of existing rules**, here or anywhere: dockit measures once, at write time, and a rule's current adoption rate is a linter's output, not a dashboard row.
 
 | State | Dashboard row |
 |-------|---------------|
@@ -261,20 +283,17 @@ When walking, present one item at a time with enough context to answer without o
    SearchClient handles reads; 4 features write directly.
    → deliberate boundary, or a gap?
 
-4 of 5 — Known hazard
+4 of 4 — Known hazard
    core.search entered the registry last sync.
    What has broken here that a newcomer wouldn't predict?
    → one rule, or "nothing" to close it
-
-5 of 5 — Rule decayed
-   "All API routes require authentication" — predicate now fails.
-   New non-conformers: webhooks.py, health_v2.py
-   → doc wrong, or code drifting?
 ```
+
+There is no "rule decayed" item. Nothing re-measures an existing rule, so the queue only ever contains decisions raised by the run that *wrote* a line.
 
 Write answers back into the docs as given: a reason fills the `<details><summary>Why</summary>` block, a promotion moves the line from Conventions to Rules, a drop removes it. Answers are the user's words — don't embellish them into prose.
 
-The hazard item is the one to hold the line on. It asks for something no scan can produce — an invariant learned by breaking something — so a fabricated answer isn't a weak answer, it's a fiction the team will design around indefinitely. Write the user's rule as a Rule-tier invariant with their words in the `Why` block, add a predicate only if the check is an obvious one-liner, and take **"nothing comes to mind" as a complete answer**: delete the marker and don't raise it again. Never mine an answer out of commit messages or issue titles to avoid leaving it blank.
+The hazard item is the one to hold the line on. It asks for something no scan can produce — an invariant learned by breaking something — so a fabricated answer isn't a weak answer, it's a fiction the team will design around indefinitely. Write the user's rule as a Rule-tier invariant with their words in the `Why` block, naming the anti-pattern if they named one, and take **"nothing comes to mind" as a complete answer**: delete the marker and don't raise it again. Never mine an answer out of commit messages or issue titles to avoid leaving it blank.
 
 ### Output Format
 
@@ -285,10 +304,11 @@ The hazard item is the one to hold the line on. It asks for something no scan ca
 |------|--------|---------|
 | Backlog | 🟡 3 open | tags: 2 `[tik]`, 1 `[modernizer]` |
 | Tickets | 📋 2 pending | .backlog/tickets/ |
-| Docs | 🟡 Stale | `dockit check` reports drift; last updated 2 days ago |
+| Docs | 🟡 May be behind | code changed 2 days after docs (`src/api/`, `src/core/`) |
+| Intended paths | ⚪ 2 declared | `core.settings`, `core.search` — decided, code hasn't caught up |
 | Agents | 🟡 Drifted | 2 of 5 agents reference renamed foundations |
 | Context handoff | 🟡 Not wired | CLAUDE.md doesn't reference docs/FOUNDATIONS.md |
-| Open decisions | 🟡 5 need you | 2 missing rationale, 1 hazard question, 1 promotion candidate, 1 decayed rule |
+| Open decisions | 🟡 4 need you | 2 missing rationale, 1 hazard question, 1 promotion candidate |
 | Pre-commit | 🟢 Installed | .pre-commit-config.yaml present |
 | Linting | 🟢 Configured | ruff |
 | Type checking | 🔴 Missing | No mypy/pyright config found |

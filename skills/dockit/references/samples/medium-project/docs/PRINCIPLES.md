@@ -9,8 +9,7 @@ Decisions this project has made that an agent or a new contributor would not gue
 
 ## Conventions
 
-**Import from `app/core/` rather than the underlying library.** Database access goes through `get_db()`, auth through `get_current_user()`, caching through `cache`. Exceptions: `alembic/env.py` constructs its own engine.
-<!-- dockit:check cmd="grep -rlE '^(from|import) (sqlalchemy|firebase_admin|redis)' app/ | grep -v 'app/core' | grep -v 'alembic' | wc -l" expect="0" last="2026-08-01" -->
+**Import from `app/core/` rather than the underlying library.** Database access goes through `get_db()`, auth through `get_current_user()`, caching through `cache`. A direct `import sqlalchemy` / `firebase_admin` / `redis` outside `app/core/` gets no connection pooling, token validation, or cache fallback, and can't be swapped in tests — route it through the matching foundation. Exceptions: `alembic/env.py` constructs its own engine.
 
 <details><summary>Why</summary>
 
@@ -19,13 +18,11 @@ imports the library directly gets none of that and can't be swapped in tests.
 Rejected: a lint rule banning the imports — it can't catch aliased or deferred imports.
 </details>
 
-**Business logic lives in `app/services/`; route handlers only translate HTTP.** A handler parses the request, calls one service function, and shapes the response.
-<!-- dockit:conform cmd="grep -lE 'from app.services' app/api/routes/*.py | wc -l" total="grep -lE '@router\.' app/api/routes/*.py | wc -l" min="80%" last="2026-08-01" -->
+**Business logic lives in `app/services/`; route handlers only translate HTTP.** A handler parses the request, calls one service function, and shapes the response. A `@router.` file with no `from app.services` import is holding logic that can't be reused or tested without HTTP — extract it into a service function.
 
 [TODO: why?]
 
-**Use `pydantic` models for request and response bodies, `SQLAlchemy` models for persistence.** The two stay separate even where the fields match.
-<!-- dockit:check cmd="grep -rlE 'response_model=[A-Za-z]*Model' app/api/routes/ | wc -l" expect="0" last="2026-08-01" -->
+**Use `pydantic` schemas for request and response bodies, `SQLAlchemy` models for persistence.** The two stay separate even where the fields match. A `response_model=` pointing at a SQLAlchemy model serialises internal columns (`password_reset_token`, `deleted_at`) to the client — declare a pydantic schema in `app/schemas/` and return that.
 
 <details><summary>Why</summary>
 
@@ -34,13 +31,11 @@ Serialising ORM objects directly leaked internal columns (`password_reset_token`
 Rejected: `orm_mode` on a single shared model — it defers the leak rather than preventing it.
 </details>
 
-**Every I/O function is `async`.** Database calls, cache reads, HTTP clients. Exceptions: `app/utils/slugify.py`, `app/utils/tokens.py` (pure functions).
-<!-- dockit:conform cmd="grep -lE 'async def' app/services/*.py app/repositories/*.py | wc -l" total="grep -lE '(async )?def ' app/services/*.py app/repositories/*.py | wc -l" min="80%" last="2026-08-01" -->
+**Every I/O function is `async`.** Database calls, cache reads, HTTP clients. A plain `def` doing I/O in a service or repository blocks the event loop for every other request — make it `async def` and `await` the call. Exceptions: `app/utils/slugify.py`, `app/utils/tokens.py` (pure functions).
 
 [TODO: why?]
 
-**Reach the database through a repository class, not a session query in a service.** One repository per model in `app/repositories/`.
-<!-- dockit:conform cmd="grep -lE 'from app.repositories' app/services/*.py | wc -l" total="grep -lE '(async )?def ' app/services/*.py | wc -l" min="80%" last="2026-08-01" -->
+**Reach the database through a repository class.** One repository per model in `app/repositories/`. A `session.query(` or `select(` inside a service skips the tenant filter and forces a real database for tests — call the matching repository method, or add one.
 
 <details><summary>Why</summary>
 
@@ -53,8 +48,7 @@ Rejected: query helpers on the model classes — nothing stops a caller bypassin
 
 ## Rules
 
-**All API routes require authentication.** The only exempt route is `GET /health`.
-<!-- dockit:check cmd="grep -LE 'Depends\(get_current_user\)' app/api/routes/*.py | grep -v 'health.py' | wc -l" expect="0" last="2026-08-01" -->
+**All API routes require authentication.** A route without `Depends(get_current_user)` is unauthenticated — add the dependency. The only exempt route is `GET /health`.
 
 <details><summary>Why</summary>
 
@@ -64,8 +58,7 @@ Rejected: middleware-level auth — routes that legitimately need anonymous acce
 invisible exceptions instead of explicit ones.
 </details>
 
-**No raw SQL outside `alembic/`.** Query through the ORM.
-<!-- dockit:check cmd="grep -rlE 'execute\(text\(' app/ | wc -l" expect="0" last="2026-08-01" -->
+**Query through the SQLAlchemy ORM.** An `execute(text(` call bypasses the tenant filter and can return other workspaces' rows — express the query with ORM constructs instead. Raw SQL belongs only in `alembic/` migrations.
 
 <details><summary>Why</summary>
 

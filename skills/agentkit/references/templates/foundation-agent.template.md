@@ -4,7 +4,7 @@ Variant of `agent.template.md` for agents that own one or more rows in `docs/FOU
 
 **Hot memory rule:** for each owned foundation, embed the **agent payload** verbatim from FOUNDATIONS.md — `Use when`, `Invariants` (with their tier), `Canonical usage`, `Extend by`, `Doesn't cover` — plus the `Change checklist`. The agent must be able to act on all of it without re-reading the doc. Everything under the entry's `Reference` heading is *not* extracted; the agent reads it on demand.
 
-**Tier rule:** copy each invariant's `tier="convention|rule"` along with the text. The two are not interchangeable — a Convention is deviable with a stated reason, a Rule is not. An agent that defends a Convention as though it were a Rule blocks legitimate work, which is the failure mode the tiers exist to prevent. Strip the `dockit:` predicate comments; those are sync's business, not the agent's.
+**Tier rule:** copy each invariant's `tier="convention|rule"` along with the text. The two are not interchangeable — a Convention is deviable with a stated reason, a Rule is not. An agent that defends a Convention as though it were a Rule blocks legitimate work, which is the failure mode the tiers exist to prevent. Copy each invariant's **named anti-pattern and repair** along with the instruction — that's the part the agent acts on when it meets a violation in code it's reading.
 
 **`Use when` rule:** the entry's `Use when` lines are the source for this agent's `description` frontmatter. Don't re-derive triggers from the code — the routing content already exists, and two independently-written versions drift. See [DESCRIPTION-WRITING.md](../guides/DESCRIPTION-WRITING.md).
 
@@ -64,6 +64,39 @@ This agent owns the following rows in `docs/FOUNDATIONS.md`:
 
 Files outside these directories are not this agent's concern unless they import from here.
 
+<!-- SOURCING THIS TABLE FOR AN `intended` FOUNDATION.
+
+     For an `active` foundation, these directories come from the catalog's Consumers
+     column. An `intended` foundation has an empty Consumers column by definition — it
+     hasn't been built on yet — and an agent with no working directories triggers on
+     nothing, which silently defeats the whole point of registering it.
+
+     So scope it by where consumers are MEANT to go, from the same evidence that earned
+     the `intended` status:
+       - the foundation's own directory, always
+       - the layer or feature directories it exists to serve (a `BasePresenter` in an
+         empty `presenters/` scopes to `presenters/`)
+       - directories a scaffold or generator creates instances into
+       - for a wrapper: the directories where the wrapped SDK or builtin is reachable,
+         since those are exactly the call sites that should route through it
+
+     Include the destination directory even when it is currently empty. That is the
+     agent's whole job — being present the first time someone writes there. -->
+
+[IF_ANY_OWNED_FOUNDATION_IS_INTENDED]
+> **{{INTENDED_FOUNDATION_NAMES}}: sanctioned path, no precedent yet.** Nothing in the
+> codebase uses {{THIS_OR_THESE}} so far, so there is no existing call site to pattern-match
+> against. Two consequences for how you work:
+>
+> - **Absence of usage does not mean optional.** The team decided this is the path. Code
+>   you write is the first precedent, and it's what everything after it will copy — so
+>   follow the contract and the extension procedure below rather than inferring from
+>   neighbours that predate the decision.
+> - **If the contract can't do the job, say so instead of routing around it.** A gap found
+>   at the first real use is worth reporting: it's the cheapest moment to fix the
+>   foundation, and working around it silently is how a sanctioned path becomes dead code.
+[ENDIF]
+
 ## Framework Context
 
 - **Framework:** {{FRAMEWORK_NAME}} @ {{FRAMEWORK_VERSION}}
@@ -98,7 +131,8 @@ foundation look closed when it isn't.
 - **[{{TIER_2}}]** {{INVARIANT_2}}
 
 <!-- Repeat per foundation. Copy verbatim from FOUNDATIONS.md → Invariants, including each
-     one's tier= value. Drop the dockit: predicate comments — those belong to sync. -->
+     one's tier= value. Keep the named anti-pattern and the repair — an agent can't
+     recognise a violation it can't name. -->
 
 ## Canonical usage (hot memory)
 
@@ -195,7 +229,7 @@ Items the team requires for any change to these foundations:
 | Path moved or renamed | Catalog `Path` + `Working Directories` in this agent + cross-doc check |
 | New consumer feature folder | `Consumers` table |
 | Refactor trigger fired | `Refactor triggers` (dated note) |
-| 90+ days since `Last reviewed` | Read the code, validate every invariant, bump date |
+| You're working on this foundation anyway | Validate the invariants while you're in the code — no date, no schedule |
 
 ### Invariant Change Protocol
 

@@ -115,10 +115,10 @@ For detection logic, see: [SIZE-SMALL.md](guides/SIZE-SMALL.md) | [SIZE-MEDIUM.m
 
 | Section | Content |
 |---------|---------|
-| Catalog | Table of all foundations: name, type, path, owner, status, health, consumers, last reviewed |
+| Catalog | Table of all foundations: name, type, path, owner, status (`active` / `intended` / …), health, consumers. No dates — derive from git |
 | Per-foundation entries | Purpose, public API, invariants, consumers, dependencies, test coverage, refactor triggers, change checklist |
 | Findings | Hotspots (high churn), hidden foundations (high fan-in outside `core/`), pretenders (in `core/` but unused) |
-| Maintenance | Review schedule (90-day cadence), trigger→action table |
+| Maintenance | Event-based review triggers (no calendar cadence), trigger→action table |
 
 **Detection methodology:** files are scored by `log(fan_in) × log(distinct_features) × stability_factor`. Convention dirs (`core/`, `shared/`, `lib/`) get a 1.2× boost but are not required. See [`guides/FOUNDATIONS-DETECTION.md`](guides/FOUNDATIONS-DETECTION.md) for the full method.
 

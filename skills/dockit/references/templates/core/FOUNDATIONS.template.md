@@ -21,15 +21,45 @@ A "foundation" here means: code with high fan-in across multiple features, inten
 ## Catalog
 
 [CATALOG_CONTEXT]
-<!-- One-sentence framing: how many foundations, what categories, last sync date -->
+<!-- One-sentence framing: how many foundations, what categories. No dates. -->
 
-| Name | Type | Path | Owner | Status | Health | Consumers | Last Reviewed |
-|------|------|------|-------|--------|--------|-----------|---------------|
+| Name | Type | Path | Owner | Status | Health | Consumers |
+|------|------|------|-------|--------|--------|-----------|
 [FOUNDATIONS_TABLE]
+
+<!-- No date column, deliberately. A stamped date is a tombstone: it records a moment
+     rather than current state, it rubber-stamps once someone bumps it without reading
+     the code, and it goes stale by doing nothing at all. When "how long since anyone
+     touched this" is genuinely needed, derive it from git at that moment
+     (`git log -1 --format=%cr -- <path>`) — the history is already authoritative and
+     can't drift from itself. Keep the Owner column: attribution is the part with
+     evidence behind it, and it doesn't decay. -->
 
 **Type values:** `service` (stateful, has runtime behaviour) · `abstraction` (interface / base class / pattern) · `primitive` (utility, pure function set) · `design-system` (UI tokens, components)
 
-**Status values:** `active` · `experimental` · `deprecated` · `sunset`
+**Status values:** `active` · `intended` · `experimental` · `deprecated` · `sunset`
+
+**`intended` means: this is the sanctioned path, and the code hasn't caught up yet.** A wrapper written to be the only door to a capability, a base class with no subclasses so far, a service the team scaffolded before building on it. Zero consumers is the *normal state* of an `intended` foundation — it is never evidence against one.
+
+<!-- Rules for `intended`, all four load-bearing:
+
+     1. DECLARED, NEVER MEASURED. A human sets it, or dockit sets it at write time when
+        it registers a foundation the code doesn't demonstrate yet. Nothing re-measures
+        adoption to decide the status.
+     2. NO REVERSE TRANSITION. `active` -> `intended` because fewer files use it than
+        before is the decay flag wearing a new label. Never do this.
+     3. NO TIME-BASED TRANSITION. Nothing changes because a date passed.
+     4. SYNC NEVER OVERWRITES IT. Same protection manual invariant edits have. Goals
+        change; the team re-declares; dockit does not correct them.
+
+     Promotion `intended` -> `active` is OFFERED on `sync --deep` as a review-queue
+     question when consumers now exist. Never applied automatically, never on normal sync.
+
+     Removal follows the universal rule: the subject of the sentence disappearing. An
+     `intended` foundation whose module is deleted goes. One nobody has built on yet
+     stays. -->
+
+**Suppressed for `intended` rows:** the pretender finding and the deprecation-candidate trigger. Both key off low consumer counts, which is what `intended` declares in advance.
 
 **Health values:** `healthy` · `hotspot` (high churn — see findings below) · `unknown` (low confidence detection)
 
@@ -43,7 +73,6 @@ A "foundation" here means: code with high fan-in across multiple features, inten
 **Type:** [FOUNDATION_TYPE]
 **Owner:** [OWNER_TEAM_OR_PERSON]
 **Status:** [STATUS]
-**Last reviewed:** [YYYY-MM-DD]
 
 <!--
 AGENT PAYLOAD — the four sections below are extracted verbatim into agentkit hot memory
@@ -62,12 +91,18 @@ Everything after "Reference" is pulled on demand and is not extracted.
 
 ### Invariants
 
-<!-- Positively phrased where possible. Each carries a stored predicate that sync re-runs;
-     a failing predicate is flagged, never auto-deleted. Prohibitions are admissible only
-     with a predicate, and only at Convention tier. -->
+<!-- Positively phrased: say what to do, never lead with a prohibition. Every invariant that
+     displaces something names the anti-pattern it displaces plus the repair — that named
+     accessor or import is the part an agent acts on. Measured once when written, never
+     re-measured. Prohibitions are Convention tier only. -->
 
-**[INVARIANT_1]**[IF_HAS_EXCEPTIONS] Exceptions: [EXCEPTION_LIST].[ENDIF]
-<!-- dockit:[check|conform] cmd="[VERIFY_COMMAND]" [expect="0"|total="[TOTAL_COMMAND]" min="80%"] tier="[convention|rule]" last="[YYYY-MM-DD]" -->
+**[INVARIANT_1]**[IF_DISPLACES_SOMETHING] [ANTI_PATTERN] [WHY_IT_HURTS] — [REPAIR].[ENDIF][IF_HAS_EXCEPTIONS] Exceptions: [EXCEPTION_LIST].[ENDIF]
+<!-- dockit:tier="[convention|rule]" -->
+
+<!-- Worked shape:
+     **All config comes from the `Settings` object** (`app/core/settings.py`).
+     Direct `os.environ` / `os.getenv` reads bypass validation and defaults —
+     add a field to `Settings` and read it from there. -->
 
 [IF_HAS_RATIONALE]
 <details><summary>Why</summary>
@@ -89,8 +124,8 @@ Rejected: [REJECTED_ALTERNATIVE]
      import graph, the git history, or the type signatures. Somebody hit it in production.
 
      A human answers, and the answer becomes a normal Rule-tier invariant above with the
-     incident in its Why block. Human-authored Rules need no predicate (though this kind
-     often supports one — write it if the check is a one-liner).
+     incident in its Why block. Nothing is measured — the team asserted it, which is
+     stronger evidence than any scan.
 
      "Nothing comes to mind" is a valid answer: delete the marker and don't re-emit it.
      Unanswered is the only state that persists. Never fill this in by inference. -->
@@ -214,17 +249,19 @@ Surfaced by the most recent dockit foundation scan. These are **not** registry r
 
 ## Maintenance
 
-### Review schedule
+### Review triggers
 
-Foundations are reviewed on a rolling cadence. A foundation's `Last reviewed` date should be no more than **90 days** old.
+Reviews are triggered by **events, not by the calendar.** Nothing here fires because time passed.
 
 | Trigger | Action |
 |---------|--------|
-| `Last reviewed` > 90 days | foundationtik writes a `foundation-stale-review` ticket |
 | Health flips to `hotspot` | foundationtik writes a `foundation-wrong-abstraction` or `foundation-bloat` ticket |
 | New hidden foundation detected | dockit `sync` adds a row, flags for review |
-| Consumer count drops below threshold | foundationtik writes a `foundation-deprecation-candidate` ticket |
-| Invariant predicate fails | dockit `sync` flags it; `/repokit status` asks whether the doc is wrong or the code is drifting |
+| Consumer count drops to zero **and the module is gone** | foundationtik writes a `foundation-deprecation-candidate` ticket |
+| The code an invariant governs is deleted | dockit `sync` removes the invariant and names it in the run report |
+| Someone works on the foundation | Validate the invariants while you're in there — the review that happens during real work is the one worth having |
+
+**Want to know what hasn't been looked at lately?** Derive it, don't store it: `git log -1 --format=%cr -- <foundation-path>` for code, `git log -1 --format=%cr -- docs/FOUNDATIONS.md` for the registry. Git already knows, and a stamped date in this file would only add a second answer that can disagree with the first.
 
 ### Re-running detection
 
@@ -232,9 +269,9 @@ Foundations are reviewed on a rolling cadence. A foundation's `Last reviewed` da
 /repokit:dockit sync
 ```
 
-Refreshes the catalog from current code state, and re-runs every stored predicate. Manual edits to invariants, refactor triggers, and change checklists are preserved — dockit only updates the table, consumers, dependencies, and findings.
+Refreshes the catalog from current code state. Manual edits to invariants, refactor triggers, and change checklists are preserved — dockit only updates the table, consumers, dependencies, and findings.
 
-**Nothing here is auto-removed on a failed predicate.** A decayed count means either the invariant is wrong or the code is drifting away from a correct invariant, and the evidence doesn't distinguish those. Sync flags; a human decides.
+**Invariants are not re-measured.** An invariant is measured once, when it's written, and after that it's a directive: it says what future work should do. Fewer files following it is not a signal, isn't counted, and isn't reported. The only removal trigger is the code it governs disappearing. For ongoing conformance enforcement, use a linter — ArchUnit, import-linter, and dependency-cruiser run on the hot path where enforcement actually works.
 
 ---
 

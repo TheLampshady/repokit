@@ -13,7 +13,7 @@ Before running, sync gathers:
 | Input | Source | What's needed |
 |-------|--------|---------------|
 | Existing agents | `.claude/agents/`, `.agents/agents/`, `.github/agents/` | All `*.md` and `*.agent.md` files |
-| Current foundations | `docs/FOUNDATIONS.md` (catalog table + entries) | Names, paths, status, invariants, last-reviewed dates |
+| Current foundations | `docs/FOUNDATIONS.md` (catalog table + entries) | Names, paths, status, invariants |
 | Per-foundation sub-docs | `docs/architecture/foundations/*.md` (if present) | Deeper context for large projects |
 | Code state | Source files referenced by foundations | To detect path renames, public API drift |
 
@@ -55,7 +55,7 @@ The catalog's invariants for a foundation differ from what's embedded in the age
 
 **Detection:** parse each foundation's `### Invariants` section in FOUNDATIONS.md and the matching `### <FoundationName>` block in the agent body.
 
-An invariant in FOUNDATIONS.md is a **bold statement line**, optionally followed by a `<!-- dockit:check|conform ... -->` comment and a `<details><summary>Why</summary>` block. In the agent, the same invariant appears as a bullet prefixed with its tier: `- **[Rule]** <text>`. Compare the statement text only — ignore the `dockit:` comments (sync's business, deliberately not copied into agents) and the `Why` blocks (not extracted).
+An invariant in FOUNDATIONS.md is a **bold statement line** — including any named anti-pattern and repair that follows it — optionally followed by a `<!-- dockit:tier=... -->` comment and a `<details><summary>Why</summary>` block. In the agent, the same invariant appears as a bullet prefixed with its tier: `- **[Rule]** <text>`. Compare the statement text **and its anti-pattern clause**; ignore the `dockit:tier` comment and the `Why` blocks (not extracted). An agent whose invariant has lost the anti-pattern clause has drifted — that clause is the operational half.
 
 A drift is any of:
 - Invariant present in FOUNDATIONS.md, missing from agent
@@ -71,23 +71,24 @@ Tier drift matters as much as text drift and is easier to miss: an agent enforci
 
 ### 5. Status drift
 
-The foundation's `Status` (active / deprecated / sunset) or `Health` (healthy / hotspot / unknown) changed in FOUNDATIONS.md but the agent's `Owned Foundations` table still shows the old value.
+The foundation's `Status` (active / intended / deprecated / sunset) or `Health` (healthy / hotspot / unknown) changed in FOUNDATIONS.md but the agent's `Owned Foundations` table still shows the old value.
 
 **Detection:** compare each owned foundation's status/health in the catalog vs. the agent's Owned Foundations table.
 
 **Default action:** auto-update the table. Run cross-doc check if status flipped to `deprecated` or `sunset`.
 
-### 6. Stale review (informational)
+**`intended → active` needs more than a table edit.** The foundation now has real consumers, which changes what the agent should carry:
 
-`FOUNDATIONS.md` itself records a `Last reviewed` date for each foundation — set deliberately by the team or by a foundation-owner agent during a real invariant validation. This is **dockit's** field, not agentkit's. Sync surfaces it as a recommendation, not as an action item.
+- **Rescope `Working Directories`.** They were sourced from where consumers were *meant* to go; now use the catalog's actual `Consumers` column, keeping any intended-destination directory that's still empty.
+- **Replace the no-precedent block with a canonical call site.** Real usage exists, so the agent should pattern-match against it instead of being told none exists.
 
-**Detection:** read `Last reviewed: YYYY-MM-DD` from each owned foundation's catalog row; compare against today.
+Ask before applying — the scope change is the substantive part, not the status word.
 
-**Default action:** flag in the report only. Recommend (don't auto-trigger): *"FOUNDATIONS.md says `core.auth` was last reviewed 142 days ago. Invoke the owning agent for a review pass, or `tikkit:foundationtik` will write a `foundation-stale-review` ticket on its next pass."*
+> **Never report foundation age.** Not from a date field (there isn't one — see [FOUNDATION-MAINTENANCE.md](./FOUNDATION-MAINTENANCE.md#never-stamp-a-date-into-foundationsmd)) and not derived from git either. *"Nobody has touched `core.auth` in 142 days"* is trivial to compute and is a calendar nag whichever source it comes from. Review is triggered by someone working on the foundation. Derive an age only if the user explicitly asks for one.
 
-### 7. Scope drift — Trigger Coverage Gaps
+### 6. Scope drift — Trigger Coverage Gaps
 
-Categories 1–6 all compare the agent against the catalog. This one compares the **agent set against the code**, and it catches the failure the others structurally cannot: `FOUNDATIONS.md` is entirely correct, every agent matches it, and a whole directory still triggers nothing.
+Categories 1–5 all compare the agent against the catalog. This one compares the **agent set against the code**, and it catches the failure the others structurally cannot: `FOUNDATIONS.md` is entirely correct, every agent matches it, and a whole directory still triggers nothing.
 
 That gap is invisible from inside the agent set. Nothing errors. Work in the uncovered directory routes to a generic assistant, which writes plausible code that ignores conventions no one told it about. It shows up in the field as *"we refactored one module into a package and the agent kept editing the old file"* and *"nobody noticed `presenters/` was never in any agent's scope."*
 
@@ -206,11 +207,6 @@ Trigger coverage gaps:
 
   Also uncovered (small, listed not flagged): src/glue/ (3), src/typing/ (2)
 
-Stale review (informational — dockit's Last reviewed dates):
-  - core.notifications  (FOUNDATIONS.md: last reviewed 142 days ago)
-  - core.auth           (FOUNDATIONS.md: last reviewed 95 days ago)
-  Recommend: invoke owning agents for review, or wait for foundationtik
-
 ─────────────────────────────────────────────────────
 ```
 
@@ -225,7 +221,7 @@ When the user accepts an update:
 1. Read the current agent file
 2. Apply the specific change (path, invariant, owned-foundation list, status)
 3. Re-grep cross-docs if the change affects PRINCIPLES.md / ARCHITECTURE.md
-4. Do not modify FOUNDATIONS.md's `Last reviewed` field — sync didn't review, it just reconciled. That field flips only during an explicit invariant-validation pass by the owning agent.
+4. Don't record that a review happened — sync didn't review, it reconciled. `FOUNDATIONS.md` carries no date field for this, and the distinction matters: reconciling an agent against a catalog row is not the same as reading the code and confirming the invariants hold.
 
 ### Delete an agent
 
@@ -255,7 +251,7 @@ When a project has agents on multiple platforms (Claude + Antigravity, etc.), th
 
 If only one platform has the agent (e.g., Claude has `auth.md` but Antigravity doesn't), flag it as a **platform gap** rather than drift. Ask: *"`auth` agent exists for Claude only. Generate Antigravity and Copilot copies?"*
 
-(Distinct from a **trigger coverage gap**, category 7 — that's code no agent covers on *any* platform. A platform gap is the same agent missing a copy.)
+(Distinct from a **trigger coverage gap**, category 6 — that's code no agent covers on *any* platform. A platform gap is the same agent missing a copy.)
 
 ---
 
@@ -282,7 +278,6 @@ Drift summary:
   - 0 missing agents
   - 1 invariant drift
   - 3 trigger coverage gaps (src/presenters/, BaseDao, schema utils split)
-  - 2 informational: dockit's Last reviewed > 90 days (core.notifications, core.auth)
 
 Run `/agentkit sync` to address drift.
 ─────────────────────────────────────────────────────

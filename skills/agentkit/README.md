@@ -40,7 +40,6 @@ Reconciles existing agents against current state. Detects:
 - **Missing agents** — a foundation has no owner
 - **Path drift** — foundation moved without updating the agent
 - **Invariant drift** — agent body and FOUNDATIONS.md disagree
-- **Stale review** — `Last reviewed` date > 90 days
 
 Prompts per finding — never auto-overwrites hand-authored agents.
 

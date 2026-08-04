@@ -4,7 +4,7 @@ The whole-repo pass of `sync`. Everything normal sync does, plus four checks tha
 
 **Invoke:** `/repokit:dockit sync --deep`, or ask for a "deep scan", "full scan", "check everything", "scan everything".
 
-**When it's worth it:** after a refactor or rename, after a first `init` (to see whether generation actually did well), and on a slow cadence — monthly is plenty. Normal sync is diff-scoped and fast; this one reads every doc and every predicate.
+**When it's worth it:** after a refactor or rename, after a first `init` (to see whether generation actually did well), and on a slow cadence — monthly is plenty. Normal sync is diff-scoped and fast; this one reads every doc and every source file.
 
 **Writes nothing extra.** Normal sync's updates still apply. Everything this pass finds is reported, and human-required items route to `/repokit status`.
 
@@ -17,9 +17,11 @@ Normal sync looks at what changed. That's the right scope for keeping docs curre
 | Check | Why a diff can't catch it |
 |---|---|
 | Reference verification | A path breaks when the *code* moves, not when the doc changes — the doc is never in the diff |
-| Predicate quality | A predicate that silently passes looks identical to one that's working |
+| Promotion offers | Whether an `intended` path has been adopted is a whole-repo question, and the answer must stay opt-in |
 | Reverse check | Code that was never documented never appears in a doc diff |
 | Filter re-application | Docs written before a filter existed were never tested against it |
+
+**Note what isn't here.** There is no conformance re-check on an unmarked rule. Dockit measures a rule once, when writing it, and never re-measures ([CHOICE-MINING.md § On sync](./CHOICE-MINING.md#on-sync-a-choice-is-not-re-litigated)). "How many files currently follow this rule" is a linter's question, and a deep scan is not the place to smuggle it back in.
 
 ---
 
@@ -46,6 +48,9 @@ Skip `node_modules/`, `.git/`, `vendor/`, `dist/`, `build/`, `.backlog/tickets/`
 | Commands | `npm run build`, `make test` | `scripts` in `package.json`; `Makefile` targets; custom scripts exist and are executable. Skip external tools (`npx`, `pip install`, `cargo build`) |
 | Env vars | `DATABASE_URL`, `$API_KEY` | Present in `.env.example`, `docker-compose.yml`, source (`os.environ` / `process.env`), or CI `env:` blocks |
 | Dependencies | "requires Redis 7+" | Named in `package.json`, `pyproject.toml`, `requirements.txt`, `Cargo.toml`, `go.mod`, or compose file; version constraint matches |
+| **Named anti-patterns** | "direct `os.environ` reads bypass validation", "importing `vendor_sdk` skips auth" | The named accessor or import still appears somewhere in the source, **or** the sanctioned path it points at still exists. Neither → the rule is describing a hazard the project no longer has |
+
+**Why anti-patterns are a reference type.** A boundary rule's anti-pattern is the part an agent acts on, so a stale one is expensive: a rule warning about `os.environ` in a project that has moved to a different config library trains the agent to look for the wrong thing. Report it, never repair it — the rule might need repointing at the new anti-pattern, or might not apply at all. That's a judgment call.
 
 ### Classify
 
@@ -60,38 +65,7 @@ Report `moved` with the suggested new location: `src/utils/auth.ts` → `src/lib
 
 ---
 
-## Check 2 — Predicate quality
-
-A stored predicate can pass for the wrong reason, and normal sync cannot tell the difference. This is the sharpest false negative in the whole design.
-
-```
-Rule:      "Don't import the SDK directly."
-Predicate: count SDK imports under app/handlers/  →  0   ✅
-
-But app/handlers/ was renamed to app/api/ last month.
-The command is counting nothing, and will report healthy forever.
-```
-
-For every `dockit:check` and `dockit:conform` comment in `PRINCIPLES.md` and `FOUNDATIONS.md`:
-
-| Check | Fail condition | Report as |
-|---|---|---|
-| Commands resolve | Any command in the pipeline is not on `PATH` | **Unverified** — a missing command yields `0`, which passes a `check` expecting `0` |
-| Paths resolve | A directory or glob in the command matches nothing on disk | **Silently passing** — the predicate is dead |
-| Population non-zero | A `conform` predicate's `total` command returns 0 | **Silently passing** — dividing by an empty set |
-| Population reachable | `total` counts items that can never satisfy `cmd` | **Unreachable metric** — can never hit 100%, so it reports a healthy rule as decayed |
-| Grammar | Fails the grammar in [CHOICE-MINING.md](./CHOICE-MINING.md#predicate-grammar) | **Unverifiable** — never run it |
-| Result | Runs, but `expect` / `min` not met | **Decayed** — doc wrong, or code drifting? |
-
-For the unreachable-metric check, the cheap heuristic is: if a `conform` predicate has never met its `min` since the `last=` stamp it was written with, suspect the denominator before suspecting the code. A rule that was true when someone wrote it down and has been failing ever since is more often mis-scoped than freshly violated.
-
-A silently-passing predicate is worse than a failing one: a failure gets looked at, a false pass gets trusted. Report those first.
-
-Never repair a predicate automatically. A dead path might mean the rule should be repointed, or that the rule no longer applies at all — that's a judgment call.
-
----
-
-## Check 3 — Reverse check
+## Check 2 — Reverse check
 
 Everything above asks "does the doc match the code?" This asks the opposite: **what exists in the code that no doc mentions?**
 
@@ -103,6 +77,23 @@ Silent omission is the statistically dominant form of doc drift — most code ch
 - List top-level modules or packages with no mention in any doc.
 
 Report these as gaps to fill, not as errors.
+
+---
+
+## Check 3 — Promotion offers for `intended`
+
+The one check that looks at an existing rule's relationship to the code, and it is deliberately confined here: `--deep` is opt-in, slow, and explicitly a re-examination. Normal sync never does this.
+
+For every foundation at `status: intended` and every rule marked `[intended]`, ask one question: **do consumers exist now?**
+
+| Finding | Offer |
+|---|---|
+| Consumers exist | *"`Settings` now has 12 consumers — drop the `[intended]` marker?"* Review-queue question, never applied automatically |
+| Still none | **Report nothing.** That's the status doing its job |
+
+**One-directional, without exception.** This check can only ever offer to *remove* a marker. It never adds one, never reports falling adoption on an unmarked rule, and never converts an `active` foundation back to `intended` — that would be a decay flag, which is banned everywhere in dockit ([CHOICE-MINING.md § On sync](./CHOICE-MINING.md#on-sync-a-choice-is-not-re-litigated)).
+
+And it never fires on elapsed time. An `intended` rule that has sat unadopted for a year is reported the same way as one written yesterday: not at all.
 
 ---
 
@@ -124,20 +115,25 @@ Flag candidates; **never delete**. A rule that fails filter 1 today may have bee
 ```markdown
 ## Deep Scan
 
-**Scanned:** 14 docs · 23 predicates · 312 source files
+**Scanned:** 14 docs · 312 source files
 
 | Check | Result |
 |-------|--------|
-| References | 4 broken · 2 moved · 3 unverified |
-| Predicates | 18 healthy · 2 silently passing ⚠️ · 1 decayed · 2 unverifiable |
+| References | 4 broken · 2 moved · 3 unverified · 2 stale anti-patterns ⚠️ |
 | Undocumented | 3 modules · 1 likely foundation |
+| Promotion offers | 1 `intended` path now has consumers |
 | Filter re-check | 4 rules would not be written today |
 
-### Silently passing predicates  ⚠️
+### Stale anti-patterns  ⚠️
 | Doc | Rule | Problem |
 |-----|------|---------|
-| PRINCIPLES.md | "Don't import the SDK directly" | `app/handlers/` doesn't exist — renamed to `app/api/`? |
-| FOUNDATIONS.md | `core.cache` → "TTL required on every set" | `conform` population is 0 |
+| PRINCIPLES.md | "Use `SearchClient` — direct `vendor_sdk` imports skip auth" | `vendor_sdk` appears nowhere in source; dependency dropped? |
+| FOUNDATIONS.md | `core.cache` → "`redis.Redis(` direct construction bypasses the pool" | `redis` not in `pyproject.toml` |
+
+### Promotion offers
+| Doc | Marked `intended` | Now |
+|-----|-------------------|-----|
+| FOUNDATIONS.md | `core.settings` | 12 consumers across 4 features — drop the marker? |
 
 ### Broken references
 | Doc | Line | Reference | Detail |

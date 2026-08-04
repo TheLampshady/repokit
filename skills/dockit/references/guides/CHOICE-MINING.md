@@ -29,7 +29,7 @@ So check first, and pick a posture:
 
 In the relaxed posture, say so in the run report: *"No existing docs found — generated fuller overview prose. Re-run sync once you've curated it and I'll tighten to pointers."* The next sync on a now-documented repo applies the strict rule and reports what it would cut.
 
-**Two things do not relax, ever.** Rationale is still never invented — a barren repo is exactly where a plausible-sounding reason is most likely to survive unchallenged. And mined choices still enter at the Convention tier with predicates; a repo having no docs says nothing about whether a pattern was intentional.
+**Two things do not relax, ever.** Rationale is still never invented — a barren repo is exactly where a plausible-sounding reason is most likely to survive unchallenged. And mined choices still enter at the Convention tier, still measured against their family's threshold before being written; a repo having no docs says nothing about whether a pattern was intentional.
 
 Choice is the target because it's the only band that is simultaneously *novel* to the agent, *action-changing right now*, and *cheap to state*. Overview fails novelty. Rationale fails immediacy — it matters only when someone reopens the decision.
 
@@ -80,15 +80,15 @@ Trust tracks one thing: **is this a measurement, or a judgment about intent?**
 
 | Write it | Why |
 |---|---|
-| Any rule whose predicate passes right now | Not a judgment. The command returns 0 direct SDK imports, so the statement is verifiably true today. |
+| Any rule whose measurement clears its family threshold | Not a judgment. The scan finds 0 direct SDK imports, so the statement is true of the code today. |
 | `Extend by:` backed by a scaffold command that exists and a git history showing it used | Mechanical. |
 | Canonical example selection | Worst case you picked the second-best example. |
 | Catalog rows, paths, consumers, counts | Already automatic. |
 
 | Write it, but flag it in the report | Why |
 |---|---|
-| Conventions at 80–99% with no clean predicate | Someone has to judge whether the exceptions matter. |
-| Prohibitions | Highest blocking cost, and the weakest compliance. Convention tier only, predicate required, never above. |
+| Conventions at 80–99% | Someone has to judge whether the exceptions matter. |
+| Prohibitions | Highest blocking cost, and the weakest compliance. Convention tier only, never above, and the anti-pattern must be named in the line itself. |
 | `Doesn't cover:` | Absence carries no marker distinguishing boundary from gap. |
 
 | Never | Why |
@@ -135,9 +135,9 @@ Filters cut individual lines. They don't stop a file growing back over a year of
 
 **Over budget is a report, not a refusal.** Never silently drop a rule to fit. Instead, rank the existing rules weakest-first and surface the bottom few for review:
 
-1. Lowest conformance (an 81% Convention before a 100% one)
+1. Lowest conformance **as recorded when it was written** (an 81% Convention before a 100% one) — not re-measured, just read off the run that created it
 2. Longest-unanswered `[TODO: why?]` — a rule nobody has justified in six months is a rule nobody missed
-3. No predicate, so nothing has ever verified it
+3. No named alternative — filter 1 should have caught it, and a rule that can't name what it rejected was never a decision
 4. Newest, if the rest tie — an established rule has earned more benefit of the doubt
 
 Report as: *"PRINCIPLES.md is at 247 lines / 51 rules, past the ~200 / ~40 budget. Weakest 5 by evidence: … — review?"* Route it to the review queue like any other decision.
@@ -153,7 +153,9 @@ Classified by evidence source, because evidence determines both confidence and f
 ### 1. Boundary choices
 One module is the only sanctioned door to a capability, and the import graph respects it.
 
-A boundary is *about* negative space — where something may not appear — but **do not write it that way.** Negative phrasing is the weak spot of instruction-following: constraints opposing model defaults fail at 10–100% rates against 99%+ compliance for positively-phrased conventional ones ([arXiv:2604.07192](https://arxiv.org/abs/2604.07192)). Write the positive instruction, name the exceptions, and let the stored predicate carry the enforcement the wording can't. The predicate is not decoration on this family — it *is* the enforcement.
+A boundary is *about* negative space — where something may not appear — but **do not write it as a prohibition.** Negative phrasing is the weak spot of instruction-following: constraints opposing model defaults fail at 10–100% rates against 99%+ compliance for positively-phrased conventional ones ([arXiv:2604.07192](https://arxiv.org/abs/2604.07192) — *unverified citation, treat as a lead*).
+
+Write the positive instruction, name the exceptions, and **name the anti-pattern inside the line** — the exact accessor or import the boundary displaces, plus the repair. On this family the anti-pattern is not optional detail; it's the only thing that lets an agent recognise a violation in code it's reading. See [What the command knew, the sentence must say](#what-the-command-knew-the-sentence-must-say).
 
 Two shapes recur often enough to look for by name.
 
@@ -161,8 +163,8 @@ Two shapes recur often enough to look for by name.
 
 - **Detect:** for each module, list its third-party imports; for each of those packages, count importers elsewhere in the source tree.
 - **Concentration test:** every importer inside one directory, or all but a nameable few → boundary.
-- **Write:** "Use `SearchClient` for all vendor-search operations." Exceptions listed inline.
-- **Predicate:** `check` — direct imports outside the wrapper, expect 0.
+- **Measure:** direct imports of the wrapped package outside the wrapper. Write only at ≥90% concentration.
+- **Write:** "Use `SearchClient` (`search/client.py`) for all vendor-search operations. Importing `vendor_sdk` directly skips auth and retry handling — route the call through `SearchClient` instead." Exceptions listed inline.
 
 **1b. Ambient-capability boundary** — one module owns access to something globally reachable.
 
@@ -177,11 +179,12 @@ Environment variables, the clock, randomness, direct DB connections, outbound HT
 
 - **Detect:** grep the whole source tree for the accessor, group hits by containing module.
 - **Concentration test:** ≥ 90% of hits in one module → Convention. Below that it's noise, not a boundary.
-- **Write:** "Read configuration through `settings`." Exceptions listed inline.
-- **Predicate:** `check` — accessor hits outside the owning module, expect 0.
+- **Write:** the accessor table above *is* the anti-pattern vocabulary — harvest the row you matched on straight into the line.
 
-```
-<!-- dockit:check cmd="grep -rlE 'os\.getenv|os\.environ' src/ | grep -v src/settings.py | wc -l" expect="0" -->
+```markdown
+**Read configuration through `settings`** (`src/settings.py`).
+Direct `os.getenv` / `os.environ` reads bypass validation and defaults —
+add a field to `settings` and read it from there.
 ```
 
 - **Both shapes fail the same way:** the wrapper is vestigial and the team quietly abandoned it. The concentration test catches that — a boundary nobody respects doesn't reach the threshold, and gets reported as an observation instead of written as a rule.
@@ -191,8 +194,8 @@ Environment variables, the clock, randomness, direct DB connections, outbound HT
 A repeated shape: naming, return types, layering, registration.
 
 - **Detect:** find the set of like things, count how many share the shape.
-- **Threshold:** ≥80% conforming, exceptions named. Below that, say nothing.
-- **Predicate:** `conform`.
+- **Threshold:** ≥80% conforming, exceptions named. Below that, say nothing. Count only members that *could* conform — see [Measurement hygiene](#measurement-hygiene).
+- **Write:** name the shape and the shape it displaces — "handlers return `Result[T]`; raising past the handler boundary loses the error envelope — wrap it in `Result.err()`."
 - **Fails when:** coincidence read as rule. The tier is the mitigation.
 
 ### 3. Extension-point choices
@@ -221,67 +224,49 @@ Old and new patterns coexist; new code favours the new one. Requires history min
 
 ---
 
-## Stored predicates
+## Measure to decide, then let go
 
-Every mined rule carries the command that verifies it, in a comment beside the rule. The rendered line stays a bare instruction.
+A mined rule is dockit's **invention**, not the team's decision. Nobody chose it; dockit looked at a pattern and inferred it. The measurement is the only thing standing between "we found a real convention" and "we put a rule in someone's docs that an agent will now defend." So measure before writing — see each family above for its threshold — and then **discard the command.** Nothing is stored in the doc, and sync never re-runs it.
 
-**Two forms**, matching the two evidence shapes:
+**Dockit measures to decide whether to write a line. It never re-measures a line that already exists.** That single rule is what keeps these docs *directive* rather than a state tracker, and most of what follows is a consequence of it.
+
+**Never store the command in the doc.** Three reasons, so the rule survives someone thinking it sounds useful:
+
+- **It reaches nobody who can act on it.** A command in a doc comment runs at sync time, in a report, to a human — never in the agent's context at the moment code gets written. Agentkit strips those comments before an agent sees the file.
+- **Conformance isn't truth.** For a *directive* — "all config comes from `Settings`" — three violating files don't make the sentence false. They make it disobeyed. Measuring that is a compliance audit, a different job from keeping documentation honest.
+- **Better tools own that job.** [ArchUnit](https://www.archunit.org/), [import-linter](https://import-linter.readthedocs.io/), and [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) enforce architectural rules on the hot path — pre-commit, CI, build failure — where enforcement works. A `grep` in a docs comment is a worse version of a solved problem; recommend one of these instead.
+
+### What the command knew, the sentence must say
+
+The valuable part of the measurement was never the count — it was the **pattern**. `grep -rE 'os.environ|os.getenv'` encodes *which specific API is the wrong path*, and that is the most actionable fact in the whole entry. Discard the command and keep only "use `Settings`", and that fact is lost.
+
+So harvest it into the visible line. **Every boundary and every prohibition names the anti-pattern it displaces:**
 
 ```markdown
-**Use `SearchClient` for all vendor-search operations.**
-<!-- dockit:check cmd="grep -rlE 'import vendor_sdk' api/ | grep -v 'search/client.py' | wc -l" expect="0" last="2026-08-01" -->
-
-**API handlers return `Result[T]`.** Exceptions: `legacy_export.py`, `health.py`.
-<!-- dockit:conform cmd="grep -lE '\-> Result\[' api/handlers/*.py | wc -l" total="grep -lE 'def handle' api/handlers/*.py | wc -l" min="80%" last="2026-08-01" -->
+**All config comes from the `Settings` object** (`app/core/settings.py`).
+Direct `os.environ` / `os.getenv` reads bypass validation and defaults —
+replace them with a `Settings` field.
 ```
 
-- `check` — `cmd` prints a violation count. Passes at `expect`.
-- `conform` — `cmd` prints conforming count, `total` prints the population. Passes at `min`.
+Three parts, in this order:
 
-### Three rules that keep a predicate from lying
+1. **The positive instruction** — what to do. Stays the headline; see the phrasing note below.
+2. **The named anti-pattern** — the exact accessor, import, or call the rule displaces. This is the harvested grep pattern. An agent can't recognise a violation it can't name.
+3. **The repair** — what to do on encountering one. Without it, an agent that spots a violation has no sanctioned next move and either leaves it or invents one.
 
-Every one of these was found by running the design against a real codebase, and each produces a *confident wrong answer* rather than an error — which is the only failure mode that actually matters here.
+**This is not a prohibition, and don't let it drift into one.** The imperative stays positive — "use `Settings`", not "never use `os.environ`". Negative phrasing is the weak spot of instruction-following (see family 1 above). Naming an anti-pattern inside a positive instruction is not the same as writing a negative instruction: the action requested is still the thing to do.
 
-**1. Use `grep`, never `rg`.** Ripgrep is faster and nicer, and it is not installed by default. When a command isn't found, the shell prints to stderr and the pipeline still exits 0, so `| wc -l` yields `0` — and a `check` expecting `0` **passes**. Worse, it looks fine on the machine that wrote it, because that machine has `rg`. The same predicate returned `6` in an interactive shell and `0` under `/bin/sh` in testing. `grep` is on every POSIX system; the speed difference is invisible at documentation scale.
+Keep the exception list visible for the same reason it always was — an agent needs to know where the rule doesn't apply, or it will "fix" the exceptions.
 
-Use `grep -E` (extended regex) — that's the dialect `rg` patterns are written in. Plain `grep` is basic regex, where `|` and `+` silently become literal characters and the pattern quietly stops matching what it used to.
+### Measurement hygiene
 
-**2. No double quotes in the command.** The predicate lives inside `cmd="..."`, so a `"` in the command makes the attribute unparseable. Use single quotes, or a `.` wildcard where a quote character needs matching.
+Dockit still runs `grep` to measure at write time, and two traps produce a *confident wrong answer* rather than an error. Both were found by running this design against a real codebase.
 
-**3. The `total` must count only things that could satisfy `cmd`.** A denominator that includes items structurally incapable of matching creates a metric that can never reach 100%. Real case: `total="grep -lE 'def handle' app/handlers/*.py | wc -l"` counted `__init__.py` — a registry file with no handler function in it — giving 6/8 = 75% against an 80% floor, and reporting a healthy convention as decayed. Count the population the rule actually applies to (`grep -lE 'def handle'`), not everything in the directory.
+**Use `grep -E`, never `rg`.** Ripgrep isn't installed by default. When a command isn't found the pipeline still exits 0, so `| wc -l` yields `0` — and a concentration test reads that as a perfect boundary. It looks fine on the machine that wrote it, because that machine has `rg`. The same command returned `6` interactively and `0` under `/bin/sh` in testing. Use `-E` specifically: plain `grep` is basic regex, where `|` and `+` become literal characters and the pattern quietly stops matching.
 
-The mirror of a check that can never fail is one that can never pass. Both read as authoritative.
+**Count only things that could conform.** A denominator including items structurally incapable of matching yields a metric that can never reach 100%. Real case: counting `__init__.py` — a registry file with no handler in it — inside the handler population gave 6/8 = 75% against an 80% floor, and killed a healthy convention. Count the population the rule actually applies to.
 
-**Why stored and not re-derived.** Re-running a fixed command returns the same answer every sync. Re-deriving the count from a fresh analysis depends on the next pass scoping its scan identically — and when it doesn't, it reports drift that isn't there. The stored predicate is what keeps this check deterministic instead of a judgment call.
-
-**Why hidden.** Conformance counts printed on the page tax every agent that reads the doc *to follow* the rule, for information that only matters *to verify* it. The exception list stays visible — an agent needs to know where the rule doesn't apply, or it will "fix" the exceptions.
-
-A **generated** prohibition without a predicate is not admissible. Context alone is the weak enforcement path; the predicate is what backs it up. Human-authored Rules are exempt — a team may assert something no command can check ("admin UX changes are validated with a content editor"), and refusing to record it would be worse than leaving it unverified.
-
-### Predicate grammar
-
-A predicate has to survive being re-run, unattended, on a machine that isn't the one that wrote it. That rules out most of the shell. The grammar below is what's left — enforced on every predicate, generated or hand-written.
-
-**This is a generation constraint, not a security boundary.** The agent runtime already gates command execution; dockit keeps no allowlist of its own and writes no approval file. What the grammar buys is a predicate that means the same thing on every machine, every sync, and can be read at a glance in a docs diff.
-
-A predicate is admissible only if it satisfies all of:
-
-**Evaluate the grammar on shell structure, not raw substrings.** Split the command into pipeline stages with a quote-aware parse first, then apply the checks below to *unquoted* regions only. Naive substring matching rejects valid predicates: `rg '-> Result\['` contains `>`, and `rg 'execute\(text\('` contains `exec`, but both are search patterns inside quotes and neither is a shell operator. Anything inside single or double quotes is data.
-
-| Requirement | |
-|---|---|
-| Every command in the pipeline is one of | `grep` `ls` `find` `wc` `sort` `uniq` `head` `tail` `cut` `tr` |
-| Every command resolves on `PATH` | Check with `command -v` before trusting any result. A missing command yields empty output, `wc -l` turns that into `0`, and a `check` expecting `0` passes. Treat unresolvable as **unverified**, never as passing |
-| `git` is allowed with these subcommands only | `log` `ls-files` `grep` `show` `diff` — never `checkout`, `push`, `config`, `clean` |
-| No unquoted | `;` `&&` `\|\|` `$(` `` ` `` `>` `>>` `<` `&` newline |
-| Not invoked at all | `xargs`, `sh`, `bash`, `env`, `eval`, `exec`, `find -exec`, or any interpreter |
-| Quotes balance | An unbalanced quote means the parse is unreliable — reject rather than guess |
-
-Pipes (`|`) between stages are permitted — that's how counts get built — but every stage must independently pass. `xargs` is excluded specifically because it launches a command the grammar can't see; rewrite as a single `rg` invocation instead.
-
-**A predicate that fails the grammar is never run.** Flag it and leave the rule unverified. If a rule genuinely needs a richer check than the grammar allows, it doesn't get an automatic predicate — record it and verify it by hand.
-
-**Where a predicate comes from matters.** A predicate arrives in the docs the same way any other line does: someone wrote it, or dockit generated it, and it went through review. Read it in the diff like you'd read any other checked-in command. Dockit doesn't track which ones you've seen before — the docs are the record.
+A test that can never pass and one that can never fail read as equally authoritative.
 
 ---
 
@@ -305,25 +290,47 @@ Until a human fills it, write `[TODO: why?]` and nothing else.
 
 ---
 
-## On sync: re-verify, never auto-remove
+## On sync: a choice is not re-litigated
 
-Re-run every predicate. When one fails, **flag it — do not delete the rule.**
+**Sync never re-measures an existing choice, and never removes one because the pattern thinned out.**
 
-A decayed conformance count means one of two things, and nothing in the evidence tells you which:
+A choice earns its place once, at the moment it's written. After that it is a *directive* — it says what future work should do. Conformance sliding from 100% to 60% is not evidence the directive is wrong. It's just as likely to be evidence the directive is being ignored, which is an argument for keeping it, not cutting it. And since dockit no longer measures existing rules, no percentage exists to react to.
 
-- The rule is wrong, and the code moved on.
-- The rule is right, and the code is drifting away from it.
+### Status: `intended` vs. the unmarked default
 
-Deleting on failure quietly removes correct rules at exactly the moment a codebase is going bad. Route the flag to the review queue instead:
+A rule can be decided before the code reflects it. That's the state a greenfield project is *entirely* made of, and it needs saying out loud, because the alternative is either silence (nothing written, so no agent knows the path exists) or a rule that reads as describing code it doesn't describe.
 
-```
-Rule decayed: "API handlers return Result[T]"
-  Was 11/13 (2026-08-01) → now 6/13
-  New non-conformers: bulk_import.py, webhooks.py, sync_status.py
-  → doc wrong, or code drifting?
-```
+| Marker | Means |
+|---|---|
+| *(none)* | The code reflects this. The default, and unmarked so it costs nothing to read |
+| **`[intended]`** | Decided; the code hasn't caught up. A scaffolded wrapper, a base class with no subclasses yet, a direction the team has committed to |
 
-Same for a dead path in an example or a scaffold command that no longer exists.
+**`intended` qualifies the code, not the rule's force.** A Convention is deviable-with-a-reason and a Rule isn't, regardless of marker. An agent that treats `[intended]` as optional has misread it — the marker says *no precedent exists yet*, which makes the written rule the only guide available, not a weaker one.
+
+Four rules keep this from becoming conformance measurement by another name:
+
+1. **Declared, never measured.** A human sets it, or dockit sets it at write time for a rule the code doesn't yet demonstrate. Nothing computes adoption to decide a marker.
+2. **No reverse transition.** Never add `[intended]` to an unmarked rule because fewer files follow it than before. That is the decay flag with a new label, and it is banned outright.
+3. **No time-based transition.** Nothing changes because a date passed.
+4. **Sync never overwrites it.** Same protection manual invariant edits carry. Goals change, the team re-declares, dockit leaves it alone.
+
+**Promotion is offered, never applied.** When consumers now exist for an `[intended]` rule, `sync --deep` raises it as a review-queue question — *"`Settings` now has 12 consumers; drop the `[intended]` marker?"* Normal sync says nothing, because normal sync doesn't look.
+
+### Removal requires feature work, not decay
+
+| Situation | Action |
+|---|---|
+| The code the choice governs is **gone** — module deleted, capability removed | **Remove the choice.** It governs nothing, and a rule about deleted code is a tombstone |
+| The choice names a path, command, or symbol that no longer exists | **Fix the reference.** The choice stands; its coordinates moved |
+| The team replaced the sanctioned path — new wrapper, new base class | **Update the choice** to name the new path. This is feature work requiring it |
+| Fewer files follow it than last month | **Nothing.** Not measured, not reported, not a signal |
+| A human says cut it | Cut it |
+
+The distinction that matters: removal follows from **the subject of the sentence disappearing**, never from the sentence being unpopular. `SearchClient` deleted → the rule about using it goes. `SearchClient` still there and bypassed in four new files → the rule stays exactly as written.
+
+Same test for an `[intended]` rule, and it's worth stating because the intuition runs the other way: a rule nobody has followed *yet* is not a removal candidate — that's what the marker declares. Only the subject vanishing removes it.
+
+This is the same test the tombstone rule applies everywhere else in dockit: does the thing still exist? Docs describe what *is*. A choice governing live code is current state, however well or badly it's followed.
 
 ---
 
@@ -337,9 +344,11 @@ Mining produces human-required work. Surface it in the completion report; `/repo
 | Empty `[TODO: why?]` | One sentence of reason. |
 | `[TODO: known hazard?]` | What has broken here that a newcomer wouldn't predict? |
 | `Doesn't cover:` observation | Intentional boundary, or a gap? |
-| Sustained 100% conformance | Promote to Rule? |
-| Failed predicate | Doc wrong, or code drifting? |
+| Convention measured at 100% when written | Promote to Rule? |
 | SDD-artifact discrepancy | Which side is right? |
+| `[intended]` rule that now has consumers (`--deep` only) | Drop the marker? |
+
+Every row except the last is produced **once, by the run that wrote the line.** The `[intended]` row is the single exception, and it's confined to `sync --deep`: opt-in, explicitly a re-examination, and one-directional — it can only ever offer to *remove* a marker. There is no decay row, because nothing re-measures an unmarked rule.
 
 ### The hazard question is the one worth interrupting someone for
 

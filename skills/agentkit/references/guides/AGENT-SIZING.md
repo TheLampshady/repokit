@@ -159,7 +159,7 @@ The goal: **fewer agents, each with broader ownership**. Two agents that both to
 
 ### Closing a coverage gap without inflating an agent
 
-`agentkit sync` category 7 reports directories and inheritance roots that trigger no agent. The obvious fix — widen the nearest agent's `Working Directories` until the report goes green — is usually the wrong one, and it is what teams reach for first.
+`agentkit sync` category 6 reports directories and inheritance roots that trigger no agent. The obvious fix — widen the nearest agent's `Working Directories` until the report goes green — is usually the wrong one, and it is what teams reach for first.
 
 Observed in the field: an agent scoped to `components/` was missing `presenters/`, so the remedy proposed was to expand it to `dao/`, `dtos/`, `presenters/`, **and** `services/`. That closes four gaps and creates a worse problem. One agent now owns four architectural layers, its description must trigger on all of them, and it knows each shallowly. The blindspot is gone; a permanently over-triggering, thinly-informed agent has replaced it.
 

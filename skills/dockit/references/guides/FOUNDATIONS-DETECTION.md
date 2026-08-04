@@ -91,9 +91,9 @@ grep -rlE "<import-pattern>" src/ \
 
 (Adjust `$2` to the column that holds the feature folder name for the project's layout.)
 
-A foundation typically scores **≥ 2** distinct features, and this used to be a hard filter. It no longer is, because it has a systematic blind spot: **a layer foundation.** A `BasePresenter` inherited by twelve presenters, or a `BaseDao` inherited by fifteen DAOs, has `distinct_features = 1` by construction — its consumers all live in the one directory whose shape it defines. Filtering on spread deletes exactly the class an agent most needs to know about.
+A foundation typically scores **≥ 2** distinct features. **Never make that a hard filter** — it has a systematic blind spot: **a layer foundation.** A `BasePresenter` inherited by twelve presenters, or a `BaseDao` inherited by fifteen DAOs, has `distinct_features = 1` by construction, since its consumers all live in the one directory whose shape it defines. Filtering on spread deletes exactly the class an agent most needs to know about.
 
-Single-feature usage is now a **penalty carried in the score**, not an exclusion, with one explicit exemption (see The score). The bias runs deliberately toward recall: a candidate the user rejects costs one line of a confirmation prompt, and a foundation never surfaced costs every future agent that writes code around it.
+Single-feature usage is a **penalty carried in the score**, not an exclusion, with one explicit exemption (see The score). The bias runs deliberately toward recall: a candidate the user rejects costs one line of a confirmation prompt, and a foundation never surfaced costs every future agent that writes code around it.
 
 ### Signal 3 — Stability (change frequency)
 
@@ -140,7 +140,7 @@ where:
 
 **Threshold.** Surface files with `foundation_score >= 1.0` **and** (`distinct_features >= 2` **or** `subclass_count >= 5`).
 
-The second clause is the **layer-foundation exemption**. It admits a base class whose children all live in one directory, which the old `distinct_features >= 2` filter excluded outright. Worked case: a `BaseDao` with 12 subclasses in a single `dao/` package scores `reach = 12 + 24 = 36`, `log(37) × log(2) × 0.86 ≈ 2.15` — comfortably above threshold, and previously discarded by the gate before the score was ever consulted.
+The second clause is the **layer-foundation exemption**: it admits a base class whose children all live in one directory. Worked case — a `BaseDao` with 12 subclasses in a single `dao/` package scores `reach = 12 + 24 = 36`, `log(37) × log(2) × 0.86 ≈ 2.15`, comfortably above threshold. Without the exemption a spread gate would discard it before the score was ever consulted.
 
 Tune the threshold by inspecting the top 20 on a sample project.
 
@@ -158,7 +158,8 @@ The same three signals identify three categories worth surfacing. Compute these 
 | **Architectural hotspot** | high | high (≥ 2) | high | Add to `FOUNDATIONS.md` as `status: active` with `health: hotspot`. Foundationtik (tikkit) will write a refactor ticket. |
 | **Hidden foundation** | high | high (≥ 2) | low | High score, but **does not live in a conventional foundation directory** and may have a domain-feature-style name (e.g. `helpers.py`, `misc.ts`, `shared_stuff.py`). Add to registry; flag in chat: *"this file is acting as a foundation but isn't named like one — consider relocating to `core/`."* |
 | **Layer foundation** | high, mostly inherited | 1 | low | Qualifies via the subclass exemption. Its consumers are one layer, and that layer's shape *is* what it defines. Add to `FOUNDATIONS.md` as `status: active`, `type: abstraction`, with the consuming directory in the `Consumers` column — that's what agentkit reads to decide which agent should own it. No new schema field: `abstraction` already means "interface / base class / pattern." |
-| **Pretender** | low | low (≤ 1) | any | Lives in `core/`/`shared/`/`lib/` but few or no cross-feature consumers **and no subclasses**. Surface as **out-of-band finding**, not a `FOUNDATIONS.md` row. Suggest inlining or moving back to a feature folder. |
+| **Intended foundation** | low or zero | any | any | Scores below threshold, but **structural evidence says it was built to be the sanctioned path**. Add to `FOUNDATIONS.md` as `status: intended` after confirming with the user. See [Intent signals](#intent-signals-scoring-cant-see-them) |
+| **Pretender** | low | low (≤ 1) | any | Lives in `core/`/`shared/`/`lib/`, few or no cross-feature consumers, **no subclasses, and no intent signal.** Surface as **out-of-band finding**, not a `FOUNDATIONS.md` row. Suggest inlining or moving back to a feature folder. |
 
 ### Detection rules
 
@@ -166,12 +167,46 @@ The same three signals identify three categories worth surfacing. Compute these 
 hotspot:           score above threshold AND change_count > median(change_count_for_top_quartile) * 2
 hidden_foundation: score above threshold AND not in {core, shared, lib, common, internal, foundation*}
 layer_foundation:  score above threshold AND distinct_features == 1 AND subclass_count >= 5
-pretender:         file in {core, shared, lib, ...} AND foundation_score < 0.5 AND subclass_count < 5
+intended:          score below threshold AND intent_signal_count >= 1 AND user confirms
+pretender:         file in {core, shared, lib, ...} AND foundation_score < 0.5
+                     AND subclass_count < 5 AND intent_signal_count == 0
 ```
 
 Hotspot vs. healthy is a **continuous** distinction — pick the top quartile of churn within the foundation set. Hidden vs. healthy is a **categorical** distinction by directory.
 
-The `subclass_count < 5` clause on `pretender` matters: without it, an abstract base parked in `lib/` and inherited throughout one layer gets recommended for deletion. That is the most damaging false positive this guide can produce, because the suggestion sounds authoritative and the code is load-bearing.
+Two clauses on `pretender` prevent its false positives, and both matter because the suggestion sounds authoritative while the code is load-bearing:
+
+- **`subclass_count < 5`** — without it, an abstract base parked in `lib/` and inherited throughout one layer gets recommended for deletion.
+- **`intent_signal_count == 0`** — without it, a wrapper or scaffolded service that nobody has built on *yet* gets recommended for deletion. That is the same class of error, aimed at exactly the code a team most recently decided to standardise on.
+
+### Intent signals: scoring can't see them
+
+Every signal above measures **adoption**. A registry also has to record **sanction** — *this is the way, use it* — and those two diverge hardest in a new or freshly-scaffolded project, where fan-in is zero by construction and a count-based scan finds nothing at all.
+
+**Zero consumers is not weak evidence against a foundation. For a wrapper, it is the strongest available evidence *for* one:** somebody wrote a module whose only purpose is to be the sanctioned door, and nothing has gone through it yet.
+
+Each of these counts as one intent signal. None is a frequency:
+
+| Signal | Why it implies sanction |
+|---|---|
+| **Wraps a third-party SDK or a language builtin** | A wrapper exists only to be the path. Its existence *is* the decision |
+| **Registered or published** | Bound in a DI container, listed in a plugin registry, exported from the public `index.ts` / `__init__.py`. Someone deliberately made it reachable |
+| **Abstract** | An ABC, an interface, a method raising `NotImplementedError`. A base class with no subclasses is *unimplemented*, not unused — future consumers are its whole reason to exist |
+| **Named by scaffolding** | Referenced from a generator, template, cookiecutter, or a "how to add a feature" section |
+| **Only one of its kind** | The single HTTP client, the single config reader. Nothing competing with it is itself evidence |
+
+**Naming corroborates, never scores.** `Base*`, `Abstract*`, `Default*` may break a tie alongside a real signal above; on its own it admits nothing.
+
+**Always confirm before writing an `intended` row.** One artifact is thin evidence for a decision, so this is the one category where the user's answer, not the score, is what admits the row: *"`SearchClient` wraps the vendor SDK and has no consumers yet — is it the sanctioned path for search?"* A no closes it silently. Nothing about zero adoption is reported as a problem.
+
+### Young projects: ask, don't score
+
+When the project is under ~6 months old, or **no file crosses the threshold**, the scoring pipeline has nothing to rank and the count-based signals are all zero. Switch modes rather than relaxing numbers:
+
+1. Collect intent-signal candidates — wrappers, registered modules, abstract types, scaffold targets.
+2. Present them as a short list and ask which are meant to be the sanctioned paths.
+3. Write the confirmed ones at `status: intended`.
+4. **Suppress `pretender` findings entirely.** In a project this young the category produces nothing but recommendations to dismantle the architecture the team just laid down.
 
 ---
 
@@ -236,9 +271,9 @@ rg '^(from|import) (\w+)' app/core/cache.py -or '$2' | sort -u
 rg -l '^(from|import) redis' app/ --glob '!app/core/cache.py'
 ```
 
-Zero hits outside the foundation is a boundary invariant with a ready-made predicate. A handful of hits is the exception list. Many hits means the wrapper is vestigial — say nothing, and report it as an observation.
+Zero hits outside the foundation is a boundary invariant, and the accessor you grepped for is the anti-pattern to name in the line. A handful of hits is the exception list. Many hits means the wrapper is vestigial — say nothing, and report it as an observation.
 
-**Structural conventions (family 2)** — the consumers table is the population. Count how many of them share a shape: the same dependency, the same return type, the same registration call. ≥80% conforming is a Convention with a `conform` predicate; below that, silence.
+**Structural conventions (family 2)** — the consumers table is the population. Count how many of them share a shape: the same dependency, the same return type, the same registration call. ≥80% conforming is a Convention; below that, silence. Record the ratio in the run report — it's what the review queue and the size budget rank on — but not in the doc, and never re-measure it later.
 
 **Extension procedure (family 3)** — this is the `Extend by:` field, and git history answers it better than static analysis:
 
@@ -263,8 +298,8 @@ Two things the scan must not do: promote anything to the Rule tier, and fill in 
 Halt and ask before proceeding if:
 
 - **No feature folders detected.** The stop-list ate everything, or the project has a flat layout. Ask: *"What are the top-level feature directories in this project?"*
-- **Project age < 6 months.** Behavioural signals are unreliable. Ask: *"Is this a new project? If yes, I'll skip the stability signal and rely on structural signals only."*
-- **No files cross the threshold.** Either the project genuinely has no foundations yet, or detection missed (e.g., codegen-heavy or DI-container codebases). Ask: *"I didn't find clear foundation candidates. Is this a young codebase, or are foundations resolved at runtime (DI / plugin system)?"*
+- **Project age < 6 months.** Behavioural signals are unreliable. Ask: *"Is this a new project? If yes, I'll skip the stability signal and rely on structural signals only."* On a yes, also run [Young projects: ask, don't score](#young-projects-ask-dont-score) — relaxed thresholds still find nothing when every count is zero.
+- **No files cross the threshold.** Either the project genuinely has no foundations yet, or detection missed (e.g., codegen-heavy or DI-container codebases). Ask: *"I didn't find clear foundation candidates. Is this a young codebase, or are foundations resolved at runtime (DI / plugin system)?"* Then offer the intent-signal list rather than reporting an empty registry — a scaffolded project has sanctioned paths worth recording before anything uses them.
 - **More than ~30 candidates above threshold.** Likely the threshold is too low for this project. Show the top 30 by score and ask: *"Where would you like me to cut the list?"*
 
 ---
@@ -313,7 +348,7 @@ Top results:
 
 dockit writes the first five into `FOUNDATIONS.md`, confirming `src/dao/base.py` with the user first (Medium confidence). The pretender goes into the report as a finding: *"`src/core/legacy_session.py` lives in `core/` but is only imported once and has no subclasses. Consider inlining or relocating."*
 
-`src/dao/base.py` is the row the previous version of this guide missed: it never reached the scoring step, because `distinct_features == 1` excluded it at the gate.
+`src/dao/base.py` is the row a spread gate would lose: `distinct_features == 1` would exclude it before scoring. It qualifies here via the subclass exemption.
 
 ---
 

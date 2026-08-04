@@ -8,7 +8,7 @@ How a foundation-owner agent keeps its foundation's documentation in sync with t
 
 When agentkit assigns a foundation to an agent, the agent becomes the canonical custodian for:
 
-1. **The catalog row** in `docs/FOUNDATIONS.md` — name, type, path, owner, status, health, consumers, last reviewed
+1. **The catalog row** in `docs/FOUNDATIONS.md` — name, type, path, owner, status, health, consumers
 2. **The per-foundation entry** within `FOUNDATIONS.md` (purpose, public API, invariants, dependencies, test coverage, refactor triggers, change checklist)
 3. **The sub-doc** at `docs/architecture/foundations/<slug>.md` (large projects only)
 4. **Cross-doc references** in `PRINCIPLES.md` and `ARCHITECTURE.md` that mention this foundation
@@ -16,7 +16,7 @@ When agentkit assigns a foundation to an agent, the agent becomes the canonical 
 The agent does **not** own:
 - The foundation's source code itself (that's still the team's)
 - The detection methodology (that's dockit's; agents read the output, not re-run scoring)
-- Tickets created for stale review (that's `tikkit:foundationtik`'s)
+- Maintenance tickets (that's `tikkit:foundationtik`'s)
 
 ---
 
@@ -26,16 +26,17 @@ The agent updates its foundation's docs when invoked for any of these reasons:
 
 | Trigger | Action |
 |---------|--------|
-| Public API of the foundation changed (new export, removed export, signature change) | Re-copy the **Canonical usage** call site from the best-conforming consumer + bump **Last reviewed** |
-| New invariant being introduced via the code change | Add to **Invariants** at `tier="convention"` with a stored predicate; flag the implication for downstream agents. **Never enter one at `tier="rule"`** — promotion is a human call collected by `/repokit status` |
+| Public API of the foundation changed (new export, removed export, signature change) | Re-copy the **Canonical usage** call site from the best-conforming consumer |
+| New invariant being introduced via the code change | Add to **Invariants** at `tier="convention"`, naming the anti-pattern it displaces and the repair; flag the implication for downstream agents. **Never enter one at `tier="rule"`** — promotion is a human call collected by `/repokit status` |
 | Sanctioned way to add a new instance changed | Update **Extend by** |
 | Foundation grows to cover a case it previously didn't | Update **Doesn't cover** |
-| An invariant's stored predicate now fails | **Flag it, never delete the invariant.** A failing predicate means either the invariant is wrong or the code is drifting away from a correct one, and the evidence doesn't say which |
+| The code an invariant governs is deleted | **Remove the invariant** — it governs nothing, and a rule about deleted code is a tombstone. Name the removal in the report |
+| New code deviates from an existing invariant | **Leave the invariant exactly as written.** A directive being bypassed is an argument for keeping it, not cutting it. Nothing re-measures conformance, so there's no decay to report |
 | Status change (active → deprecated, active → sunset) | Update catalog row + run cross-doc check |
 | Path moved or renamed | Update **Path**, all refs in PRINCIPLES.md / ARCHITECTURE.md, sub-doc filename |
 | New consumer added (a feature folder starts importing) | Update **Consumers** table |
-| Refactor trigger fired (e.g., consumer count crossed threshold, tests broke an invariant) | Update **Refactor triggers** with a dated note; consider opening a foundationtik ticket |
-| 90+ days since `Last reviewed` | Read the code, validate each invariant still holds, update the date |
+| Refactor trigger fired (e.g., consumer count crossed threshold, tests broke an invariant) | Update **Refactor triggers**; consider opening a foundationtik ticket |
+| **You're working on the foundation anyway** | Validate the invariants while you're in the code. This is the only review trigger that isn't a specific change — the review that happens during real work is the one worth having, and it needs no schedule |
 
 If the agent is invoked for general work (not a doc-maintenance request) and notices doc drift, it should **flag** rather than silently update — only act on doc maintenance when explicitly asked or when the user accepts a recommendation.
 
@@ -94,17 +95,20 @@ This is the same prompt-shape dockit's sync uses for prose-heavy section deletio
 
 ---
 
-## What "Last Reviewed" Means
+## Never stamp a date into FOUNDATIONS.md
 
-The `Last reviewed` date is not just a timestamp — it's a claim that the agent (or a human) has read the code and confirmed every invariant still holds. Bump it only when that's true.
+There is no `Last reviewed` field, and don't reintroduce one. A stamped date is a tombstone: it records a moment instead of current state, it goes stale by doing nothing, and it invites the rubber-stamp — bumped because a row was touched, not because anyone read the code. That turns a claim about verification into a claim about editing.
 
-Routine touch-ups (consumer count, public API symbol added) do **not** require a full review. Reset the date only when:
+When someone genuinely needs "how long since this was looked at", **derive it**:
 
-- An invariant was checked against the code
-- A status change was applied
-- A 90-day cadence review was completed
+```bash
+git log -1 --format=%cr -- app/core/auth.py       # code
+git log -1 --format=%cr -- docs/FOUNDATIONS.md    # registry
+```
 
-If you're updating a row but haven't re-verified invariants, leave the date alone.
+Git already holds it and can't disagree with itself. The `Owner` column stays — attribution is the part with evidence behind it, and it doesn't decay.
+
+**Say what you verified, in the report, not in the file.** "Read `core.auth` and confirmed all three invariants hold" belongs in the chat where the user can act on it. Written into the doc it becomes an unfalsifiable claim the next agent inherits.
 
 ---
 
@@ -120,8 +124,7 @@ If you're updating a row but haven't re-verified invariants, leave the date alon
    c. Apply the update
 5. Run cross-doc consistency check
 6. Resolve every hit (update / ask / flag)
-7. Update Last reviewed if a real review happened
-8. Report to user: what changed, what was flagged, what needs their decision
+7. Report to user: what changed, what was flagged, what you verified, what needs their decision
 ```
 
 ---

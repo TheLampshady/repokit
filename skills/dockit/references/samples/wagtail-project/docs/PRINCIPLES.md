@@ -11,8 +11,7 @@ Decisions this project has made that an agent or a new contributor would not gue
 
 ## Conventions
 
-**Define blocks in `core/blocks/`.** Not in per-app `blocks.py` modules.
-<!-- dockit:check cmd="grep -rlE 'blocks\.(Struct|Stream|List)Block' --include=*.py . | grep -v 'core/blocks' | wc -l" expect="0" last="2026-02-26" -->
+**Define blocks in `core/blocks/`.** A `blocks.StructBlock` / `StreamBlock` / `ListBlock` declared in a per-app `blocks.py` drifts in styling and duplicates variants editors can't tell apart — move the class into `core/blocks/` and import it.
 
 <details><summary>Why</summary>
 
@@ -22,18 +21,15 @@ Rejected: a shared base class per app — it standardises the code without stand
 editor experience, which is the part that mattered.
 </details>
 
-**Every `StreamField` passes `use_json_field=True`.**
-<!-- dockit:check cmd="grep -rE 'StreamField\(' --include=*.py . | grep -v 'use_json_field' | wc -l" expect="0" last="2026-02-26" -->
+**Every `StreamField` passes `use_json_field=True`.** A `StreamField(` without it stores the value as text, so the field can't be queried or indexed — add the argument when declaring the field.
 
 [TODO: why?]
 
-**Declare reusable `StreamBlock` classes; don't inline block lists in a field definition.**
-<!-- dockit:conform cmd="grep -cE 'class \w+Block\(blocks\.StreamBlock\)' core/blocks/*.py | wc -l" total="grep -rlE 'StreamField\(' --include=*.py . | wc -l" min="80%" last="2026-02-26" -->
+**Declare reusable `StreamBlock` classes.** An inline block list inside a `StreamField(...)` definition can't be reused or migrated as a unit — declare a named `class XBlock(blocks.StreamBlock)` in `core/blocks/` and reference it.
 
 [TODO: why?]
 
-**Keep block nesting to two levels.**
-<!-- dockit:check cmd="grep -rE 'StreamBlock\(\[[^]]*StreamBlock\(\[[^]]*StreamBlock\(' core/blocks/ | wc -l" expect="0" last="2026-02-26" -->
+**Keep block nesting to two levels.** A third `StreamBlock(` nested inside two others makes the editor UI unusable at typical browser widths — flatten it, or promote the inner block to a top-level choice.
 
 <details><summary>Why</summary>
 

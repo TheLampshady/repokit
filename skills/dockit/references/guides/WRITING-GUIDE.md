@@ -210,7 +210,7 @@ This principle applies to ALL generated documentation:
 
 ## Stable Section Names
 
-Downstream consumers — `agentkit` and dockit's own `sync` and `check` modes — depend on predictable structure across generated docs. They look for `## Foundations` in FOUNDATIONS.md, `## Quick Start` in README.md, env var tables under known headings. When a template author renames `## Architecture` to `## System Design`, the consumers don't break loudly — they silently miss the section, and project agents lose their context.
+Downstream consumers — `agentkit` and dockit's own `sync` mode — depend on predictable structure across generated docs. They look for `## Foundations` in FOUNDATIONS.md, `## Quick Start` in README.md, env var tables under known headings. When a template author renames `## Architecture` to `## System Design`, the consumers don't break loudly — they silently miss the section, and project agents lose their context.
 
 Treat canonical section names in the core templates as a contract.
 

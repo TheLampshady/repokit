@@ -11,17 +11,18 @@ Generate and maintain project documentation optimized for humans and AI agents.
 That's it. Auto-detects the right action:
 - No docs? → generates them
 - Git changes? → syncs stale sections
-- CI environment? → runs check mode
 - Docs current? → tells you
 
 ### Explicit modes (optional)
 
 ```
-/dockit init      # Force full generation
-/dockit migrate   # Restructure legacy docs
-/dockit sync      # Force sync
-/dockit check     # Force CI mode
+/dockit init         # Force full generation
+/dockit migrate      # Restructure legacy docs
+/dockit sync         # Force sync
+/dockit sync --deep  # Whole-repo pass: broken refs, undocumented code
 ```
+
+Every mode is human-run by design — there's no gate mode and nothing to wire into CI. For a read-only "has anything drifted?", use `/repokit status`.
 
 ## Architecture
 
@@ -91,26 +92,13 @@ dockit/
 - **CLAUDE.md**: dockit does NOT generate - cross-links only
 - **GEMINI.md**: dockit generates with `@imports` for hierarchical loading
 
-### With CI/CD
+### With CI/CD and pre-commit hooks
 
-```yaml
-# GitHub Actions
-- name: Check documentation
-  run: claude "/dockit check"
-```
+**Don't.** dockit has no gate mode and nothing here belongs in an automated pipeline.
 
-### With Pre-commit Hooks
+`sync` deletes doc sections whose code is gone, and its only safeguard is the change report it prints for a human to review — automated, that report lands in a log nobody opens and content disappears unnoticed. And a pass/fail mode isn't offered as the automatable alternative, because an exit code produced by a language model isn't a gate you can rely on; CI would treat a silent fail-open as a pass.
 
-```yaml
-# .pre-commit-config.yaml
-- repo: local
-  hooks:
-    - id: dockit-check
-      name: Check documentation freshness
-      entry: claude "/dockit check"
-      language: system
-      pass_filenames: false
-```
+Run `/repokit:dockit sync` yourself after a change, and `/repokit status` when you want a read-only look at whether anything has drifted.
 
 ## Philosophy
 
