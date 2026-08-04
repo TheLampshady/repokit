@@ -155,6 +155,7 @@ Only ask if cannot detect:
 ## Templates
 
 Use `templates/wagtail/`:
+- `README.template.md` → `./README.md` — carries the Django/Wagtail management commands from Essential Commands above, so they land in the README without being retyped
 - `ROOT-CONTEXT.template.md` → `./GEMINI.md`
 - `APP-CONTEXT.template.md` → `./[app]/GEMINI.md`
 - `MODELS.template.md` → `./docs/MODELS.md`

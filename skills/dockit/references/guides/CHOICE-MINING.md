@@ -4,6 +4,22 @@ How dockit decides what to write into PRINCIPLES.md and into foundation entries 
 
 > Companion to [WRITING-GUIDE.md § Earn the Heading](./WRITING-GUIDE.md#earn-the-heading). Earn the Heading says what to **cut**. This guide says what to **add**.
 
+## Contents
+
+- [The three bands](#the-three-bands)
+- [The two tiers](#the-two-tiers)
+- [What you may write without asking](#what-you-may-write-without-asking)
+- [The two filters](#the-two-filters)
+- [Size budget](#size-budget)
+- [The six families](#the-six-families)
+- [Measure to decide, then let go](#measure-to-decide-then-let-go)
+- [Rationale blocks](#rationale-blocks)
+- [On sync: a choice is not re-litigated](#on-sync-a-choice-is-not-re-litigated)
+- [What goes to the review queue](#what-goes-to-the-review-queue)
+- [Best-practice observations stay out of the docs](#best-practice-observations-stay-out-of-the-docs)
+
+---
+
 ---
 
 ## The three bands

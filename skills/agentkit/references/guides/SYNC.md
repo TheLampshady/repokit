@@ -4,6 +4,19 @@ How `agentkit sync` reconciles existing project agents with the current state of
 
 Sync is a three-way compare: **agent files** vs. **FOUNDATIONS.md** vs. **the code**. Where they disagree, sync surfaces the disagreement and asks the user.
 
+## Contents
+
+- [Inputs](#inputs)
+- [Drift Categories](#drift-categories)
+- [Sync Output Format](#sync-output-format)
+- [Per-Finding Actions](#per-finding-actions)
+- [Multi-Platform Considerations](#multi-platform-considerations)
+- [Status Mode (Read-Only)](#status-mode-read-only)
+- [How Sync Identifies Agentkit-Generated Agents](#how-sync-identifies-agentkit-generated-agents)
+- [What Sync Does NOT Do](#what-sync-does-not-do)
+
+---
+
 ---
 
 ## Inputs

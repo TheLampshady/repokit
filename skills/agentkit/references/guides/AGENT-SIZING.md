@@ -146,7 +146,7 @@ If none of those apply, group it.
 
 ### Combined Agents (Foundation + Custom Code)
 
-Custom-code findings from Phase 1.4 don't get their own agents when foundations are present. Instead, fold them into the foundation agent whose directory or domain they overlap with:
+Custom-code findings from step 1.4 of [DISCOVERY.md](./DISCOVERY.md) don't get their own agents when foundations are present. Instead, fold them into the foundation agent whose directory or domain they overlap with:
 
 | Custom-code finding location | Folds into |
 |------------------------------|------------|

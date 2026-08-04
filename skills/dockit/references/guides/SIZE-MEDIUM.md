@@ -2,6 +2,22 @@
 
 Documentation structure for multi-service or feature-rich projects.
 
+## Contents
+
+- [When to Use Medium Structure](#when-to-use-medium-structure)
+- [Detection Logic](#detection-logic)
+- [File Structure](#file-structure)
+- [README Structure](#readme-structure)
+- [Doc Purposes](#doc-purposes)
+- [PRINCIPLES.md Content](#principlesmd-content)
+- [CONTRIBUTING.md Content](#contributingmd-content)
+- [CLOUD.md Content](#cloudmd-content)
+- [Rules](#rules)
+- [Templates](#templates)
+- [Sample](#sample)
+
+---
+
 ## When to Use Medium Structure
 
 - Multi-service projects (API + frontend, backend + worker)

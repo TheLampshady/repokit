@@ -2,6 +2,23 @@
 
 Documentation structure for complex projects, monorepos, and multi-team codebases.
 
+## Contents
+
+- [When to Use Large Structure](#when-to-use-large-structure)
+- [Detection Logic](#detection-logic)
+- [File Structure](#file-structure)
+- [Complexity Triggers](#complexity-triggers)
+- [TOC Structure](#toc-structure)
+- [Parent Doc Structure](#parent-doc-structure)
+- [Framework-Specific Docs](#framework-specific-docs)
+- [Monorepo Structure](#monorepo-structure)
+- [Migration Detection](#migration-detection)
+- [Rules](#rules)
+- [Templates](#templates)
+- [Sample](#sample)
+
+---
+
 ## When to Use Large Structure
 
 - >50 source files
@@ -228,6 +245,8 @@ monorepo/
         └── README.md            # Package docs
 ```
 
+Generate each service README from `templates/core/SERVICE-README.template.md`, and `infra/` from `templates/core/INFRA-README.template.md`. Both link back to the shared `docs/` rather than duplicating it — that's the whole point of the layout.
+
 Service README links to shared docs:
 
 ```markdown
@@ -297,6 +316,9 @@ Proceed with restructure? [Y/n]
 - `templates/core/cloud/DEPLOYMENT.template.md` - Deployment sub-doc
 - `templates/core/cloud/RUNBOOK.template.md` - Operations runbook
 - `templates/core/TESTING.template.md` - Test strategy doc
+- `templates/core/CONTRIBUTING.template.md` - Contributor workflow (the large variant: code-review process, per-role sections, release process)
+- `templates/core/SERVICE-README.template.md` - Per-service README in a monorepo, linking back to the shared `docs/`
+- `templates/core/INFRA-README.template.md` - `infra/` README in a monorepo
 
 ## Sample
 

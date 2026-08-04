@@ -6,6 +6,22 @@ The premise: **a foundation is whatever the rest of the codebase actually depend
 
 This guide produces input rows for `FOUNDATIONS.md`.
 
+## Contents
+
+- [When to use this guide](#when-to-use-this-guide)
+- [The signals](#the-signals)
+- [The score](#the-score)
+- [Failure modes](#failure-modes)
+- [Output format](#output-format)
+- [Mining the entry, once a foundation is confirmed](#mining-the-entry-once-a-foundation-is-confirmed)
+- [When to ask the user](#when-to-ask-the-user)
+- [Exclusions](#exclusions)
+- [Worked example](#worked-example)
+- [Cross-doc consistency check](#cross-doc-consistency-check)
+- [References](#references)
+
+---
+
 ---
 
 ## When to use this guide

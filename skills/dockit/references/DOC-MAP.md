@@ -22,8 +22,8 @@ Complete reference for dockit documentation structure, topics, and scaling.
 | Size | Docs Generated |
 |------|----------------|
 | **Small** (≤20 files) | README, ARCHITECTURE, ENVIRONMENTS |
-| **Medium** (20-50 files) | + PRINCIPLES, FOUNDATIONS, TROUBLESHOOTING, CLOUD |
-| **Large** (>50 files) | + CONTRIBUTING, sub-docs (incl. `architecture/foundations/`) |
+| **Medium** (20-50 files) | + PRINCIPLES, FOUNDATIONS, TROUBLESHOOTING, CLOUD, CONTRIBUTING |
+| **Large** (>50 files) | + sub-docs (incl. `architecture/foundations/`); CONTRIBUTING gains the fuller variant |
 
 For detection logic, see: [SIZE-SMALL.md](guides/SIZE-SMALL.md) | [SIZE-MEDIUM.md](guides/SIZE-MEDIUM.md) | [SIZE-LARGE.md](guides/SIZE-LARGE.md)
 
@@ -158,7 +158,7 @@ For detection logic, see: [SIZE-SMALL.md](guides/SIZE-SMALL.md) | [SIZE-MEDIUM.m
 
 ---
 
-### CONTRIBUTING.md (Large only)
+### CONTRIBUTING.md (Medium+)
 
 **Purpose:** Development workflow for teams
 
@@ -169,6 +169,8 @@ For detection logic, see: [SIZE-SMALL.md](guides/SIZE-SMALL.md) | [SIZE-MEDIUM.m
 | Code Guidelines | Standards, review checklist |
 | Testing | How to write/run tests |
 | Release | Version, deploy process |
+
+**Two variants.** Medium uses `CONTRIBUTING-MEDIUM.template.md` — workflow, guidelines, testing. Large uses `CONTRIBUTING.template.md`, which adds a code-review process with a checklist, per-role sections (frontend / backend / DevOps / QA), style guides, and a release process. Those extras earn their place only once there are enough people for a role split to mean something.
 
 ---
 
