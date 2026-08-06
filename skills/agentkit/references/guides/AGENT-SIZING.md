@@ -10,6 +10,8 @@ If the answer is no — if standard framework knowledge is sufficient — skip t
 
 ## When to Create an Agent
 
+**This section and the next govern the custom-code-only path** — projects with no `docs/FOUNDATIONS.md`. When foundations exist, a catalog row is the team declaring the code load-bearing, so the question is never *whether* it gets an owner but *which* agent owns it: see [Split triggers](#split-triggers). The Core Test above stays in force on both paths, and applies to coverage gaps either way.
+
 Create an agent when ALL of these apply:
 
 1. **Custom code that looks like framework defaults** — The project overrides or extends framework behavior in ways that AI would miss. This is the most dangerous category: AI confidently writes "correct" code that breaks the project's patterns.
@@ -28,17 +30,22 @@ Create an agent when ALL of these apply:
 - Isolated single-file customizations (unless extremely complex)
 - Patterns already documented in project docs or instruction files
 
-## Project Size Tiers
+## Agent Count Is an Output
 
-The sweet spot is **3–4 agents** for most projects. More agents means more context for the AI to juggle, and quality degrades as agent count increases ("context rot").
+Count is derived, never chosen. Start from one agent owning everything, split only when a [trigger](#split-triggers) fires, and the number that falls out is the right one. There is no target and no ceiling on the total. Two **per-agent** budgets bound the result, and they are the only numbers in this guide:
 
-| Size | Source Files | Max Agents | Strategy |
-|------|-------------|-----------|----------|
-| Small | 1–20 | 1–2 | Single "project-expert" agent covering all custom patterns |
-| Medium | 21–50 | 2–4 | One agent per major custom area |
-| Large | 51+ | 3–5 | Specialized agents; may split by service in monorepos |
+- **Size budget** — 10,000 characters of body, 12 patterns, 6 working directories, 5 owned foundations. Past any of these, an agent knows its territory too shallowly to advise on it. Full table: [GENERATION.md](./GENERATION.md) § Size check.
+- **Routability** — every agent's `description` must be distinguishable from every other agent's in the set without reading the bodies. See [Check routability before proposing the set](#check-routability-before-proposing-the-set).
 
-**Why cap at 5?** Research from Anthropic and industry practitioners shows that agent effectiveness plateaus around 3–4 agents. Beyond that, overlap increases, triggering becomes unreliable, and the AI spends more tokens routing than solving. If you need more than 5, consider whether some agents can be merged or whether the project should be split.
+Both are per-agent, so they bound the system from the other end: merging is the default, and count rises only when a trigger fires or a budget forces a split. A large agent set is therefore evidence about the project — many genuinely uncoupled areas — not a number to be brought down.
+
+Project shape still suggests a starting strategy:
+
+| Size | Source Files | Strategy |
+|------|-------------|----------|
+| Small | 1–20 | Single "project-expert" agent covering all custom patterns |
+| Medium | 21–50 | One agent per major custom area |
+| Large | 51+ | Specialized agents; may split by service in monorepos |
 
 ## Counting Source Files
 
@@ -113,36 +120,31 @@ In rough order of strength:
 
 If two foundations hit ≥ 2 of these signals, **merge them**. If they hit 0–1, the case for keeping them separate is stronger.
 
-### When to keep foundations separate
+### Split triggers
 
-Split only when one of these is true:
+This is the whole authority for splitting a foundation off. **Any one is sufficient**; if none fires, group it.
 
-- **Combined agent would exceed the size budget** (>10,000 chars body, >12 patterns, >6 working dirs — see size check in SKILL.md). At that point, merging hurts more than splitting.
-- **Distinct teams or owners** — `Owner` field in FOUNDATIONS.md differs. A platform-team foundation and a feature-team foundation shouldn't share an agent even if they're related.
-- **Mutually orthogonal invariants** — the foundations genuinely don't interact. If you can't construct a feature that would touch both, they're not change-coupled.
-- **One foundation is a `hotspot` and the other isn't** — the hotspot's high churn would force constant re-syncing of an agent that mostly didn't need it.
+| Trigger | Test |
+|---------|------|
+| **Different owner team** | The `Owner` field in FOUNDATIONS.md differs. A platform-team foundation and a feature-team foundation shouldn't share an agent even when they're related. |
+| **Hotspot mismatch** | Its `health` is `hotspot` while the rest of the cluster is `healthy`. The hotspot's churn would force constant re-syncing of an agent that mostly didn't need it. |
+| **Orthogonal invariants** | You cannot construct a feature that would touch both. If you can, they're change-coupled and this trigger hasn't fired. |
+| **Different consumer base** | One serves a boundary the others don't — a public-API foundation among internal-only foundations. |
+| **Size budget breach** | The merged agent would exceed 10,000 chars, 12 patterns, 6 working dirs, or 5 owned foundations. At that point merging hurts more than splitting, and this trigger overrides every argument for grouping. |
 
-### Sanity ceiling (not a target)
+**Not triggers**, though each gets proposed as one: 5+ invariants, 10+ consumers, or having a per-foundation sub-doc. All three are normal for a healthy foundation and say nothing about coupling. A sub-doc matters only if the invariants inside it turn out to be orthogonal, which is the third trigger doing the work, not the sub-doc.
 
-| Project shape | Soft ceiling |
-|---------------|--------------|
-| Small (≤ 20 source files) | 1 agent |
-| Medium (21–50 files) | up to 3 agents |
-| Large (51+ files) | up to 5 agents |
-| Large monorepo with services | up to 5 — per-service grouping wins; one agent owns all foundations within its service |
+### Check routability before proposing the set
 
-These are **ceilings, not targets**. Many projects should land below them. A medium project with 4 foundations might end up with 1 or 2 agents — that's healthier than 4 specialists. Numbers exist to flag "you've split too far," not to push you to split when grouping would have been fine.
+Delegation is decided by reading `description` fields, so a split only pays off if the descriptions can express it. Write each proposed agent's one-line description first, then for every pair in the set ask:
 
-### What Counts as "Genuinely Distinct" (override grouping)
+> *"Would a request that matches one of these plausibly match the other?"*
 
-A foundation is distinct enough to justify its own agent ONLY when ANY of these is true (not "5+ invariants" or "10+ consumers" by themselves — those are normal for a healthy foundation):
+If yes, the boundary is wrong. Re-split along a boundary the descriptions can express, or merge the pair back and say in the plan that routability is why. **A split you can't describe is a split the router can't act on.**
 
-- It has a different `Owner` team than the foundations it would otherwise group with
-- Its `health` is `hotspot` AND the others in the cluster are `healthy` (drift mismatch)
-- It has a per-foundation sub-doc AND its invariants are genuinely orthogonal to the cluster's
-- It serves a different consumer base (e.g., a public-API foundation vs. internal-only foundations)
+When a pair is close but genuinely distinct, the fix is a mutual negative scope — each description points at the other for the boundary case. [DESCRIPTION-WRITING.md](./DESCRIPTION-WRITING.md) § Negative scope phrases owns how to write that; this guide only decides when it's required.
 
-If none of those apply, group it.
+Run this on the proposed set in Phase 3, before the user sees the plan. A routing collision is cheap to fix in a plan and expensive to fix across six generated files. Sync re-runs it, because a foundation can drift into a neighbour's territory long after the boundary was drawn.
 
 ### Combined Agents (Foundation + Custom Code)
 
@@ -180,17 +182,19 @@ utils, helpers, lib                                    → cross-cutting
 | Situation | Action |
 |-----------|--------|
 | Same layer as the agent's existing dirs | **Fold.** This is the normal case. |
-| Different layer, but ≥ 2 change-coupling signals (see above) | **Fold**, and say in the prompt which signals justified crossing the layer. |
-| Different layer, 0–1 change-coupling signals | **Propose a new agent.** If that would breach the sanity ceiling, say so and let the user choose between a broader agent and a documented non-goal. |
+| Different layer, but ≥ 2 change-coupling signals (see above) | **Fold**, and name in the report which signals justified crossing the layer. |
+| Different layer, 0–1 change-coupling signals | **Propose a new agent**, and check it for routability against the existing set before putting it in the plan. |
 | Folding pushes the agent past 6 working dirs, 12 patterns, or 10,000 chars | **Split**, regardless of layer. The existing size budget wins. |
 
-#### Ceilings still bind
+#### Budgets still bind
 
-Coverage never justifies exceeding the sanity ceiling. If every remaining gap needs a sixth agent, the honest report is *"these directories are uncovered and the agent budget is full"* — not a fifth agent stretched over three layers. An uncovered directory the user has seen and accepted is a better outcome than a covered one whose owner can't advise on it.
+Coverage never justifies breaching a per-agent budget. If closing a gap would push an agent past its size budget or collide its description with another agent's, the honest report is *"this directory is uncovered, and folding it into `messaging` would take that agent to 7 working directories"* — not one agent stretched over three layers. Name the budget and the number. An uncovered directory the user has seen and accepted is a better outcome than a covered one whose owner can't advise on it.
+
+**"We're out of agents" is never the reason.** Count isn't capped, so a gap stays open because it fails the Core Test or because closing it would breach a per-agent budget — never because the set is full.
 
 #### Not every gap wants an owner
 
-Apply the Core Test at the top of this guide. If an AI assistant would get the directory right from framework knowledge alone — thin CRUD, config, glue, generated output — the correct resolution is `[s]kip`, and it should not be re-reported as new on the next sync.
+Apply the Core Test at the top of this guide. If an AI assistant would get the directory right from framework knowledge alone — thin CRUD, config, glue, generated output — the correct resolution is to leave it uncovered, list it under the report's "Noted" section, and not re-raise it as a finding on the next sync.
 
 ### When No Foundations Exist
 

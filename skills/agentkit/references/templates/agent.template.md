@@ -4,6 +4,10 @@ This is the unified template for all platforms (Claude, Antigravity, Copilot). I
 
 **Hot memory rule:** Embed real code snippets for the 2-3 most critical patterns. Describe the rest in prose. The agent should be effective without reading any files, but can go deeper by reading the files listed in Key Files.
 
+**Exemplar rule:** name one worked file per custom area by *address* — path plus symbol, never the contents. Worked code outranks prose about code, so the exemplar sits above Custom Patterns and prose yields first when the size budget binds. Selection rule and the reasoning behind it: [GENERATION.md](../guides/GENERATION.md) § Exemplar selection.
+
+**No persona framing.** State scope and what to do; don't assert expertise. Role framing in a system prompt measured as inert against a no-persona control, so the characters are better spent on a real path. Background: `docs/research/subagent-value-research.md`.
+
 **Required-fields rule:** Every generated agent file MUST start with frontmatter containing `name` and `description`. Without those two, the agent isn't discoverable on any platform — it just sits as inert markdown. The body is useless without them.
 
 ---
@@ -21,9 +25,8 @@ description: {{AGENT_DESCRIPTION}}
 # Copilot:     tools (enforced), no permission concept
 ---
 
-You are an expert in {{PROJECT_NAME}}'s custom {{CUSTOM_AREA}}. Your role is to help
-AI assistants understand and correctly use the project's custom patterns instead of
-inventing new approaches or falling back to framework defaults.
+You cover {{PROJECT_NAME}}'s custom {{CUSTOM_AREA}}. Use the project's existing patterns
+rather than inventing a new approach or falling back to a framework default.
 
 ## Architecture Context
 
@@ -62,10 +65,26 @@ How the team works in this area:
      Example: "All blocks are named *Block and live in blocks/.
      Each block has a corresponding test in tests/blocks/test_*.py." -->
 
+## Exemplar — read this before writing
+
+**Read the named file before you write new code here.** The conventions above give you the
+rules; the exemplar gives you the decisions the rules don't mention. Match its shape.
+
+| Area | Read | Why this file |
+|------|------|---------------|
+| {{CUSTOM_AREA}} | `{{EXEMPLAR_PATH}}` → `{{EXEMPLAR_SYMBOL}}` | {{WHY_REPRESENTATIVE}} |
+
+<!-- Generated per GENERATION.md § Exemplar selection — newest-added file in the working
+     directories, anchored on a symbol rather than a line range, add date in the Why column.
+     Omit the row if selection yields nothing. -->
+
 ## Custom Patterns
 
 <!-- For the 2-3 MOST CRITICAL patterns: embed real code from the codebase.
-     For the rest: describe in prose with file paths. -->
+     For the rest: describe in prose with file paths.
+
+     If a pattern lives in a file the agent could just be told to read, give the path
+     instead of the snippet — see the Exemplar rule at the top of this template. -->
 
 ### {{PATTERN_NAME}} (critical)
 
@@ -122,9 +141,10 @@ AI assistants typically get these wrong without this agent:
 When unsure about a pattern or when asked about upgrading:
 
 1. **Check project docs first** — read `docs/ARCHITECTURE.md`, `README.md`, or any relevant files in `docs/` before going external
-2. **Check framework docs** — use context7 or web search to look up {{FRAMEWORK_NAME}} documentation for the specific feature
-3. **Check for native alternatives** — search whether newer versions of {{FRAMEWORK_NAME}} (beyond {{FRAMEWORK_VERSION}}) provide native support for any custom patterns above
-4. **Verify compatibility** — before suggesting changes, confirm they work with {{FRAMEWORK_NAME}} {{FRAMEWORK_VERSION}}
+2. **Read the exemplar** — for "how is this done here," the file named above answers it and nothing external can
+3. **Check framework docs** — use context7 or web search to look up {{FRAMEWORK_NAME}} documentation for the specific feature. Framework APIs only; it can't tell you how this team uses them
+4. **Check for native alternatives** — search whether newer versions of {{FRAMEWORK_NAME}} (beyond {{FRAMEWORK_VERSION}}) provide native support for any custom patterns above
+5. **Verify compatibility** — before suggesting changes, confirm they work with {{FRAMEWORK_NAME}} {{FRAMEWORK_VERSION}}
 
 ## Completion Handoff
 

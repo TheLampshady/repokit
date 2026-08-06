@@ -77,13 +77,15 @@ Keep the full description under 1024 characters. Full pattern guide with example
 
 1. **Architecture Context** — pull the relevant excerpt from `ARCHITECTURE.md` or `README.md`. Keep to 5-10 lines. If no docs exist, summarize from code.
 
-2. **Working Directories** — list the directories this agent operates in.
+2. **Working Directories** — list the directories this agent operates in. For an `intended` foundation the catalog's `Consumers` column is empty by definition, so sourcing the table from it yields an agent that triggers on nothing. Scope it by where consumers are *meant* to go — the foundation's own directory, the layer it exists to serve, scaffold destinations, and for a wrapper the directories where the wrapped SDK is reachable — including directories that are currently empty. `../templates/foundation-agent.template.md` carries the full sourcing note and the no-precedent block that goes with it.
 
 3. **Framework Context** — framework name and version. What's native vs what's custom in this area.
 
 4. **Conventions** — extract from actual code patterns: naming, file organization, error handling, tests.
 
-5. **Custom Patterns (hot memory)** — for the 2-3 most critical patterns, **read the source files** and embed real code snippets. Prose for the rest.
+4b. **Exemplar (address, not content)** — one worked file per foundation, named by path and symbol, with a read-it-before-writing instruction. Sits *above* Custom Patterns, because worked code outranks prose about code. Which file, how to anchor it, and why it's an address rather than a paste: [§ Exemplar selection](#exemplar-selection).
+
+5. **Custom Patterns (hot memory)** — for the 2-3 most critical patterns, **read the source files** and embed real code snippets. Prose for the rest. Embedded code is capped at what has no address: the canonical call site and a named anti-pattern that exists as real code. If a pattern lives in a file the agent could be told to read, give the path.
 
 6. **Key Files** — table with "read when" guidance.
 
@@ -109,6 +111,35 @@ Keep the full description under 1024 characters. Full pattern guide with example
 
 15. **agentkit-managed marker** — HTML comment near the top of the body: `<!-- agentkit-managed -->`. Marks the agent as agentkit-generated so sync mode knows it's safe to update without prompting; hand-authored agents (no marker) are always treated as off-limits unless the user opts in.
 
+**What the body must not contain:** an assertion of expertise. Open with scope and authority — *"You own X's Y foundation(s)"*, not *"You are the owner and subject-matter expert for…"*. Role framing in a system prompt measured as inert against a no-persona control, so it buys nothing and spends characters an exemplar address or a real invariant needs. Behavioral instructions that read like framing are not framing and stay: *"work through the existing foundation rather than inventing a new approach"* tells the agent what to do.
+
+#### Exemplar selection
+
+One worked file per foundation (or per custom area, for a non-foundation agent). Computed here at generation time from inputs agentkit already reads — nothing new to store, and no schema change to FOUNDATIONS.md.
+
+1. **Candidate set** — the foundation entry's `Consumers` table (`Feature / Module` column), under its `#### Reference` heading. That table is Reference tier — *not* extracted into the agent — and nothing about this rule changes that: generation reads it to compute one address, and the address is what the agent carries. For a non-foundation agent, use the files in its working directories. For an `intended` foundation the table is empty by definition: emit no exemplar, and say so.
+2. **Resolve to paths** — entries are feature or module names (`billing.invoices`), not necessarily paths. Convert to a directory the way the `Working Directories` table does; if one won't resolve, fall back to grepping for imports of the foundation and use the importing files directly. Skip a consumer you can't resolve rather than guessing at it.
+3. **Drop disputed shapes** — exclude candidates inside a `hotspot` foundation's tree. High churn means the abstraction is under active dispute, and a shape the team is arguing about is the wrong thing for new code to copy. Filter before picking, so the pick can't land on one.
+4. **Pick the newest** — the most recently *added* file among what's left:
+   ```bash
+   git log --diff-filter=A --format='%ad %H' --date=short --name-only -- <resolved-paths>
+   ```
+   The newest consumer is the last time someone did this task and got it through review, so it reflects current practice rather than the oldest surviving pattern.
+5. **Anchor on a symbol, not a line range** — record the path plus the declaration the agent should look at: `` `app/notifications/order_confirmed.py` → `class OrderConfirmedNotification` ``. Line numbers move every time anything above them is edited, so a range goes wrong while the code is still perfectly good; a symbol goes wrong when the symbol is renamed or deleted, which is the drift worth catching. Both are greppable, so both are checkable — only one of them is stable.
+6. **Record the add date alongside it** — `` — newest consumer, added 2026-05 ``. It's the only staleness signal a reader gets, so it isn't optional.
+7. **When selection yields nothing** — every candidate was dropped, or the set was empty. Omit the row and say so in the Phase 6 report: *"no exemplar for `<foundation>` — all consumers sit in a hotspot tree."* An absent row is honest; a row pointing at a disputed pattern is worse than no row.
+
+#### Why an address and not the code
+
+This is the reasoning behind the exemplar, the embedded-code cap, and `SYNC.md` § Exemplar drift. It lives here so those three don't each carry their own copy of it — they state the rule and point back.
+
+- **Cost.** A path plus a symbol runs ~80 characters against a 10,000-character body. The file itself runs ~1,500. Fifteen invariants fit in the difference.
+- **Drift.** Pasting the file puts a second copy of the code inside a doc, where it goes stale silently the next time someone edits the original. That is the failure dockit exists to remove, and generating it on purpose would be indefensible.
+- **Checkability.** An address that stops resolving is a checkable claim — sync greps for the symbol and reports what it can't find. A stale paste asserts nothing checkable, so nothing ever catches it.
+- **The one real cost.** The agent spends a tool call reading the file, and might skip it. That's the tradeoff being made deliberately: a read that might not happen, against a copy that will certainly rot.
+
+**`context7` doesn't substitute for this, and don't write a disclaimer into the agent saying so.** context7 serves third-party framework APIs — a genuinely different question from how this team builds one, and the exemplar exists only in this repository. The agent's `Research` section already routes framework questions to context7 and local ones to the exemplar; that ordering is the instruction, and prose explaining the distinction is body weight the agent doesn't act on.
+
 #### Step 3 — Pre-write validation (do not skip)
 
 Before writing the file, confirm every requirement is satisfied:
@@ -122,6 +153,19 @@ Before writing the file, confirm every requirement is satisfied:
 | Body has `<!-- agentkit-managed -->` near the top | yes (agentkit-generated agents only) |
 | Body has Owned Foundations + Maintenance sections | yes (foundation-owner agents only) |
 | Body has Completion Handoff section with the verbatim "ready for verification" phrasing | yes (both templates) |
+| Body names an exemplar by path and symbol, or the report says why it doesn't | yes (both templates) |
+| Body is self-sufficient (below) | yes (both templates) |
+
+**Self-sufficiency check.** A subagent runs in its own context window. Read the body once more and ask whether it still works for an agent that has:
+
+- **no conversation history** — nothing the user said, nothing the parent decided
+- **none of the files the parent already read** — including `docs/FOUNDATIONS.md` itself
+- **no output style** — formatting preferences don't reach it
+- **no auto memory** — the main conversation's accumulated notes don't load
+
+Anything the agent *needs* that lives in one of those four is missing, not inherited. This is why the invariants are copied verbatim instead of referenced: a pointer to a doc the agent must remember to read is weaker than the line itself.
+
+The one thing that *does* cross the boundary on Claude is the `CLAUDE.md` hierarchy — user, project, `CLAUDE.local.md`, unscoped `.claude/rules/`, managed policy — plus a git-status snapshot. Don't rely on it: it's platform-specific, and a rule that must hold belongs in the body. Never assume `AGENTS.md` reaches the agent; Claude Code reads `CLAUDE.md`, not `AGENTS.md`, unless the project imports one from the other.
 
 **If any check fails, fix it before writing.** Do not write a file without `name` and `description` — that produces a file no platform discovers. It's worse than not generating the agent at all, because the user thinks they have an agent and don't.
 
@@ -137,6 +181,14 @@ After building the body, check its size. An effective agent needs enough context
 | Embedded code snippets | 2–3 critical patterns | >5 snippets |
 | Custom patterns covered | 3–10 per agent | >12 patterns |
 | Working directories | 1–4 directories | >6 directories |
+
+**What yields when the budget binds** — in order, cheapest loss first:
+
+1. **Prose** — conventions restated in sentences, pattern descriptions, anything explaining code rather than showing it.
+2. **Architecture Context** — trim toward the low end of 5–10 lines.
+3. **A third or fourth embedded snippet** — replace with a path.
+
+**What never yields:** the exemplar addresses, the invariants with their tiers and named anti-patterns, and the canonical call sites. Cutting an invariant to fit prose is backwards. The bet on exemplars ranking above prose is a working position rather than a measured one — see `docs/research/subagent-value-research.md` H4 — but at ~80 characters an address is cheap enough that being wrong about it costs almost nothing.
 
 **If an agent exceeds the split signal:**
 

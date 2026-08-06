@@ -173,12 +173,40 @@ commandExecutionPolicy: sandbox
 
 ---
 
+### Agent Body Review (both platforms, and agentkit templates)
+
+Frontmatter decides whether an agent loads and gets routed to. The body decides whether it's any good once it runs. These checks are platform-neutral — apply them to `.claude/agents/`, `.agents/agents/`, and the templates under `skills/agentkit/references/templates/`.
+
+**Self-sufficiency — the one that matters most.** A subagent runs in its own context window. Read the body and ask whether it still works for an agent with **no conversation history, none of the files the parent already read, no output style, and no auto memory**. Anything it needs from those four is missing, not inherited.
+
+- [ ] No instruction depends on something said earlier in a conversation the agent won't see
+- [ ] Content the agent must *act on* is embedded, not referenced. A pointer to a doc it has to remember to read is weaker than the line itself
+- [ ] Content the agent only *consults* is referenced by path, not pasted
+- [ ] Nothing assumes `AGENTS.md` reached the agent — Claude Code reads `CLAUDE.md`, not `AGENTS.md`. On Claude the `CLAUDE.md` hierarchy *does* load into a custom subagent, but that's platform-specific, so a rule that must hold belongs in the body
+
+**No persona framing.** Flag an opening that asserts expertise — *"You are an expert in…"*, *"You are the owner and subject-matter expert for…"*. Role framing in a system prompt measured as inert against a no-persona control, so it costs characters and buys nothing. The fix is scope plus authority: *"You own X's Y foundation(s). You may edit `docs/`; you may not modify the source."*
+
+Behavioral instructions that *read* like framing are not framing and stay — *"work through the existing foundation rather than inventing a new approach"* tells the agent what to do. Flag the assertion, not the instruction.
+
+**Payload shape.** Worked code outranks prose about code.
+
+- [ ] An exemplar is named by **address** — `path` plus a symbol, plus why that file — never pasted in full, and anchored on a symbol rather than a line range (line numbers move when anything above them is edited). Reasoning: `skills/agentkit/references/guides/GENERATION.md` § Why an address and not the code
+- [ ] Embedded code is limited to what has no address: a canonical call site (a site *inside* a file) and a named anti-pattern that exists as real code
+- [ ] Invariants carry their tier (`Convention` / `Rule`) and their named anti-pattern and repair. An agent can't recognise a violation it can't name, and one that defends a Convention as a Rule blocks legitimate work
+- [ ] Prose that explains code the agent could simply be shown is a trim candidate, not a feature
+
+**Size.** Body over 10,000 characters, more than 5 embedded snippets, more than 6 working directories, or more than 5 owned foundations — flag for a split, not a trim. Cutting an invariant to make room for prose is backwards.
+
+Background for all of the above: `docs/research/subagent-value-research.md`.
+
+---
+
 ## Review Workflow
 
 1. **Identify component type** from the file path and extension
 2. **Read the file** and any referenced documents
 3. **Check required fields first** — `name` and `description` must be present on every component; flag as blocking errors if missing
-4. **Run the full checklist** for the component type
+4. **Run the full checklist** for the component type — and for any agent or agent template, the [Agent Body Review](#agent-body-review-both-platforms-and-agentkit-templates) on top of the frontmatter checks. A file can pass every frontmatter check and still be an agent that only works when the parent's context happens to still be there
 5. **Check cross-platform status**: does the other platform's version exist and match?
 6. **Assess description quality**: would this trigger correctly? missing triggers? too vague?
 7. **Identify safe optional fields to add** — use the "Optional fields to add" lists above; only recommend fields that are safe for the component's platform scope
@@ -206,6 +234,11 @@ commandExecutionPolicy: sandbox
 
 ### Content Quality
 [Size, focus, clarity, actionability]
+
+### Body Payload (agents and agent templates only)
+[Self-sufficient without the parent's context? Persona framing to cut? Exemplar named by
+address rather than pasted? Embedded code within the cap? Invariants carrying tier and
+anti-pattern?]
 
 ### Platform Safety
 [Any forbidden fields present? Hook event names valid?]

@@ -169,7 +169,7 @@ Turn discovery output into a proposed agent set. Two assessments run, then group
 | 3.2 Custom-code assessment | Candidates for the custom patterns discovery found, native alternatives ruled out |
 | 3.3 Grouping into agents | The merge/split decision — fewer, broader agents by default |
 
-**Read [`references/guides/ANALYSIS.md`](references/guides/ANALYSIS.md) before running this phase** — it holds the assessment format, native-alternative detection, and the grouping rules. Grouping also depends on [`AGENT-SIZING.md`](references/guides/AGENT-SIZING.md), which owns the change-coupling principle and the size ceilings.
+**Read [`references/guides/ANALYSIS.md`](references/guides/ANALYSIS.md) before running this phase** — it holds the assessment format, native-alternative detection, and the grouping rules. Grouping also depends on [`AGENT-SIZING.md`](references/guides/AGENT-SIZING.md), which owns the change-coupling principle, the split triggers, and the per-agent budgets.
 
 The output of this phase is the plan the user reviews in Phase 4. Nothing is written until they accept it.
 
@@ -177,82 +177,18 @@ The output of this phase is the plan the user reviews in Phase 4. Nothing is wri
 
 ## Phase 4: Plan and User Review
 
-Present the analysis as a clear plan. **Do not generate any files yet.**
+Present the analysis as a plan. **Do not generate any files yet.**
 
-### Plan Format (foundation-led)
+**Read [`references/guides/REPORTING.md`](references/guides/REPORTING.md) before presenting** — it owns the four-field agent block, the full plan format, the review block for hand-authored agents, and the rule that reports state decisions rather than ask questions. Sync's **New** section uses the same agent block, so the shape is learned once.
 
-```markdown
-## Proposed Agents
+The plan covers, in this order: the agent blocks, the routability check, per-agent budgets, custom code folded in, assumptions the reader may want to correct, anything left uncovered on purpose, and a closing line saying what will be written and how to reshape it.
 
-### Project: [name]  |  Size: [S/M/L]  |  Foundations: [N]  |  Agents Proposed: [N]
+Two rules that decide what belongs in it:
 
-| # | Agent | Owns Foundations | Folded Custom Code | Working Dirs | Notes |
-|---|-------|------------------|--------------------|--------------|-------|
-| 1 | auth | core.auth, core.permissions | custom-middleware (4 files) | core/auth/, middleware/ | hotspot — 90d review due |
-| 2 | data-layer | core.database, core.cache | custom-querysets (6 files) | core/db/, models/ | healthy |
-| 3 | messaging | core.notifications | — | core/notifications/ | sub-doc exists |
+- **A foundation's name appears once**, in the agent that owns it. A foundation *attribute* appears only when it's the reason for a decision.
+- **No working-directories table.** Catalog paths are derivable; only departures from the catalog are worth reporting.
 
-### Domain-Expert Agents (no foundation ownership)
-- [name] — [why it stands alone]
-
-### Existing Agents (review only — won't be modified)
-
-For each hand-authored agent (no `agentkit-managed` marker), present the structured review built in step 1.5 of [DISCOVERY.md](references/guides/DISCOVERY.md). Do not modify any of these files; this is information for the user to act on.
-
-```markdown
-#### `.claude/agents/auth-helper.md` (hand-authored)
-
-**Scope:** Helps with OAuth2 token management — refresh, scope validation, refresh-token rotation.
-
-**Foundation overlap:**
-
-| Foundation | Overlap | Notes |
-|-----------|---------|-------|
-| `core.auth` | partial | This agent covers tokens; the foundation also covers session lifecycle and replay-window enforcement |
-| `core.permissions` | none | — |
-
-**Gaps relative to FOUNDATIONS.md:**
-- Doesn't acknowledge the `core.auth` invariant *"replay window must be enforced on all token validations"*
-- No mention of the change checklist for auth foundations
-
-**Recommendation: Merge content into the new `auth` agent, then retire**
-- Copy the OAuth-specific patterns (token refresh, scope validation) from this agent into the new `auth` agent's `Custom Patterns` section
-- Then delete `.claude/agents/auth-helper.md`
-- Reasoning: the new `auth` agent will own `core.auth` from FOUNDATIONS.md plus this agent's specifics, and avoids the triggering conflict
-
-(Other recommendation options shown if relevant: *Keep as-is alongside generated agents*, *Retire — covered by new agent*.)
-```
-
-If multiple hand-authored agents are present, repeat this block per agent. Don't lump them together — each gets its own scope/overlap/gaps/recommendation.
-
-### Skipped Foundations
-- [name] — [reason: sunset / pretender / user opted out]
-
-### Skipped Custom Code (native alternatives exist)
-- [area] ([N] files) — [why it's native]
-
-### Borderline (your call)
-- [area] ([N] files) — [why it's borderline, what the alternative is]
-
-### Questions
-1. Confirm the foundation→agent grouping above
-2. [Any "did you mean to customize this?" questions]
-3. [Any handling decisions for existing hand-authored agents]
-```
-
-### What to Ask About
-
-Only ask questions that affect the **grouping plan above**. Don't ask the user about future direction, upgrades, or what features they might add — that's out of scope (see Scope Boundary).
-
-- **Foundation grouping** — "I clustered `core.notifications` and `core.events` into one `messaging` agent (shared consumers, same domain). Split them?"
-- **Heavy foundation own agent** — "`core.database` has its own sub-doc and 14 consumers. Recommend its own agent. OK?"
-- **Folding custom code** — "Your `custom-paginator.py` lives near `core.api`. Folding into the api agent. OK?"
-- **Borderline custom code** — "Your `CustomPaginator` adds only `max_page_size`. Skip this or include in the api agent?"
-- **Existing hand-authored agents** — present the per-agent review (scope / foundation overlap / gaps / recommendation) and ask: "For each, do you want to (k)eep alongside, (r)etire, or (m)erge content first then retire?" Default: leave them untouched until the user picks.
-
-**Don't ask the user about upgrade paths or native replacements.** If the agent's framework version has a known native replacement for one of its patterns (e.g., the project is on Wagtail 6.0 but 6.3 added `TableBlock`), put that in the generated agent's `Common Mistakes` or `Research` section as a *flag*, not as a question to the user during planning. Upgrade decisions are the team's call — agentkit just records the fact.
-
-**Wait for user approval before proceeding to Phase 5.**
+**Nothing is written until the user accepts the plan.** That gate is real — what the plan doesn't do is open with a confirmation prompt or close with a questionnaire.
 
 ---
 
@@ -267,7 +203,7 @@ Write the agent files. Only runs after the user approves the Phase 4 plan.
 | 5.3 Generate agent files | The agents themselves, per platform |
 | 5.4 Update instruction files | The pointer that lets the platform find them |
 
-**Read [`references/guides/GENERATION.md`](references/guides/GENERATION.md) before writing any file** — it holds the per-platform frontmatter requirements, the hot-memory extraction rules, and what each template expects. Platform field names and enforcement differ in ways that fail silently, so [`references/platforms.md`](references/platforms.md) is the authority on those.
+**Read [`references/guides/GENERATION.md`](references/guides/GENERATION.md) before writing any file** — it holds the per-platform frontmatter requirements, the hot-memory extraction rules, the exemplar-selection rule, the self-sufficiency check, and what each template expects. Platform field names and enforcement differ in ways that fail silently, so [`references/platforms.md`](references/platforms.md) is the authority on those.
 
 Descriptions drive routing, so they come from each foundation's `Use when` lines rather than being re-derived — see [`DESCRIPTION-WRITING.md`](references/guides/DESCRIPTION-WRITING.md).
 
@@ -379,32 +315,37 @@ But only mention these **if asked**. Don't list them unprompted.
 
 1. **Inputs** — gather existing agents, current FOUNDATIONS.md, code state
 2. **Drift scan** — classify findings into six categories: orphaned, missing, path drift, invariant drift, status drift, and **trigger coverage gaps**
-3. **Report** — present a structured drift report (see SYNC.md for the exact format)
-4. **Per-finding decisions** — prompt the user for each drifted item: update / replace / skip / delete
-5. **Apply** — update agent files in place, run cross-doc check if foundations changed; the `agentkit-managed` marker stays as-is (no timestamp)
+3. **Apply** — fix every agent the catalog already settled, without prompting: paths, statuses, invariant wording and tier, orphaned references, module-split rescopes, unowned catalogued foundations, missing platform copies. Edits stay inside agent files
+4. **Report** — four sections: *Updated* (a table of what changed on existing agents), *New* (agents sync created, in the same four-field block init uses), *Left for you* (what it deferred and why), *Noted* (too small to act on). Close with a recommendation and its alternatives, never a question. Format and readability rules in [SYNC.md](references/guides/SYNC.md#sync-output-format)
 
-Categories 1–5 compare each agent against `FOUNDATIONS.md`. Category 6 compares the **agent set against the code** — directories, inheritance roots, and split modules that trigger no agent at all. That gap can't be seen from inside the agent set, so the scan runs every sync. When closing one, apply the layer test in AGENT-SIZING.md: widening an agent until the report goes green trades a blindspot for an over-triggering agent.
+**Sync acts; it doesn't interview.** The line is authority, not risk: *apply it when `FOUNDATIONS.md` already decided; defer it when applying would mean deciding.* So sync defers exactly four things — deleting an agent file (destructive), editing `FOUNDATIONS.md` (dockit's, never agentkit's), creating an agent for **uncovered code** (the catalog is silent on those directories, so that judgment is the user's), and folds that fail the layer test or breach the size budget. Everything else it fixes and reports.
+
+Write the report for an engineer who didn't build the agent set and doesn't know agentkit's vocabulary: verdict first, no `none` sections, findings labelled by **agent name** (never by a platform config file), full paths, no "see above" cross-references. Four lines per deferred item — offer `explain <n>` rather than wrapping a paragraph. Close by naming the files touched and noting `git diff` reverses it.
+Edits land in agent files in place; the `agentkit-managed` marker stays as-is (no timestamp). Cross-doc hits go in the report, never into the docs.
+
+Categories 1–5 compare each agent against `FOUNDATIONS.md`. Category 6 compares the **agent set against the code** — directories, inheritance roots, and split modules that trigger no agent at all. That gap can't be seen from inside the agent set, so the scan runs every sync. It's also the one category that always defers, because the catalog is silent on uncovered code by definition. When closing one, apply the layer test in AGENT-SIZING.md: widening an agent until the report goes green trades a blindspot for an over-triggering agent.
 
 ### What sync does NOT do
 
-- Re-run dockit's foundation detection (that's `/dockit sync`). Category 7 may **count** files and subclasses; it never scores, ranks, or writes a `FOUNDATIONS.md` row
-- Silently rewrite invariants
+- Re-run dockit's foundation detection (that's `/dockit sync`). Category 6 may **count** files and subclasses; it never scores, ranks, or writes a `FOUNDATIONS.md` row
+- Rewrite invariants *silently* — it fixes them to match the catalog and prints the before/after
+- Delete agent files, or create agents for uncovered code
 - Auto-overwrite hand-authored agents (no `agentkit-managed` marker → warn and recommend, never replace)
-- Modify foundation source code
+- Modify source code or doc files
 
 ### Multi-platform sync
 
-When the same agent exists on multiple platforms, sync applies the same change to all platforms in one pass. If an agent exists on only one platform, sync flags it as a **platform gap** and asks whether to extend. (Not to be confused with a trigger coverage gap — code no agent covers on any platform.)
+When the same agent exists on multiple platforms, sync applies the same change to all platforms in one pass. If an agent exists on only one platform, that's a **platform gap**: generate the missing copies and report it. The team already decided the agent should exist. (Not to be confused with a trigger coverage gap — code no agent covers on any platform.)
 
 ---
 
 ## Status Mode
 
-`/agentkit status` runs the drift scan in read-only mode — no actions, just a report. Use it to:
+`/agentkit status` runs the drift scan in read-only mode — no actions, just a report. It's sync's dry run, which is why sync needs no `--dry-run` flag. Use it to:
 
 - Inventory what agents exist and what they own
 - See which foundations are uncovered, and which source directories trigger no agent
-- See drift before deciding to run sync
+- Look at the drift before sync changes anything
 
 Output format in [`references/guides/SYNC.md`](references/guides/SYNC.md) under "Status Mode."
 

@@ -113,7 +113,13 @@ The lightest version of this is one rule added to WRITING-GUIDE: *every section 
 
 ### Subagent context loss: the active-work compromise
 
-Default subagents spawn fresh, don't see CLAUDE.md or AGENTS.md, re-do work that already happened, and produce parallel content that duplicates what dockit owns. This is the immediate pain point — and it's the *opposite* failure from the ETH study. The ETH study warns about *redundant* context; the subagent problem is *missing* context.
+A subagent starts in a fresh, isolated context window, and the boundary is selective rather than total. Project *rules* cross it; project *state* does not.
+
+What crosses on Claude: every level of the CLAUDE.md hierarchy the main conversation loads — managed policy, `~/.claude/CLAUDE.md`, project `CLAUDE.md`, `CLAUDE.local.md`, unscoped `.claude/rules/` — plus a git-status snapshot and any skills named in the agent's `skills` field. Only the built-in Explore and Plan agents skip CLAUDE.md and git status, and no frontmatter field changes that ([Claude Code — subagents § What loads at startup](https://code.claude.com/docs/en/sub-agents)). `AGENTS.md` is not among them: "Claude Code reads `CLAUDE.md`, not `AGENTS.md`" — a project wanting both points one at the other with an `@AGENTS.md` import or a symlink ([Claude Code — memory § AGENTS.md](https://code.claude.com/docs/en/memory)).
+
+What does not cross: conversation history, the files the parent already read, the skills it already invoked, output style, and the main conversation's auto memory. A fork is the exception — it inherits the parent conversation.
+
+So the pain point is narrower than "spawns blind," and it is the part dockit owns: `docs/FOUNDATIONS.md` and `docs/ARCHITECTURE.md` are project docs, not memory files, so nothing loads them for the subagent. It re-does discovery that already happened and produces parallel content duplicating what dockit owns. That is still the *opposite* failure from the ETH study — the ETH study warns about *redundant* context; the subagent problem is *missing* context.
 
 Both are real, but they trade off. Fully de-duplicating the agent's input (DRY for both humans and machines) is the long-term direction — break out FOUNDATIONS-style references that subagents and humans both consume by pointer rather than copy. The current priority is pragmatic: **small + present beats DRY + missing**. If a subagent doesn't have the context, it fabricates or duplicates; if it has the context but the context is partially redundant, the cost is tokens, not correctness.
 
@@ -167,6 +173,8 @@ The ETH study's finding — that auto-generated summaries hurt — is specifical
 | [Fern — Docs Linting Guide](https://buildwithfern.com/post/docs-linting-guide) | Practitioner guide | Stable headings as tooling contract |
 | [Netlify — Docs Linting in CI/CD](https://www.netlify.com/blog/a-key-to-high-quality-documentation-docs-linting-in-ci-cd/) | Practitioner blog | CI-side enforcement of doc quality |
 | [Qodo — Code Documentation Best Practices 2026](https://www.qodo.ai/blog/code-documentation-best-practices-2026/) | Industry article | Recent consensus on AI-era documentation practices |
+| [Claude Code — Create custom subagents](https://code.claude.com/docs/en/sub-agents) | Official docs | Exactly what loads into a subagent's initial context, and what never crosses the boundary |
+| [Claude Code — How Claude remembers your project](https://code.claude.com/docs/en/memory) | Official docs | The CLAUDE.md hierarchy and load order; `AGENTS.md` is read only via import or symlink |
 
 ## Resolved (deliberately not doing)
 

@@ -87,17 +87,29 @@ Orientation first: **what does this project's context layer actually contain?** 
 # Which docs exist
 ls docs/*.md README.md 2>/dev/null
 
-# Foundations: count, and the catalog's actual columns
+# Catalog only — foundation count and the status vocabulary actually in use.
+# The awk range matters: per-entry Consumers tables also start with a backticked
+# cell, and counting those inflates the foundation count several times over.
+awk '/^## Catalog/{c=1;next} c&&/^## /{c=0} c&&/^\| *`/{n++; split($0,f,"|"); gsub(/[* ]/,"",f[6]); st[f[6]]++} \
+     END{print "foundations:",n+0; for(k in st) print "status",k,st[k]}' docs/FOUNDATIONS.md 2>/dev/null
+
+# The catalog's actual columns
 grep -m1 '^| Name' docs/FOUNDATIONS.md 2>/dev/null
-grep -cE '^\| `' docs/FOUNDATIONS.md 2>/dev/null
 
-# Status vocabulary in use
-grep -oE '\| (active|intended|experimental|deprecated|sunset) \|' docs/FOUNDATIONS.md 2>/dev/null | sort | uniq -c
-
-# Invariants by tier, and how many name an anti-pattern
+# Invariants, and how many carry a repair clause
 grep -c 'dockit:tier="rule"' docs/FOUNDATIONS.md 2>/dev/null
 grep -c 'dockit:tier="convention"' docs/FOUNDATIONS.md 2>/dev/null
+grep -B1 'dockit:tier=' docs/FOUNDATIONS.md 2>/dev/null | grep -c '—'
+
+# PRINCIPLES.md carries no tier comments — tier is the section a rule sits under
+awk '/^## Conventions/{s="c"} /^## Rules/{s="r"} /^\*\*/{n[s]++} \
+     END{print "conventions",n["c"]+0; print "rules",n["r"]+0}' docs/PRINCIPLES.md 2>/dev/null
+grep -c '\[intended\]' docs/PRINCIPLES.md 2>/dev/null
 ```
+
+**Two traps these commands avoid, both found by running them.** Restrict the foundation count to the `## Catalog` range — per-entry Consumers tables also begin with a backticked cell, and counting those reported 26 foundations where there were 6. And strip `*` before reading the Status cell: a catalog may bold a value for emphasis (`**intended**`), and a naive match drops it while happily counting the table's separator row.
+
+**The status read is deliberately open-ended.** It reports whichever value sits in the catalog's Status column rather than matching against a known list — that's what lets an unfamiliar value be *reported* instead of silently dropped, which is the whole point of the next rule.
 
 ```
 Docs shape
@@ -437,7 +449,7 @@ Check whether agentkit has been initialized on this project:
 ls .claude/agents/*.md .agents/agents/*.md .agents/agents/*/agent.md .github/agents/*.md 2>/dev/null
 ```
 
-If any agent files exist, invoke `agentkit sync`. It reconciles each agent against the now-current docs, surfaces drift, and lets the user pick what to update — it doesn't auto-overwrite.
+If any agent files exist, invoke `agentkit sync`. It reconciles each agent against the now-current docs and reports what it changed. It applies what the docs already settled — paths, statuses, invariant wording — and defers what would mean deciding for the user, chiefly whether uncovered code deserves an agent of its own. Hand-authored agents are never overwritten.
 
 Tell the user: "Running agentkit sync to update project agents against the new docs..."
 

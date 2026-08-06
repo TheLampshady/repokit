@@ -27,21 +27,22 @@ Optional platform filter: `/agentkit init claude`, `/agentkit sync antigravity`,
 
 1. **Reads** `docs/FOUNDATIONS.md` — catalog rows, invariants, change checklists, sub-docs
 2. **Discovers** dependencies, frameworks, custom code that extends foundations
-3. **Groups** foundations into 1–5 agents using the AGENT-SIZING heuristic (combined to avoid trigger conflicts)
+3. **Groups** foundations into agents using the AGENT-SIZING heuristic — merging by default, splitting only on a named trigger, then checking that no two descriptions collide
 4. **Plans** — shows the foundation→agent mapping and asks for confirmation
 5. **Generates** foundation-owner agents (with maintenance sections + edit permissions) for the chosen platforms
 6. **Enriches** your instruction file (CLAUDE.md / AGENTS.md / copilot-instructions) with agent routing
 
 ## How sync Works
 
-Reconciles existing agents against current state. Detects:
+Reconciles existing agents against current state, then reports what it changed. Detects:
 
 - **Orphaned agents** — claim a foundation that no longer exists
 - **Missing agents** — a foundation has no owner
 - **Path drift** — foundation moved without updating the agent
 - **Invariant drift** — agent body and FOUNDATIONS.md disagree
+- **Coverage gaps** — code no agent covers on any platform
 
-Prompts per finding — never auto-overwrites hand-authored agents.
+Sync fixes what `FOUNDATIONS.md` already settled rather than prompting per finding, and defers what would mean deciding on the user's behalf: deleting an agent, editing the catalog, or declaring that uncovered code needs an owner. Hand-authored agents are never overwritten, and `/agentkit status` is the dry run.
 
 ## Output
 
@@ -107,7 +108,8 @@ Agents are NOT created for:
 
 ## References
 
-- `references/guides/AGENT-SIZING.md` — agent count + foundation-mapping heuristic
+- `references/guides/AGENT-SIZING.md` — split triggers, per-agent budgets, foundation-mapping heuristic
+- `references/guides/REPORTING.md` — plan format, the agent block init and sync share, decisions-not-questions rule
 - `references/guides/FOUNDATION-MAINTENANCE.md` — what foundation-owner agents do when invoked for maintenance
 - `references/guides/SYNC.md` — drift detection and reconciliation logic
 - `references/templates/agent.template.md` — domain-expert template

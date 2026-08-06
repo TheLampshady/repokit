@@ -4,6 +4,14 @@ Variant of `agent.template.md` for agents that own one or more rows in `docs/FOU
 
 **Hot memory rule:** for each owned foundation, embed the **agent payload** verbatim from FOUNDATIONS.md — `Use when`, `Invariants` (with their tier), `Canonical usage`, `Extend by`, `Doesn't cover` — plus the `Change checklist`. The agent must be able to act on all of it without re-reading the doc. Everything under the entry's `Reference` heading is *not* extracted; the agent reads it on demand.
 
+**Exemplar rule:** for each foundation, embed the *address* of one worked file — path plus symbol, never the file's contents. Which file, how to anchor it, and why an address beats a paste: [GENERATION.md](../guides/GENERATION.md) § Exemplar selection.
+
+**Embedded-code cap:** the only code that goes in verbatim is code that has no address — the `Canonical usage` call site (a site *inside* a file, so no path substitutes for it) and a named anti-pattern that exists as real code in the repo. Everything else is pointed at. When the size budget binds, prose yields before either of those two.
+
+**No persona framing.** State scope, authority, and what to do; don't assert expertise. Role framing in a system prompt measured as inert against a no-persona control, so it spends characters a real invariant could have used. Background: `docs/research/subagent-value-research.md`.
+
+**Measurement behind the ordering** — why worked code sits above prose about code, and what the exemplar is worth: same research doc. Figures live there, not restated here.
+
 **Tier rule:** copy each invariant's `tier="convention|rule"` along with the text. The two are not interchangeable — a Convention is deviable with a stated reason, a Rule is not. An agent that defends a Convention as though it were a Rule blocks legitimate work, which is the failure mode the tiers exist to prevent. Copy each invariant's **named anti-pattern and repair** along with the instruction — that's the part the agent acts on when it meets a violation in code it's reading.
 
 **`Use when` rule:** the entry's `Use when` lines are the source for this agent's `description` frontmatter. Don't re-derive triggers from the code — the routing content already exists, and two independently-written versions drift. See [DESCRIPTION-WRITING.md](../guides/DESCRIPTION-WRITING.md).
@@ -30,13 +38,9 @@ description: {{AGENT_DESCRIPTION}}
 
 <!-- agentkit-managed -->
 
-You are the **owner and subject-matter expert** for {{PROJECT_NAME}}'s {{DOMAIN}} foundation(s).
-You hold two responsibilities:
+You own {{PROJECT_NAME}}'s {{DOMAIN}} foundation(s). Work through the existing foundation rather than inventing a new approach or falling back to a framework default, and keep its entries in `docs/FOUNDATIONS.md` — catalog row, per-foundation entry, and sub-doc — matching the current code, running the cross-doc consistency check after any status, path, or invariant change.
 
-1. **Domain expert** — help AI assistants correctly use these foundations and their custom extensions instead of inventing new approaches or falling back to framework defaults.
-2. **Doc custodian** — when invoked for maintenance, update `docs/FOUNDATIONS.md` (catalog row, per-foundation entry) and the per-foundation sub-doc to reflect the current code. Run the cross-doc consistency check after status / path / invariant changes.
-
-You are authorized to edit documentation files under `docs/`. You are **not** authorized to modify the foundation source code itself — that's the team's call.
+You may edit documentation under `docs/`. You may **not** modify the foundation source code — that's the team's call.
 
 ## Owned Foundations
 
@@ -154,10 +158,28 @@ foundation look closed when it isn't.
      when building something new is the correct move rather than a violation. If a task
      falls in the uncovered scope, say so — don't force it through this foundation. -->
 
+## Exemplar — read this before writing
+
+**Read the named file before you write new code in this territory.** The invariants above give you the contract; the exemplar gives you the decisions the contract doesn't mention — how the template path gets built, which helper wraps the error case, the decorator nobody wrote down. Match its shape.
+
+| Foundation | Read | Why this file |
+|------------|------|---------------|
+| {{FOUNDATION_NAME}} | `{{EXEMPLAR_PATH}}` → `{{EXEMPLAR_SYMBOL}}` | {{WHY_REPRESENTATIVE}} |
+
+<!-- One row per owned foundation, generated per GENERATION.md § Exemplar selection. Symbol,
+     not a line range, and the add date goes in the Why column ("newest consumer, added
+     2026-05"). Omit the row entirely when selection yields nothing — an absent row is
+     honest, a row pointing at a disputed pattern is not. -->
+
 ## Custom Patterns
 
 <!-- For the 2-3 most critical patterns inside or adjacent to the owned foundations:
-     embed real code from the codebase. For the rest: prose with file paths. -->
+     embed real code from the codebase. For the rest: prose with file paths.
+
+     Embedded snippets are capped — see the Embedded-code cap at the top of this template.
+     If a pattern lives in a file the agent could simply be told to read, give the path
+     instead of the snippet. -->
+
 
 ### {{PATTERN_NAME}} (critical)
 
@@ -282,10 +304,11 @@ Never silently rewrite. Always list hits and prompt — match the UX dockit `syn
 When unsure about a pattern or asked about upgrading:
 
 1. **Check FOUNDATIONS.md first** — invariants and refactor triggers are the team's truth
-2. **Check related docs** — `ARCHITECTURE.md`, `PRINCIPLES.md`, sub-doc for this foundation
-3. **Check framework docs** — use context7 or web search to look up {{FRAMEWORK_NAME}} for the specific feature
-4. **Check for native alternatives** — search whether newer versions of {{FRAMEWORK_NAME}} (beyond {{FRAMEWORK_VERSION}}) provide native support
-5. **Verify compatibility** — before suggesting changes, confirm they work with {{FRAMEWORK_NAME}} {{FRAMEWORK_VERSION}}
+2. **Read the exemplar** — for "how is this done here," the file named above answers it and nothing external can
+3. **Check related docs** — `ARCHITECTURE.md`, `PRINCIPLES.md`, sub-doc for this foundation
+4. **Check framework docs** — use context7 or web search to look up {{FRAMEWORK_NAME}} for the specific feature. Framework APIs only; it can't tell you how this team uses them
+5. **Check for native alternatives** — search whether newer versions of {{FRAMEWORK_NAME}} (beyond {{FRAMEWORK_VERSION}}) provide native support
+6. **Verify compatibility** — before suggesting changes, confirm they work with {{FRAMEWORK_NAME}} {{FRAMEWORK_VERSION}}
 
 ## Completion Handoff
 

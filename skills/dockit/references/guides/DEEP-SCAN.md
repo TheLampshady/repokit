@@ -36,7 +36,7 @@ Read every doc and confirm each claim points at something real.
 - `CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `CONTRIBUTING.md`, `CHANGELOG.md`
 - Any `.md` reached by a link from the above
 
-Skip `node_modules/`, `.git/`, `vendor/`, `dist/`, `build/`, `.backlog/tickets/`.
+Skip `node_modules/`, `.git/`, `vendor/`, `dist/`, `build/`.
 
 ### Extract and verify
 

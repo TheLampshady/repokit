@@ -76,9 +76,11 @@ Classify project size:
 
 | Size | Source Files | Agent Strategy |
 |------|-------------|---------------|
-| Small | 1–20 | 1–2 agents max (single "project-expert" covering all custom patterns) |
-| Medium | 21–50 | 2–4 agents (one per major custom area) |
-| Large | 51+ | 3–5 agents (specialized; may split by service in monorepos) |
+| Small | 1–20 | Single "project-expert" covering all custom patterns |
+| Medium | 21–50 | One agent per major custom area |
+| Large | 51+ | Specialized agents; may split by service in monorepos |
+
+These are starting strategies, not counts — the final number is whatever the split triggers and per-agent budgets in [AGENT-SIZING.md](./AGENT-SIZING.md) produce.
 
 Detect structure type:
 - **Monorepo** — multiple `package.json`/`pyproject.toml` files, or directories like `services/`, `packages/`, `apps/`

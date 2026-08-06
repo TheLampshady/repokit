@@ -2,7 +2,7 @@
 
 How agentkit turns discovery output into a proposed agent set. Invoked from [`SKILL.md`](../../SKILL.md#phase-3-analysis) § Phase 3.
 
-Grouping decisions also depend on [`AGENT-SIZING.md`](./AGENT-SIZING.md), which owns the change-coupling principle and the size ceilings. Nothing in this phase writes a file — its output is the plan the user reviews in Phase 4.
+Grouping decisions also depend on [`AGENT-SIZING.md`](./AGENT-SIZING.md), which owns the change-coupling principle, the split triggers, and the per-agent budgets. Nothing in this phase writes a file — its output is the plan the user reviews in Phase 4, shaped by [`REPORTING.md`](./REPORTING.md).
 
 ---
 
@@ -35,21 +35,10 @@ Then apply the **Grouping Principle: Change-coupling beats domain-tidiness** fro
 1. Start by assuming **one agent owns all foundations**.
 2. For each foundation, run "the test" from AGENT-SIZING:
    > *"If a feature came in that needed to touch this foundation and another, would I be OK with the human (or LLM) consulting two agents and merging their advice — every time, for the life of this project?"*
-3. Only split off a foundation when **change-coupling is genuinely absent** — different owner team, orthogonal invariants, hotspot/healthy mismatch, or different consumer base. See AGENT-SIZING § "When to keep foundations separate."
-4. Apply the size budget as a final check — if a merged agent exceeds 10,000 chars body, split on the weakest change-coupling boundary.
+3. Only split off a foundation when a **split trigger** fires — different owner team, hotspot mismatch, orthogonal invariants, different consumer base, or size-budget breach. The table in AGENT-SIZING § "Split triggers" is the whole authority; if none fires, group it.
+4. Check the resulting set for **routability** — write each agent's one-line description and confirm no two would match the same request. A collision means you split on the wrong boundary. See AGENT-SIZING § "Check routability before proposing the set."
 
-The point is **fewer agents**. Two agents that both touch a feature when it lands will conflict on triggering and drift apart on maintenance. One agent with broader ownership keeps the picture coherent.
-
-**Sanity ceilings (not targets):**
-
-| Project | Soft ceiling on agent count |
-|---------|------------------------------|
-| Small (≤20 source files) | 1 |
-| Medium (21–50) | up to 3 |
-| Large (51+) | up to 5 |
-| Large monorepo with services | up to 5 — per-service grouping wins |
-
-Many projects should land below these. Numbers exist to flag "you've split too far," not to push you to split.
+The default is **fewer agents**. Two agents that both touch a feature when it lands will conflict on triggering and drift apart on maintenance; one agent with broader ownership keeps the picture coherent. But the count itself is an output — never a target and never capped. Whatever the triggers and budgets produce is the right number, and a monorepo with eight uncoupled services legitimately yields eight agents.
 
 Custom-code findings (3.2) fold into the foundation agents — don't add separate agents unless the custom code is unrelated to any foundation.
 
@@ -98,7 +87,7 @@ Apply the scaling logic from `AGENT-SIZING.md`:
 1. Apply the Mapping Heuristic — produce the foundation→agent assignments
 2. For each custom-code area (3.2), find the foundation it belongs to (same directory tree, extends a foundation, or same domain) and **fold it in**
 3. Custom-code areas with no foundation home become separate domain-expert agents (no foundation ownership) — only if they pass the agent-worthy bar
-4. Cap at 3–5 agents total; if over, merge the smallest
+4. Run the routability check across the whole proposed set; merge any pair whose descriptions collide
 
 **Custom-code-only path (no FOUNDATIONS.md):**
 1. Sort findings by file count (descending)
