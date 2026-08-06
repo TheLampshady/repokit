@@ -2,54 +2,233 @@
 
 *Generate choices, defer rationale, cut overviews.*
 
-**Date:** 2026-08-01
+**Written:** 2026-08-01
+**Last updated:** 2026-08-06
 **Original request:** Define the overview / choice / rationale spectrum as the content rule for everything repokit generates; map the general context-tooling landscape onto it; settle whether "foundations" should become "conventions"; and enumerate what actually belongs in the "choice" band.
-**Goal:** Turn the ETH instruction-vs-overview finding into an operational taxonomy — what generation may emit, what it may draft for confirmation, and what it must leave to humans — so choice-mining can be specified without crossing into invented judgment.
-**Provenance:** External claims cite primary sources inline. Positions that came out of project working discussions rather than published sources are marked **(repokit hypothesis)**: Zach's working position, unmeasured, and something to validate by experiment in repokit rather than treat as established.
+**Charter:** `docs/research/CHARTER.md`
+**Provenance:** Sourced claims cite primary sources inline; everything under Hypotheses is unmeasured. This doc stands alone.
 
-**Revised 2026-08-04** — **stored predicates are removed from the design.** Every mention of them below is historical; the measurement thresholds they cite are still live. The 2026-08-02 open question about predicates is resolved (no eval needed — the agent never saw them), the replacement mechanism is the **named anti-pattern**, and removal of a mined rule now requires the code it governs to disappear rather than its conformance to fall. New sources: Treude & Baltes on measured context rot, the architecture-conformance tool class, Factory.ai on the prose-vs-linter split. The ETH paper's arXiv ID could not be confirmed against the publisher page and the citation now points at the publisher.
+## Summary
 
----
+### Goal
 
-## Executive summary
+Turn the measured instruction-vs-overview split into an operational taxonomy — what generation may emit, what it may draft for a human to confirm, and what it must never write — so choice-mining can be specified without crossing into invented judgment.
 
-The ETH result splits context-file content into a type agents obey (instructions) and a type that adds cost without helping (repository overviews). Generalized — **(repokit hypothesis)** — that's a three-band spectrum. **Overview** describes what code does — fully derivable by reading, so restating it adds tokens without information. **Choice** is a decision visible in the code as evidence: what the team settled on — the chosen wrapper, the repeated pattern, the sanctioned way to add a new thing. Choices are *derivable-at-a-cost*: expensive for an agent to notice mid-task, cheap to state, and when stated as instructions they get followed. **Rationale** is why the choice was made, what was rejected, and what must stay true — not recoverable from code at all.
+### Claims
 
-Why choice is the sweet spot **(repokit hypothesis)**: it is the only band that is both *novel to the agent* and *action-changing right now*. Overview fails novelty — the agent already has that information or can derive it, so each line pays attention cost for zero delta. Rationale fails immediacy — real information that changes nothing about the next action; it matters only when the choice itself is revised. Choice passes both, and adds a third property: it is cheap to state and mechanically verifiable. Novel × action-changing × cheap is the whole admission test.
+14 findings, 21 hypotheses.
 
-The economics behind that **(repokit hypothesis)**: choice documentation **pre-pays expensive discovery**. A choice is derivable-at-a-cost — the import graph contains "use the wrapper," but no agent walks the import graph before writing its first line; under task pressure it skips discovery and builds bespoke (the field case). Choice-mining pays that discovery cost once, at documentation time, and converts it into a one-line instruction that every future session, agent, and teammate reads for near-free. Overview pre-pays nothing — the agent re-derives it cheaply anyway. Rationale pre-pays for a moment that rarely arrives. The amortization is the business case for the entire choice band.
+**Overview, choice, rationale** — Not everything about a codebase is worth documenting. Some things a reader works out instantly, some cost real effort to discover, and some can't be worked out from the code at all. Only the middle group pays for itself.
 
-The generation rule that falls out: **generation is banned from writing overview (except compressed to one-line pointers), licensed to write choices (measured before writing, and only at the revisable Convention tier), and locked out of rationale (omit or `[TODO:]`, never synthesize).**
+- *(finding)* — Instructions are followed; repository overviews are not.
+- *(finding)* — Project Context Conflicts are 24.56% of coding hallucinations.
+- *(finding)* — ADRs span all three bands by their own canonical structure.
+- *(finding)* — Agents forget pull tools exist after context compaction.
+- *(finding)* — No published ablation of a repo map's contribution exists *(absence claim)*.
+- **H1** *(hypothesis)* — Documentation divides into three bands by recovery cost: free, costly, impossible.
+- **H2** *(hypothesis)* — Content earns its place only if novel, action-changing, and cheap to state.
+- **H3** *(hypothesis)* — Derivability isn't binary; documenting the costly middle pre-pays a discovery nobody makes.
+- **H9** *(hypothesis)* — The bands have task-type affinities; new work wants the middle one.
+- **H10** *(hypothesis)* — What a statement says is independent of when it reaches the reader.
 
-> **Superseded 2026-08-04 — stored predicates removed.** Every "stored predicate" in this document described a shell command written into a comment beside each mined rule and **re-run on every sync**. That mechanism is gone. Measurement now happens once, when deciding whether to write the line, and the command is discarded. What the command encoded — the specific accessor or import the rule displaces — is harvested into the visible line as a **named anti-pattern** instead. Reasoning in [Open questions](#open-questions) (the 2026-08-02 predicate question, resolved) and [Resolved](#resolved-deliberately-not-doing). Read every "predicate" below as historical design, not current behaviour; the *thresholds* it cites are still live, because writing still requires measurement. Most high-value doc lines are actually choice+rationale composites — "exclude boolean fields from facet requests *(choice, inferable from the code)* because the vendor API returns 400s *(rationale, human-only)*" — so generation drafts the left half and `[TODO: why?]` marks the missing right half **(repokit hypothesis)**. Naming verdict: **foundations stays**. A foundation is a *thing* (module, path, API, owner); a convention is a *rule* (a pattern of choice, possibly attached to no module). Conventions already have homes — PRINCIPLES.md for codebase-wide rules, per-foundation entries for foundation-scoped ones — and renaming FOUNDATIONS.md would break the tools that read it by name (agentkit and dockit sync).
+**Mining choices from code** — Some team decisions leave visible traces: a file everyone routes through, a shape every similar file repeats. These claims are about which traces a tool can find, and which decisions leave none behind.
+
+- *(finding)* — Dependency retrieval favors recall over precision, explicitly.
+- *(finding)* — Architecture conformance is commodity; the field keeps enforcement in the linter.
+- *(finding)* — Agents replicate structure they see more strongly than prose they read.
+- **H13** *(hypothesis)* — Recoverable conventions partition by evidence source, which predicts the failure mode.
+- **H17** *(hypothesis)* — Some constraints are reachable by no analysis; asking is the only channel.
+- **H6** *(hypothesis)* — Missing true context costs more than including irrelevant context, for mining too.
+- **H8** *(hypothesis)* — An example is a rule in executable form, and the exemplar is recoverable.
+
+**Writing a mined rule** — Once you know what to say, the wording decides whether it gets followed. These claims are about phrasing, and about what has to be left blank because only a person knows it.
+
+- *(finding)* — Negative constraints comply measurably worse than positive ones.
+- **H5** *(hypothesis)* — Name the wrong path in a positive instruction instead of prohibiting it.
+- **H18** *(hypothesis)* — Naming the wrong path improves compliance over the bare instruction.
+- **H7** *(hypothesis)* — A useful rule composites a recoverable constraint with an unrecoverable reason.
+- **H16** *(hypothesis)* — Worth writing only if the drafter can name the alternative not taken.
+- **H19** *(hypothesis)* — A status marker is read as qualifying the rule's force, not the code's state.
+
+**What a foundation entry must express** — A description of what already exists cannot tell someone where it is fine to build something new. These claims are about the gap that leaves.
+
+- *(finding)* — SDD frameworks carry conventions in known file locations.
+- **H14** *(hypothesis)* — A doc that only describes what exists can't say where building new is correct.
+- **H21** *(hypothesis)* — Mined conventions have existing homes; this is a content problem, not a structural one.
+
+**Keeping generation safe** — A tool that writes documentation will sometimes write something wrong, and wrong instructions get followed as readily as right ones. These claims are about limiting the damage rather than trying to prevent it.
+
+- *(finding)* — Instructions are followed even when wrong — an obeyed error, not noise.
+- *(finding)* — Checked-in agent context rots: 23% of 356 repos carried stale code references.
+- *(finding)* — The overview ban is conditional on the repo already being documented.
+- *(finding)* — Practitioner consensus caps context files at <300 lines, ~150–200 instructions.
+- **H11** *(hypothesis)* — Generation's value is band-dependent and conditional on existing documentation.
+- **H12** *(hypothesis)* — Strength tiers cap harm better than a confirmation gate, if the document declares them.
+- **H15** *(hypothesis)* — Mined and declared rules read identically unless separated by origin.
+- **H22** *(hypothesis)* — A filtered document regrows; a budget needs ranked eviction, not silent truncation.
+- **H20** *(hypothesis)* — Post-write review trades a hard failure for a soft one, and the soft one is likelier.
 
 ## Key findings
 
-- **The spectrum is grounded in the ETH split, not invented here.** *"Instructions in the context files are well followed by coding agents [while] repository overviews … are not helpful"*; context files are *"useful for specifying non-standard coding practices"* ([arXiv:2602.11988](https://arxiv.org/abs/2602.11988)). Instructions carrying choices = the followed type; overviews = the unhelpful type; "non-standard practices" = precisely choices + rationale, the two bands the code alone can't assert as rules. The three-band generalization itself is ours **(repokit hypothesis)**.
+- **Instructions are followed; repository overviews are not.** *"Instructions in the context files are well followed by coding agents [while] repository overviews … are not helpful"*; context files are *"useful for specifying non-standard coding practices"* ([ETH SRI](https://www.sri.inf.ethz.ch/publications/gloaguen2026agentsmd)). The publisher page confirms the venue (MemAgents @ ICLR 2026, Oral & Runner-up Best Paper) and the headline — *"no improvement in task success rates, while also increasing inference cost by over 20%"* — and concludes that human-written context files "should describe only minimal requirements."
 
-- **Instructions are followed even when wrong — the guardrails are load-bearing, not cautious.** The ETH agents followed context-file instructions *"rigorously but counterproductively"*, adding steps per task when the instructions were bad ([arXiv:2602.11988](https://arxiv.org/abs/2602.11988) — specific step counts are from the paper body, not independently re-verified here). Field audits report agents obeying stale claims ("we use Jest," surviving a Vitest migration) with full compliance ([Packmind](https://packmind.com/evaluate-context-ai-coding-agent/)). A wrong choice statement is not neutral noise; it is an obeyed error.
+- **Instructions are followed even when wrong, so the guardrails are load-bearing.** The agents followed context-file instructions *"rigorously but counterproductively"*, adding steps per task when the instructions were bad ([ETH SRI](https://www.sri.inf.ethz.ch/publications/gloaguen2026agentsmd) — specific step counts are paper-body detail, not independently verified here). Field audits report agents obeying stale claims ("we use Jest," surviving a Vitest migration) with full compliance ([Packmind](https://packmind.com/evaluate-context-ai-coding-agent/)). A wrong choice statement is not neutral noise; it is an obeyed error.
 
-- **Negative constraints are the weak spot of instruction-following.** Constraints that oppose model defaults fail at 10–100% rates versus 99%+ compliance for conventional ones, and negative phrasing ("don't use Y") is measurably harder for LLMs than positive ([arXiv:2604.07192](https://arxiv.org/abs/2604.07192)); piling on structural constraints can degrade agent pass rates outright ([arXiv:2605.06445](https://arxiv.org/abs/2605.06445)). Consequence for the choice band: prefer positive phrasing ("use A for B operations") over prohibition, and back every negative rule with a mechanical drift check (does new code import B?) rather than trusting context alone **(repokit hypothesis on the mitigation)**. This also kills the strongest circulating pro-ADR claim — a ">60% regression reduction from rejected-option negative constraints" attributed to a 2024 ACM/IEEE paper that does not exist.
+- **Negative constraints are the weak spot of instruction-following.** Constraints that oppose model defaults fail at 10–100% rates against 99%+ compliance for conventional ones, and negative phrasing ("don't use Y") is measurably harder for LLMs than positive ([arXiv:2604.07192](https://arxiv.org/abs/2604.07192)); piling on structural constraints can degrade agent pass rates outright ([arXiv:2605.06445](https://arxiv.org/abs/2605.06445)). This also kills the strongest circulating pro-ADR claim — a ">60% regression reduction from rejected-option negative constraints," attributed to a 2024 ACM/IEEE paper that does not exist.
 
-- **Choices rot — and the evidence label makes them the only mechanically re-verifiable band.** Staleness is a documented context-file failure mode, and the field's tooling response is early — a dedicated linter exists precisely because checked-in agent context rots ([agents-lint](https://github.com/giacomo/agents-lint); [Packmind](https://packmind.com/evaluate-context-ai-coding-agent/)). A mined choice carries recomputable evidence: conformance counts and import ratios can be re-checked on every `dockit sync`, so `11/13 conform` decaying to `6/13` flags the rule automatically. Overview prose and rationale can't be machine-verified this way. The inference that the evidence label doubles as a drift-check contract — and that this is where choice-mining meets repokit's context-in-sync premise — is ours **(repokit hypothesis)**.
+- **Checked-in agent context rots, and it has been measured.** DOCER over **612 config files across 356 repos found 23.0% carrying stale code references — 230 total, 64% confirmed genuine on manual validation** ([Treude & Baltes](https://arxiv.org/html/2606.09090)), which also names the phenomenon *context rot* and recommends reusing existing documentation-consistency tooling rather than inventing new mechanisms. A dedicated linter exists for the same reason ([agents-lint](https://github.com/giacomo/agents-lint); [Packmind](https://packmind.com/evaluate-context-ai-coding-agent/)). The staleness measured is *does the named element still exist* — descriptive, not a conformance ratio on a directive.
 
-- **The overview ban is conditional on the repo being documented.** The ETH gap-filler nuance: with other documentation removed, LLM-generated context files *did* help ([arXiv:2602.11988](https://arxiv.org/abs/2602.11988) — paper-body finding, not independently re-verified here). Auto-generation is defensible on doc-barren repos and net-negative on documented ones — dockit should encode that asymmetry rather than a flat ban.
+- **The overview ban is conditional on the repo being documented.** With other documentation removed, LLM-generated context files *did* help ([ETH SRI](https://www.sri.inf.ethz.ch/publications/gloaguen2026agentsmd) — paper-body finding, not independently verified here). Auto-generation is defensible on doc-barren repos and net-negative on documented ones; the asymmetry is the finding, not a flat ban.
 
-- **"Derivable" has a middle band, and it's where generation earns its keep** **(repokit hypothesis, grounded in a field observation)**. A binary derivable/non-derivable rule misses the case that matters: in a production project (user-supplied, anonymized), an implement agent hand-rolled vendor-SDK calls even though the existing shared client was fully visible in the code — and stopped the moment the docs surfaced it. A choice can be derivable and still unknown at decision time: the import graph contains "use the wrapper," but no agent reads the import graph before writing its first line. Compressing that evidence into one instruction is the highest-leverage thing generation can do — and it is not overview, because it asserts a *selection*, not a description.
+- **The failure the choice band exists to prevent has a name and a measured frequency.** A hand-annotated taxonomy of hallucinations across six models puts **Project Context Conflicts at 24.56%** of all coding hallucinations, dominant subtype **Dependency Conflicts at 11.26%** — the model inventing project-internal functions that don't exist. Their worked example is a model calling `generate_default_schema()` when the repository defines `generate_default_observer_schema_dict()`. Root-cause analysis names **repository-level context awareness** as one of four contributing factors ([arXiv:2409.20550](https://arxiv.org/abs/2409.20550) / [PACMSE](https://dl.acm.org/doi/10.1145/3728894); percentages verified against the paper body).
 
-- **The failure the choice band exists to prevent has a name and a measured frequency (added 2026-08-02).** A hand-annotated taxonomy of hallucinations across six models puts **Project Context Conflicts at 24.56%** of all coding hallucinations, whose dominant subtype is **Dependency Conflicts at 11.26%** — the model inventing project-internal functions and attributes that don't exist. Their worked example is a model calling `generate_default_schema()` when the repository defines `generate_default_observer_schema_dict()`. Root-cause analysis names **repository-level context awareness** as one of four contributing factors ([arXiv:2409.20550](https://arxiv.org/abs/2409.20550) / [PACMSE](https://dl.acm.org/doi/10.1145/3728894); taxonomy percentages verified against the paper body). This is the strongest external grounding the choice band has: it quantifies the class of error that project-specific context is supposed to eliminate.
+  **Two caveats, both load-bearing.** Their RAG mitigation improved Pass@1 by only **0.87–3.05 points** across six models, so "supply repository context and the hallucination goes away" is *not* established — the paper supports the problem statement far more strongly than any solution. And the model cohort (CodeGen, PanGu-α, ChatGPT, CodeLlama, StarCoder2, DeepSeekCoder) is stale relative to 2026 frontier models, so the *rates* should not be quoted forward. The field's term is **Project Context Conflict**; "architectural hallucination" is repokit's coinage and is not established terminology.
 
-  **Two caveats, both load-bearing.** Their RAG mitigation improved Pass@1 by only **0.87–3.05 points** across six models, so "supply repository context and the hallucination goes away" is *not* established — the paper supports the problem statement far more strongly than any solution. And the model cohort (CodeGen, PanGu-α, ChatGPT, CodeLlama, StarCoder2, DeepSeekCoder) is stale relative to 2026 frontier models; the *rates* should not be quoted forward. Note also that the field's term is **Project Context Conflict** — "architectural hallucination," used in repokit's charter, is our coinage and should not be cited as established terminology.
+- **Retrieval evidence favors recall over precision.** On repository-level generation benchmarks, sparse and dense retrievers reach recall 0.51–0.57 at precision <0.09–0.12, while a dependency-aware retriever reaches 0.89–0.92 recall at modest precision. The authors defend the trade verbatim: *"for code generation, failing to retrieve true dependencies is far more damaging than including some irrelevant context"* ([arXiv:2602.11671](https://arxiv.org/pdf/2602.11671) — quote and figures verified in the paper body, not the abstract). Similarity-based retrieval does worst on *class* dependencies (functions 0.65–0.75, variables <0.4).
 
-- **Retrieval evidence favors recall over precision, which argues against tight filters on mined content (added 2026-08-02).** On repository-level generation benchmarks, sparse and dense retrievers reach recall 0.51–0.57 at precision <0.09–0.12, while a dependency-aware retriever reaches 0.89–0.92 recall at modest precision. The authors defend the trade verbatim: *"for code generation, failing to retrieve true dependencies is far more damaging than including some irrelevant context"* ([arXiv:2602.11671](https://arxiv.org/pdf/2602.11671) — quote and figures verified in the paper body, not the abstract). Their per-type breakdown adds a wrinkle relevant to family 5: similarity-based retrieval does worst on *class* dependencies (functions 0.65–0.75, variables <0.4). Generalizing this from retrieval to mining is ours **(repokit hypothesis)** — but it cuts against any conformance or spread threshold justified purely as noise reduction.
+- **Architecture conformance is a commodity, and the field keeps enforcement out of the document.** [ArchUnit](https://www.archunit.org/), [import-linter](https://import-linter.readthedocs.io/), and [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) enforce architectural rules on the hot path — pre-commit, CI, build failure. [Factory.ai](https://factory.ai/news/using-linters-to-direct-agents) states the split independently: prose establishes *why* a standard matters, linting creates the *guarantee*, with each prose guideline mapped to a lint rule ID. Decision-record practice agrees from the other side — records are point-in-time and effectively never machine-verified, with a human review cadence and a "last verified" date as the accepted remedies and automated tests recommended as a *separate* mechanism ([techdebt.best](https://techdebt.best/architectural-decisions/); [Azure Well-Architected](https://learn.microsoft.com/en-us/azure/well-architected/architect-role/architecture-decision-record)). Executable-documentation prior art marks the same boundary: what gets tested is documented procedures and examples, never a conformance ratio on a directive ([Docs as Tests](https://www.docsastests.com/); Rust doc-tests).
 
-- **Examples are choices in executable form.** Agents replicate the structure of code patterns they see more strongly than they follow prose ([Srikanth R](https://www.linkedin.com/pulse/hidden-power-markdown-structuring-md-files-ai-coding-assistants-r-kdgof) — practitioner claim, not measured). A canonical example is therefore a choice-carrier: picking *which* instance is the exemplar is itself an inferable choice (the most-conforming, most-imported instance), and embedding it (agentkit hot memory) transmits the convention better than describing it **(repokit hypothesis)**.
+- **Agents replicate structure they see more strongly than prose they read** ([Srikanth R](https://www.linkedin.com/pulse/hidden-power-markdown-structuring-md-files-ai-coding-assistants-r-kdgof) — practitioner claim, not measured).
 
-- **Choice and rationale compose, and the seam is where `[TODO:]` lives** **(repokit hypothesis)**. An invariant is usually a constraint (inferable — the code does exclude boolean fields) welded to a reason (not inferable — the 400 errors). Generation may draft the constraint *as observed behavior*; the reason is omitted or marked. A fluent invented reason is the worst output on the spectrum because instructions-are-followed cuts both ways.
+- **Practitioner consensus caps context-file size at <300 lines and ~150–200 instructions** ([HumanLayer](https://www.humanlayer.dev/blog/writing-a-good-claude-md) — practitioner numbers, not measured research). The write-only-the-non-discoverable rule is stated independently ([Augment Code](https://www.augmentcode.com/guides/how-to-build-agents-md); [Anthropic](https://code.claude.com/docs/en/best-practices), which also supplies the per-line admission test: would removing this line cause an agent to make a mistake?).
 
-- **Bands have task-type affinities** **(repokit hypothesis)**. New-feature development turns on the build-vs-reuse moment, and choice is the band aimed at exactly that — extension points, boundaries, use-when. Revision and refactor work is where rationale pays: it's the payload when a settled decision gets reopened. Navigation is overview's job, and pull-based retrieval already serves it on demand. Consequence: for repokit's primary scenario — agents building new features — choice is the most valuable band; rationale is scheduled for later; overview is outsourced to retrieval.
+- **No published ablation of a repository map's contribution to task success was found** *(absence claim)*. Aider's map is re-ranked per conversation turn ([aider](https://aider.chat/2023/10/22/repomap.html)); static checked-in map clones drop exactly that step, and nothing measures the difference.
 
-- **The content spectrum is orthogonal to the delivery axis** **(repokit hypothesis)**. Overview/choice/rationale says *what kind of statement*; push/pull (always-loaded context files and agent descriptions vs on-demand docs and retrieval tools) says *when it reaches the agent*. A choice delivered pull-only can still be missed; an overview delivered push is still dead weight — both dimensions have to be right, independently.
+- **Agents forget pull tools exist after context compaction** ([Serena issue #802](https://github.com/oraios/serena/issues/802)) — a documented pull-surface failure, not a claim about map quality.
+
+- **ADRs span all three bands by their own canonical structure.** Per [MADR](https://adr.github.io/madr/): Decision Outcome = choice, Context = overview, Drivers / Rejected Options / Consequences = rationale ([Nygard](https://www.cognitect.com/blog/2011/11/15/documenting-architecture-decisions)). Evidence for ADRs-as-agent-context is practitioner-only ([Chris Swan](https://blog.thestateofme.com/2025/07/10/using-architecture-decision-records-adrs-with-ai-coding-assistants/)).
+
+- **SDD frameworks carry conventions in known locations**, verified 2026-08-01: [SpecKit](https://github.com/github/spec-kit) `.specify/memory/constitution.md`; [OpenSpec](https://github.com/Fission-AI/OpenSpec) `openspec/project.md` and `openspec/AGENTS.md`; [Conductor](https://github.com/gemini-cli-extensions/conductor) `conductor/product-guidelines.md`, `conductor/workflow.md`, `conductor/code_styleguides/`.
+
+## Hypotheses
+
+Positions developed in working discussions (2026-07-31 → 2026-08-04) rather than found in literature: unmeasured, and the reason the Actions below are worth taking. IDs are permanent — assigned once, never renumbered, never reused — so they do not run in order within a group.
+
+### Overview, choice, rationale
+
+**H1 — Documentation of a codebase divides into three bands by what it costs a reader to recover: what is derivable by reading, what is a decision visible in the code as evidence, and why the decision was made — which is recoverable from code at no cost, at a cost, and not at all.** · *open* · added 2026-08-01
+- **Builds on:** the measured instruction/overview split ([ETH SRI](https://www.sri.inf.ethz.ch/publications/gloaguen2026agentsmd)) — extends a two-type result by separating a third band it does not address.
+- **Unsourced because:** Searched for prior three-band taxonomies of context-file content; found only the two-type split, which stops short of separating rationale.
+- **Check:** Two independent raters classify a sample of real context files into the three bands. The taxonomy earns its keep only if the middle band is separable in practice.
+
+**H2 — Content is worth writing for an agent only when it is novel to the reader, action-changing at the moment of reading, and cheap to state — and only the middle band clears all three.** · *open* · added 2026-08-01
+- **Builds on:** H1.
+- **Unsourced because:** No published admission test beyond the per-line "would removing this cause a mistake?" heuristic, which is a weaker version of the same idea.
+- **Check:** Apply the three-part test and the per-line test to the same file. If they never disagree, the three-part framing is decoration.
+
+**H3 — Derivability is not binary: a fact can be fully visible in the code and still unknown at decision time, because discovery has a cost and an agent under task pressure declines to pay it. Documenting such a fact pre-pays that discovery once and converts it into something every later reader gets for free.** · *open* · added 2026-08-01
+- **Unsourced because:** Searched for cost-of-discovery or amortization models for agent context; found none. The nearest measured work is dependency-retrieval recall ([arXiv:2602.11671](https://arxiv.org/pdf/2602.11671)), which is about fetching, not pre-paying. The band itself rests on a field observation rather than literature: in a production project (user-supplied, anonymized), an implement agent hand-rolled vendor-SDK calls though the shared client was fully visible, and stopped the moment the docs surfaced it. n=1, uncontrolled.
+- **Check:** Same task, same repo, two arms — with and without the mined boundary rule. Does the agent route through the wrapper on first write?
+
+**H4 — Retired 2026-08-06, merged into H3.** Stated the derivable-at-a-cost band as a separate position, but it resolved on the same experiment, so it was never a separate hypothesis. ID kept dead rather than reused.
+
+**H9 — The bands have task-type affinities: new work turns on the build-versus-reuse moment and wants the choice band, revision work is where rationale pays, and navigation is served by retrieval on demand.** · *open* · added 2026-08-01
+- **Builds on:** H1.
+- **Unsourced because:** Searched for task-type breakdowns of context-file value; the measured work reports aggregate task success, not per-task-type deltas.
+- **Check:** Segment an eval by task type and compare per-band contribution. Requires a task corpus repokit does not yet have.
+
+**H10 — What a statement says is independent of when it reaches the reader: content band and delivery mode are orthogonal axes, and both have to be right for the statement to land.** · *open* · added 2026-08-01
+- **Unsourced because:** Both axes appear separately in the literature; nothing states their independence. The delivery-failure half has a documented instance ([Serena #802](https://github.com/oraios/serena/issues/802)) but that's one point, not the claim.
+- **Check:** Deliver the same mined choice push-only and pull-only on the same task. Equal outcomes refute the orthogonality.
+
+### Mining choices from code
+
+**H13 — Conventions recoverable from code partition by evidence source, and the evidence source predicts the failure mode — so a detector's trustworthiness is a property of what it looks at, not of how much it finds.** · *open* · added 2026-08-01, extended 2026-08-02
+- **Builds on:** H3.
+- **Unsourced because:** Searched for existing taxonomies of mineable code conventions; found detector-specific work but no classification by evidence source. The six families this yields are listed under *How this applies*; family 1b was added after a field report where two of four blind spots were ambient-capability leaks a vendor-SDK detector could never see, which is itself evidence that the partition is incomplete rather than settled. The ≥90% concentration threshold for 1b is a proposal with nothing behind it.
+- **Check:** Run all six detectors against repos with known conventions and count precision and recall per family. Whether 1a and 1b are one family or two is part of the same check.
+
+**H17 — Some load-bearing constraints are reachable by no analysis at any cost, because code that complies with them is indistinguishable from ordinary code. They exist only because someone shipped the obvious version and watched it fail, so asking directly is the only channel that reaches them.** · *open* · added 2026-08-02
+- **Builds on:** H3 — the boundary case on the far side of derivable-at-a-cost.
+- **Unsourced because:** The motivating case is a field artifact — *"exclude numeric and date fields from facet requests; the vendor returns 400"* — which no import graph implies and no conformance count suggests. n=1, and no literature on eliciting non-derivable constraints.
+- **Check:** Ask the question across a set of components, with "nothing" a valid answer. Measure what fraction yield an answer, whether answers are genuinely non-derivable or merely not-yet-derived, and whether repeated asking trains users to dismiss the channel.
+
+**H6 — The retrieval finding that missing true context costs more than including irrelevant context carries over to mining, which cuts against any threshold justified purely as noise reduction.** · *open* · added 2026-08-02
+- **Builds on:** the recall-over-precision result ([arXiv:2602.11671](https://arxiv.org/pdf/2602.11671)).
+- **Unsourced because:** The transfer is ours and nothing tests it. The mechanisms differ — a retriever's false positive costs tokens, a document's false positive is an obeyed error.
+- **Check:** Vary the threshold across runs on the same repo and count both missed real conventions and written-but-wrong rules. If the second curve is flat, recall should win.
+
+**H8 — An example is a rule in executable form, and which instance serves as the exemplar is itself recoverable from code (most-conforming, most-referenced).** · *open* · added 2026-08-01
+- **Builds on:** the examples-propagate claim ([Srikanth R](https://www.linkedin.com/pulse/hidden-power-markdown-structuring-md-files-ai-coding-assistants-r-kdgof) — anecdotal).
+- **Unsourced because:** Nothing measures whether an *automatically selected* exemplar carries the same weight as a hand-picked one.
+- **Check:** Compare agent output against a hand-picked exemplar versus the automatically selected pick on the same convention.
+
+### Writing a mined rule
+
+**H5 — The repair for weak compliance with prohibitions is a positive instruction that names the wrong path and the fix, rather than a prohibition phrased more forcefully.** · *open* · added 2026-08-01, revised 2026-08-04
+- **Builds on:** the negative-constraint compliance gap ([arXiv:2604.07192](https://arxiv.org/abs/2604.07192)).
+- **Unsourced because:** No source tests this particular repair. Originally proposed as a positive rule backed by a stored predicate; the predicate was removed (see Decisions) and the anti-pattern harvested into the visible line instead: *"direct `os.environ` reads bypass validation and defaults — add a field to `Settings`."*
+- **Check:** See H18, which is the experiment this reduces to.
+
+**H18 — Naming the wrong path inside a positive instruction improves compliance over the bare positive instruction.** · *open* · added 2026-08-04
+- **Builds on:** H5 — the measurable core of it.
+- **Unsourced because:** The compliance gap is measured; this construction — positive imperative carrying the wrong path plus a repair — is ours and untested. It replaced an earlier question about stored predicates that turned out to be structurally unanswerable (see Decisions).
+- **Check:** Three arms, same task and repo: rule alone; rule plus named wrong path plus repair; rule as prohibition.
+
+**H7 — A useful documented rule is usually a composite of a recoverable constraint and an unrecoverable reason, so the two halves need separate treatment inside one entry rather than one voice covering both.** · *open* · added 2026-08-01
+- **Builds on:** H1.
+- **Unsourced because:** No literature on splitting a documented rule into inferable and non-inferable halves. The composite is observable in real invariants — "exclude boolean fields from facet requests *(constraint)* because the vendor returns 400s *(reason)*" — but that's an example, not evidence.
+- **Check:** Sample real invariants from a production project and count what fraction decompose cleanly. A low fraction means the seam is imaginary.
+
+**H16 — A pattern is worth documenting as a rule only if the drafter can name the plausible alternative that was not taken; without one, the pattern is the path of least resistance rather than a selection.** · *open* · added 2026-08-01
+- **Builds on:** H2 — a mechanical stand-in for the novelty term.
+- **Unsourced because:** Substitutes for a comparison against ecosystem baselines that has no mechanical implementation. Needs no corpus and no defaults database, only the drafting model's own priors — which is exactly the knowledge that makes a fact obvious-or-not to the agent reading it downstream. Nothing tests whether that substitution holds.
+- **Check:** Run the filter over a set of known-obvious and known-surprising conventions and measure discrimination. Open risk: a sufficiently fluent drafter can name an alternative for anything, so the filter may under-cut.
+
+**H19 — A status marker attached to an instruction is read as qualifying the instruction's force, not the state of the code it describes.** · *open* · added 2026-08-04
+- **Cuts against:** H12 — if a marker is read as force, it silently overrides the tier the document declared, and the tier model only works if nothing else moves force.
+- **Unsourced because:** No source on how agents read status markers on instructions. The design intends the opposite — a Convention stays deviable-with-a-reason and a Rule stays not, marker or no marker — but design intent isn't behavior.
+- **Check:** The H18 setup plus a marked arm on a component with zero consumers. The failure mode is asymmetric: reading the marker as weakening the rule is exactly what keeps a new sanctioned path unused.
+
+### What a foundation entry must express
+
+**H14 — A component document that only describes what exists cannot say where building something new is correct, so a reader meeting an uncovered case either forces the work through the wrong abstraction or breaks a rule it cannot tell is soft.** · *open* · added 2026-08-01
+- **Builds on:** H9 — the gap falls exactly on the task type the choice band is aimed at.
+- **Unsourced because:** No source on what fields an agent-facing component catalog needs. The gap is observable but observing a gap isn't measuring one. Of the two fields proposed to close it (A5, A6), the sanctioned-path one is confidently draftable from scaffold commands, registries, and files that changed together across recent additions; the deliberate-edge one is only half-inferable, since absence carries no marker distinguishing an intentional boundary from an unfinished feature from a bug.
+- **Check:** Give agents a task falling outside every documented component, with and without the two fields, and compare what they build.
+
+**H21 — Mined conventions have natural homes in the documentation a project already keeps, so convention-mining is a content problem rather than a structural one.** · *open* · added 2026-08-01
+- **Unsourced because:** An architectural prediction; nothing external bears on it.
+- **Check:** Build the first four detectors and route their output. A new file or mode turning out to be necessary refutes it.
+
+### Keeping generation safe
+
+**H11 — The value of generating documentation is band-dependent and conditional on what documentation already exists: overview written into a documented repo is net-negative and into a barren one it helps, while rationale is unsafe to generate at any documentation level.** · *open* · added 2026-08-01
+- **Builds on:** H1 and the conditional gap-filler result ([ETH SRI](https://www.sri.inf.ethz.ch/publications/gloaguen2026agentsmd)).
+- **Unsourced because:** The overview half rests on the measured result plus its exception; the pointer form, the posture switch, and the never-synthesize rule are ours. No source tests a conditional generation posture.
+- **Check:** Run generation under both postures on a documented and a doc-barren repo, and compare agent task success against no generated context at all.
+
+**H12 — Tiering instructions by strength caps the harm of a wrong one better than gating writes on human confirmation, because a gate that blocks output produces a queue nobody drains — and the tiers exist only if the document declares them.** · *open* · added 2026-08-01
+- **Builds on:** the obeyed-error finding ([ETH SRI](https://www.sri.inf.ethz.ch/publications/gloaguen2026agentsmd); [Packmind](https://packmind.com/evaluate-context-ai-coding-agent/)).
+- **Unsourced because:** No literature on tiering agent-facing instructions by strength. The argument is asymmetric harm — a wrong soft rule costs misplaced consistency, a wrong hard rule blocks correct work — which is reasoning, not evidence.
+- **Check:** Does an agent given a two-line legend deviate from the soft tier with a stated reason and refuse to deviate from the hard one? Same task, legend present and absent.
+
+**H15 — Mined and human-declared rules read identically to an agent unless the document separates them by origin, which is how a coincidental pattern gets obeyed as law.** · *open* · added 2026-08-01
+- **Builds on:** H12 — origin is what the tier is supposed to encode.
+- **Unsourced because:** No source addresses organizing rules by origin rather than topic. The failure it targets is real in shape — topic organization renders a coincidental 11-of-13 pattern in the same voice as a mandatory constraint — but unmeasured.
+- **Check:** Ask raters to identify which lines in a topic-organized file are mined versus declared. Poor accuracy is the case for the split.
+
+**H22 — A filtered document regrows across syncs, so holding a size budget requires ranked eviction with the weakest line named; silent truncation is worse than a visible ranking because nobody sees what left.** · *open* · added 2026-08-06
+- **Builds on:** H15 — the ranking needs origin to rank on.
+- **Unsourced because:** Split out of H15 on 2026-08-06; it resolves on a different experiment. The size numbers are practitioner consensus ([HumanLayer](https://www.humanlayer.dev/blog/writing-a-good-claude-md)), not measurement, and nothing addresses eviction policy.
+- **Check:** Track file size and rule count across repeated syncs on a live repo, with and without a budget. Does the file converge or creep?
+
+**H20 — Deferring review to a post-write channel trades a hard failure (a gate stalls output) for a soft one (output accumulates unreviewed), and the soft failure is the more likely of the two.** · *open* · added 2026-08-01
+- **Builds on:** H12 — the tier model is what makes post-write review the design rather than a compromise.
+- **Unsourced because:** Which failure actually occurs is unmeasured.
+- **Check:** Instrument the review walk and measure completion rate over real syncs.
+
+## How this applies to repokit
+
+The measured result is narrow — instructions get followed, overviews don't, and a wrong instruction gets followed too. Everything repokit wants to do with it depends on H1 holding: that the useful residue between "derivable, so worthless" and "not derivable, so unwritable" is a real band and not a gradient someone drew a line across.
+
+If it is real, the consequences chain. The economics (H3) say mining is worth building at all — not because the information is unavailable, but because it's available at a cost every agent declines to pay under task pressure. The obeyed-error finding says a wrong mined line is worse than no line, which is what forces the tier model (H12) rather than a confirmation gate: gating on human review produces a queue nobody drains, so the safety valve has to cap harm instead of preventing writes. The negative-constraint finding then routes the highest-risk output — prohibitions — into the lowest tier with a named anti-pattern attached (H5, H18).
+
+Two findings pull against the design rather than supporting it, and both are live. Recall-over-precision (H6) argues that conformance thresholds justified as noise reduction are cutting the wrong way; the retrieval authors are explicit that missing a true dependency costs more than including an irrelevant one, and if that transfers, repokit's instinct to filter hard is a mistake. And the commodity finding says architecture conformance belongs in the linter, on the hot path — which is what removed stored predicates entirely and left mining with a narrower job than it started with: direct future work, don't audit past work.
+
+The naming question resolves against renaming. A **foundation** is a thing (module, path, API, owner); a **convention** is a rule, a pattern of choice possibly attached to no module. Conventions already have homes — PRINCIPLES.md for codebase-wide rules, per-foundation entries for foundation-scoped ones — and FOUNDATIONS.md is a tooling contract that agentkit and dockit sync read by name.
+
+On the specific question of whether choice is obtainable from code alone: five of the six families in H13 are draftable from code as it sits. Code yields the *draft*; a human supplies the *confirmation* (was this intentional?) and the *why*. That division is what the whole spectrum encodes, and it's why H7's `[TODO:]` seam is structural rather than a politeness.
 
 ### One subject, three bands
 
@@ -58,205 +237,166 @@ The same fact about a codebase written in each band, using the anonymized field 
 > **Overview** — *don't generate; the agent learns this by reading the file*
 > "`search/client.py` provides an abstraction layer over the vendor search SDK. It handles authentication, request construction, and response parsing, and exposes a unified interface for API handlers."
 
-> **Choice** — *generate: instruction + pointer + evidence, as a confirm-or-delete draft*
-> "Use `SearchClient` (`search/client.py`) for all vendor-search operations. Evidence: 9/9 handlers route through it; no direct SDK imports outside the client. `[TODO: intentional rule or accident?]`"
+> **Choice** — *generate: instruction + pointer + named anti-pattern, at Convention tier*
+> "Use `SearchClient` (`search/client.py`) for all vendor-search operations — direct SDK imports bypass retry and auth handling. `[TODO: intentional rule or accident?]`"
 
 > **Rationale** — *never generate; human-supplied, stored for revision time*
 > "We wrapped the SDK because raw calls leaked retry and auth handling into handlers and broke during a vendor migration. Direct SDK use was considered and rejected. Revisit if the vendor ships a stable async client."
 
-Same subject three times. Only the middle one belongs in generation's output; only the last one matters when someone proposes replacing the client; the first one is what most auto-generated docs consist of — and it's the band the evidence says to cut.
+Only the middle one belongs in generation's output; only the last matters when someone proposes replacing the client; the first is what most auto-generated docs consist of.
 
-### The spectrum, with everything we discussed placed on it
+### The spectrum, applied
 
-Band assignments are this project's analysis **(repokit hypothesis)**; per-tool behavior claims carry their own citations.
+Band assignments are H1 applied to specific artifacts; per-tool behavior claims carry their own citations.
 
 | Artifact / tool | Band | Notes |
 |---|---|---|
-| Repo maps ([aider](https://aider.chat/2023/10/22/repomap.html), [RepoMapper](https://github.com/pdavis68/RepoMapper)) | Overview | Aider's map is re-ranked per conversation turn; static checked-in maps drop exactly that step. No published ablation of the map's contribution was found (absence claim — uncited by nature) |
+| Repo maps ([aider](https://aider.chat/2023/10/22/repomap.html), [RepoMapper](https://github.com/pdavis68/RepoMapper)) | Overview | Aider re-ranks per turn; static checked-in clones drop that step |
 | Code graphs (CodeGraph, GitNexus, CodeGraphContext) | Overview (queryable, pull) | Execution-phase retrieval; carries no selection |
-| Symbol servers ([Serena](https://github.com/oraios/serena) / LSP) | Overview on demand | Answers "where/what," never "which one is ours"; agents forget to use it after context compaction ([Serena issue #802](https://github.com/oraios/serena/issues/802)) — pull failure, documented |
+| Symbol servers ([Serena](https://github.com/oraios/serena) / LSP) | Overview on demand | Answers "where/what," never "which one is ours" |
 | Repo packers / flatteners | Overview, maximal | The extreme case of paying for the derivable |
 | [llms.txt](https://llmstxt.org/) | Overview (index) | Pointer-shaped, so the tolerable form |
-| Auto-generated AGENTS.md summaries | Overview | The measured net-negative case ([arXiv:2602.11988](https://arxiv.org/abs/2602.11988)) |
-| Purpose/architecture prose in generated docs | Overview risk zone | Allowed only compressed: one-line pointers ("shared search client lives at X") |
-| FOUNDATIONS catalog rows (name, path, API, consumers) | Pointer (compressed overview) | Earns tokens by routing, not describing |
-| Build/test/scaffold commands (context files) | Choice (config-encoded) | The classically useful context-file content ([Anthropic best practices](https://code.claude.com/docs/en/best-practices)) |
-| `Use when:` trigger lines | Choice (task → chosen tool) | The routing form of a boundary choice **(repokit hypothesis — planned experiment)** |
-| Agent descriptions (agentkit) | Choice, rendered for the router | Same content as trigger lines, on the push surface **(repokit hypothesis — planned experiment)** |
-| Wrapper rules ("use A, don't import B") | Choice (boundary) | Import-graph evidence; the field case, automated |
-| Structural conventions ("all handlers return X") | Choice (repetition) | Conformance-count evidence |
-| Extension-point rules ("new component → scaffold, register in factory") | Choice (sanctioned path) | The most task-shaped choice; gold for generation **(repokit hypothesis)** |
-| Canonical code examples (hot memory) | Choice (executable form) | Propagates harder than prose ([Srikanth R](https://www.linkedin.com/pulse/hidden-power-markdown-structuring-md-files-ai-coding-assistants-r-kdgof), anecdotal) |
-| Invariants | Choice + rationale composite | Constraint draftable as observed; reason human-only |
-| PRINCIPLES.md | Choice (codebase-wide conventions) + rationale | The existing home for module-less rules |
-| ADRs | Composite: overview + choice + rationale | Per [MADR](https://adr.github.io/madr/)'s own structure: Decision Outcome = choice; Context = overview; Drivers / Rejected Options / Consequences = rationale. Agent-context evidence is practitioner-only ([Chris Swan](https://blog.thestateofme.com/2025/07/10/using-architecture-decision-records-adrs-with-ai-coding-assistants/)) |
-| SDD artifacts (SpecKit constitution, OpenSpec `project.md`, Conductor guidelines) | Rationale + chosen principles | Themselves usually agent-generated — same epistemic class as a mined convention, so not authoritative. dockit reads, compares, and reports; never writes (repokit design decision) |
-| context7 / external library docs | Off-spectrum | Reference material about third-party code, not repo-derived |
-| Per-task user context | Off-spectrum | Definitionally never a project artifact |
+| Auto-generated AGENTS.md summaries | Overview | The measured net-negative case |
+| Purpose/architecture prose in generated docs | Overview risk zone | Allowed only as one-line pointers |
+| FOUNDATIONS catalog rows | Pointer (compressed overview) | Earns tokens by routing, not describing |
+| Build/test/scaffold commands | Choice (config-encoded) | The classically useful context-file content |
+| `Use when:` trigger lines | Choice (task → chosen tool) | The routing form of a boundary choice |
+| Agent descriptions (agentkit) | Choice, rendered for the router | Same content as trigger lines, on the push surface |
+| Wrapper rules | Choice (boundary) | Import-graph evidence; family 1a |
+| Ambient-capability rules | Choice (boundary) | Grep-and-concentrate evidence; family 1b |
+| Structural conventions | Choice (repetition) | Conformance-count evidence |
+| Extension-point rules | Choice (sanctioned path) | The most task-shaped choice |
+| Canonical code examples (hot memory) | Choice (executable form) | H8 |
+| Invariants | Choice + rationale composite | H7 |
+| PRINCIPLES.md | Choice (codebase-wide) + rationale | The existing home for module-less rules |
+| ADRs | Composite: all three bands | Per [MADR](https://adr.github.io/madr/)'s own structure |
+| SDD artifacts | Rationale + chosen principles | Usually agent-generated, so not authoritative |
+| context7 / external library docs | Off-spectrum | Third-party reference, not repo-derived |
+| Per-task user context | Off-spectrum | Never a project artifact |
 
-## How this applies to repokit
+### The six choice families
 
-### The generation rule, per band **(repokit hypothesis — the experiment this doc exists to specify)**
+Classified by **evidence source**, because evidence determines confidence and failure mode. This is H13; the detectors are A16.
 
-- **Overview:** never generated as prose *in documented repos*. The only permitted form is the pointer — one line, existence + location + chosen-ness ("shared client for vendor search lives at `<path>` — use it"). Exception: doc-barren repos, where the ETH gap-filler result licenses fuller generation until humans have something to curate. Per-line admission test ([Anthropic](https://code.claude.com/docs/en/best-practices)): would removing this line cause an agent to make a mistake? If not, don't generate it. *Implementation note (2026-08-01):* the asymmetry is a posture chosen during analysis — **documented** (a `docs/` directory exists, or README carries more than ~50 lines of real content) versus **doc-barren**. The relaxed posture is announced in the run report and re-tightens on the next sync once the repo has curated docs. Two things never relax: rationale is still never invented — a barren repo is precisely where an unchallenged plausible reason survives — and mined choices still enter at Convention tier with predicates, since a repo's lack of docs says nothing about whether a pattern was intentional.
-- **Choice:** generation's licensed territory, under four conditions: (1) every emitted choice carries a **stored predicate** — the literal command that verifies it plus the expected result — held in a comment beside the rule and invisible in the rendered doc; the visible line is a bare instruction, because conformance counts printed on the page tax every read-to-follow for information that only matters at verification time, (2) it enters at the **Convention** tier and is revisable in review, rather than blocking on confirmation before it may be written (see the tier model below), (3) it is phrased as an instruction, not a description — and positive where possible, since negative constraints have measured-weak compliance and need a verification backstop, (4) the predicate is re-run on every sync — a failing check or a dead path flags the rule, because stale instructions are obeyed ([Packmind](https://packmind.com/evaluate-context-ai-coding-agent/)). A flagged rule is never auto-removed: a decayed count means *either* the rule is wrong *or* the code is drifting away from a correct rule, and nothing in the evidence distinguishes those. That disambiguation is human work **(repokit hypothesis)**.
-- **Rationale:** omit or `[TODO: why?]`. Never synthesized, no exceptions. The composite pattern means most choice drafts end with an open rationale slot for a human. Rationale's value is revision-time, not generation-time — it is the payload when a settled choice gets reopened. Placement decision **(repokit hypothesis)**: an inline collapsed block (`<details><summary>Why</summary>`) directly beneath its rule, holding the reason and the rejected alternative. Collapsing buys human ergonomics, not token savings — an agent reads the block regardless — but attaching the why to the rule kills the classic separated-rationale failure where the rule changes and its recorded reason silently doesn't. The block is deliberately shaped as an **ADR stub**: it already carries decision + rejected alternative, so adding `Status:` and `Date:` later makes it mechanically extractable into per-decision files without rewriting anything. Rationale is also the one content type that cannot be mined, since it is invented rather than found — which is what makes a human-facing review channel structural rather than optional.
+1. **Boundary choices** — one module is the only sanctioned door to a capability. Two shapes. **1a, vendor boundary:** a project module wrapping a third-party SDK, found by listing its third-party imports and counting importers of those packages elsewhere. **1b, ambient-capability boundary:** one module owning access to something globally reachable with no manifest entry — env vars, the clock, randomness, DB connections, outbound HTTP. Detection is a grep for the accessor across the tree, grouped by containing module, with a concentration threshold (proposed ≥90%). Both emit the same output form. Failure mode: the wrapper is vestigial and the team abandoned it.
+2. **Structural conventions** — repeated shape across instances: naming, return types, layering, registration. Evidence: N-of-M conformance counts. Failure mode: coincidence read as rule.
+3. **Extension-point choices** — the sanctioned way to add a new X. Evidence: the scaffolding or registry exists and past additions used it. The most valuable family, because it's natively task-shaped.
+4. **Config-encoded choices** — selections visible in config or dependencies that nothing machine-enforces. Explicitly excludes anything a linter already enforces.
+5. **Canonical-example selection** — which instance is the exemplar. Evidence: most-conforming plus most-referenced.
+6. **Directional choices** — old and new patterns coexist and new code uses the new one. Evidence: git recency. **Highest-risk family** — can invert the truth, since the newer pattern might be the failed experiment. Parked.
 
-### Strength tiers: the safety valve that replaces the confirmation gate **(repokit hypothesis — from working discussions, 2026-08-01)**
+A wrapper is not a convention: the wrapper is an *artifact*, "route through it" is the rule it implies, and as a detector family it's distinct because its evidence is the import graph rather than repetition. They meet only at the output format.
 
-The instructions-are-followed finding cuts both ways, which invites an obvious mitigation: gate every mined rule behind human confirmation before it may be written. That mitigation is worse than the disease — a system that generates a review queue and refuses to produce anything until the queue is drained is a system nobody runs twice. The alternative is to let generation write freely and cap the *harm* of a wrong line instead of preventing the line:
-
-| Tier | Semantics for the agent | Who may write it |
-|---|---|---|
-| **Convention** | How it's done here. Follow by default; deviating is fine with a stated reason. | Generation may write, at will |
-| **Rule** | Deviating is a defect. | Humans only |
-
-Generation writes **only** into the Convention tier; promotion to Rule is exclusively human. A wrong Convention costs misplaced consistency; a wrong Rule blocks correct work. That asymmetry is the whole argument, and it is sharpest for prohibitions — the family with the worst measured compliance and the highest blocking cost ([arXiv:2604.07192](https://arxiv.org/abs/2604.07192)). Prohibitions may therefore be generated, but never above Convention, and never without a predicate.
-
-The tiers are inert unless declared. An agent reads a markdown file as undifferentiated instruction, so the distinction only exists if the file states it — a two-line legend at the top defining both tiers is load-bearing, not decorative **(repokit hypothesis)**.
-
-This also settles what "confirmation" means operationally: not a gate before writing, but a **review channel after**. The human-required work this design generates — unconfirmed conventions, empty rationale slots, intent questions, promotion candidates, and flagged decay — accumulates and must be walkable, or the `[TODO:]` slots become permanent and the never-synthesize-rationale rule becomes unlivable in practice. That channel is the natural home for promotion prompts ("this convention has held at 100% for 90 days") and for best-practice observations, which are deliberately kept *out* of the generated docs: a generic recommendation written into a project's own documentation is indistinguishable, to the next agent, from a decision the team actually made — the precise mechanism the obeyed-error result describes.
-
-### The choice families (there are six, not three) **(repokit hypothesis — taxonomy from working discussions)**
-
-Classified by **evidence source**, because evidence determines confidence and failure mode:
-
-1. **Boundary choices** — one module is the only sanctioned door to a capability, and the import graph respects it. Evidence: artifact + import ratios. Output: "use A for X operations," positively phrased with exceptions named — *not* "don't import B," per key finding #3 — with a stored predicate carrying the enforcement the wording can't. Failure mode: the wrapper is vestigial and the team actually abandoned it — the concentration threshold and exception list catch this.
-
-   **Two shapes, added 2026-08-02 (repokit hypothesis — from a second field report).** The original detector looks for a project module wrapping a *third-party SDK* (**1a, vendor boundary**), found by listing a module's third-party imports and counting importers of those packages elsewhere. A second shape recurs and that detector cannot see it: **1b, ambient-capability boundary** — one module owning access to something *globally reachable with no dependency-manifest entry at all*. Environment variables, the clock, randomness, direct DB connections, outbound HTTP. The door is a project module (`settings.py`, `clock.py`); the thing being confined is a language builtin. Detection is a grep for the accessor across the tree, grouped by containing module, with a concentration threshold (proposed: ≥90% of hits in one module). Both shapes emit the same output form and the same `check … expect=0` predicate.
-
-   Why it matters that 1b was missed: two of the four blind spots in the field report were ambient-capability leaks (`os.getenv` reaching into controllers), and a detector built only for vendor SDKs would never have surfaced either. Whether ≥90% is the right threshold, and whether the two shapes should stay one family or split, are both untested.
-2. **Structural conventions** — repeated shape across instances: naming schemes, return types, layering, registration patterns. Evidence: N-of-M conformance counts. Failure mode: coincidence read as rule; the threshold and exceptions guard it.
-3. **Extension-point choices** — the sanctioned way to add a new X: scaffold commands, registries, plugin directories. Evidence: the scaffolding/registry exists and past additions used it. The most valuable family because it's natively task-shaped ("adding a component? → this path").
-4. **Config-encoded choices** — selections visible in config/dependencies that nothing machine-enforces. Evidence: config + usage. Explicitly excluded: anything a linter already enforces — restating an enforced rule fails the per-line test, since the linter already guarantees compliance.
-5. **Canonical-example selection** — which instance is the exemplar of each convention. Evidence: most-conforming + most-referenced. Feeds agentkit hot memory.
-6. **Directional choices** — old pattern and new pattern coexist; new code consistently uses the new one. Evidence: git recency correlation. Output: "prefer B; A is legacy." **Highest-risk family** — requires history mining and can invert the truth (B might be the failed experiment). Park it behind stricter confirmation or defer entirely.
-
-Answering the specific question: a wrapper is not a convention — the wrapper is an *artifact*, "route through it" is the rule it implies, and as a detector family it's distinct because its evidence is the import graph rather than repetition. They meet only at the output format (both emit instructions).
-
-And on whether choice is obtainable from code alone: five of the six families are draftable from code as it sits (family 6 needs history mining and stays parked). Code yields the *draft*; a human still supplies the *confirmation* (is this pattern intentional?) and the *why*. That's the division of labor the whole spectrum encodes.
-
-### Naming: foundations stays, conventions get routed **(repokit design decision, from working discussions)**
-
-- **Foundation** = a thing: path, public API, owner, health, consumers. The catalog of load-bearing code. FOUNDATIONS.md keeps its name — it's a tooling contract: agentkit and dockit sync read it by name, so renaming is a breaking change.
-- **Convention** = a rule: a pattern of choice. Two homes, both existing: foundation-scoped conventions land in that foundation's entry (alongside its invariants); codebase-wide conventions land in PRINCIPLES.md, which already exists for exactly this content.
-- Choice-mining therefore adds **no new file**: it feeds FOUNDATIONS entries, PRINCIPLES.md, `Use when:` lines, and agentkit hot memory through the existing structure.
-
-### Improving FOUNDATIONS.md and PRINCIPLES.md around these findings **(repokit hypothesis — planned experiments)**
-
-> **Amended 2026-08-04.** The list below was written when stored predicates were the plan. Substitute throughout: *measure once at write time and discard the command*, and *name the anti-pattern the rule displaces, in the visible line, with a repair.* The predicate-and-drift-check items (invariant predicates, the negative-invariant drift check, predicate-verified modality split, "absence of a predicate" as a weakness rank) are **not** planned work. The rest of the list stands as written.
+## Actions
 
 **FOUNDATIONS.md, per entry:**
 
-- Lead with the choice content: a `Use when:` trigger line first, then invariants — positively phrased wherever possible.
-- Demote purpose prose to pointer form: one line, existence + location + chosen-ness. The catalog table stays pure pointers.
-- Give every invariant a stored predicate and an explicit rationale slot: constraint drafted from observation, reason human-owned and held in the collapsed block beneath it.
-- Pair every *negative* invariant ("never call the SDK directly") with a registered drift check that sync runs mechanically (e.g., an import scan) — negative constraints have measured-weak compliance, so verification backs up context.
-- Admit lines by the per-line test; sync re-runs all predicates and flags decay.
-- **Replace the public-API signature list with a canonical call site.** A signature block is derivable by opening the file and goes stale on every rename; a real invocation lifted from the best-conforming consumer costs the same tokens and additionally carries construction, async-ness, and house style. Which consumer to copy is itself a family-5 choice.
-- **Add the two growth-facing fields the entry structure currently lacks.** As written, every field is either a description or a constraint, so the document can only ever say *use the existing thing* — it has no way to express where a foundation is going or where building something new is correct. The consequence is that an agent meeting an uncovered case either forces its work through the wrong abstraction or violates a rule it cannot tell is soft **(repokit hypothesis)**:
-  - `Extend by:` — the sanctioned path to add a new instance. Well-suited to inference: scaffold commands in build files, registry files, and — strongest signal — the set of files that changed together across the last several additions in git history. Family 3, and confidently draftable.
-  - `Doesn't cover:` — the foundation's deliberate edge. Only half-inferable: the *observation* is visible ("four features write directly, bypassing this"), but absence carries no marker distinguishing an intentional boundary from an unfinished feature from a bug. Draft the observation, mark the intent question. The composite pattern again.
+- **A1 — Lead each entry with a `Use when:` trigger line, then invariants, positively phrased** · *proposed*
+  **Because:** H9, H11, [arXiv:2604.07192](https://arxiv.org/abs/2604.07192)
+- **A2 — Demote purpose prose to pointer form (one line: existence, location, chosen-ness); keep the catalog table pure pointers** · *proposed*
+  **Because:** H1, H10, H11, [ETH SRI](https://www.sri.inf.ethz.ch/publications/gloaguen2026agentsmd)
+- **A3 — Give every invariant an explicit rationale slot as an inline collapsed block (`<details><summary>Why</summary>`) directly beneath its rule, holding the reason and the rejected alternative** · *proposed*
+  **Because:** H7, H16
+- **A4 — Replace the public-API signature list with a canonical call site lifted from the best-conforming consumer** · *proposed*
+  **Because:** H8, [Srikanth R](https://www.linkedin.com/pulse/hidden-power-markdown-structuring-md-files-ai-coding-assistants-r-kdgof)
+- **A5 — Add an `Extend by:` field, inferred from scaffold commands, registry files, and the files that changed together across recent additions** · *proposed*
+  **Because:** H14, H13 (family 3)
+- **A6 — Add a `Doesn't cover:` field: draft the observation, mark the intent question** · *proposed*
+  **Because:** H14, H7
+- **A7 — Admit lines by the per-line test at write time** · *proposed*
+  **Because:** H2, [Anthropic](https://code.claude.com/docs/en/best-practices)
 
 **PRINCIPLES.md:**
 
-- Narrow the charter to choices: codebase-wide conventions as positive instructions, each carrying a stored predicate and an exception list.
-- Split the file by **modality, not topic** — an observed section (mined, Convention tier, predicate-verified) and a declared section (human-owned, Rule tier, never auto-edited). The current topic-based organisation renders a coincidental 11-of-13 pattern in the same voice as a mandatory constraint, which is exactly how an accidental repetition gets promoted to law without anyone deciding it **(repokit hypothesis)**.
-- Apply the surprising-choices filter (mechanism now specified — see Open questions): a rule must name the plausible alternative the team did not take. No nameable alternative means it is an ecosystem default, not a decision, and the line is cut.
-- Exclude machine-enforced rules entirely; the linter restates itself.
-- Keep the decisions table's rationale column but leave it `[TODO: why?]` when unfilled. The failure mode is not the column — it is generation filling it with fluent invention ("better concurrency for I/O-bound API") that no human ever asserted, which the next agent then reads as settled team reasoning. An empty slot is honest; a plausible guess is an obeyed error.
-- Cut the derivable sections outright: test-directory trees, test command lists, and any convention a formatter or type checker enforces.
-- No second disclosure level: principles link to code, never to further principle sub-docs. *Implementation note (2026-08-01):* dockit's large-project structure previously created a `docs/principles/` directory for an extracted testing doc, which contradicted this. Resolved in favour of the rule — test strategy is not principles content under the modality split anyway (test organisation and commands are derivable and belong in CONTRIBUTING), so it moved to `docs/TESTING.md` and the sub-doc directory was removed.
-- Carry a size budget, because filters cut lines but don't stop a file regrowing across a year of syncs: ~200 lines and ~40 rules for PRINCIPLES.md, ~8 invariants per foundation entry, from the practitioner numbers in the sources below. Over budget produces a weakest-first review list — ranked by lowest conformance, longest-unanswered rationale slot, and absence of a predicate — never a silent drop **(repokit hypothesis)**.
+- **A8 — Narrow to choices: codebase-wide conventions as positive instructions, each with an exception list** · *proposed*
+  **Because:** H11, [arXiv:2604.07192](https://arxiv.org/abs/2604.07192)
+- **A9 — Split the file by modality — an observed section (mined, Convention tier) and a declared section (human-owned, Rule tier, never auto-edited)** · *proposed*
+  **Because:** H15, H12
+- **A10 — Apply the name-the-alternative filter at draft time; cut the line when no alternative can be named** · *proposed*
+  **Because:** H16, H6
+- **A11 — Exclude machine-enforced rules entirely** · *proposed*
+  **Because:** H2, [Factory.ai](https://factory.ai/news/using-linters-to-direct-agents)
+- **A12 — Keep the decisions table's rationale column and leave it `[TODO: why?]` when unfilled** · *proposed*
+  **Because:** H7, [ETH SRI](https://www.sri.inf.ethz.ch/publications/gloaguen2026agentsmd)
+- **A13 — Cut derivable sections: test-directory trees, test command lists, and anything a formatter or type checker enforces** · *proposed*
+  **Because:** H11, [Augment Code](https://www.augmentcode.com/guides/how-to-build-agents-md)
+- **A14 — Enforce no second disclosure level: principles link to code, never to further principle sub-docs** · *proposed*
+  **Because:** H11
+- **A15 — Carry a size budget (~200 lines and ~40 rules for PRINCIPLES.md, ~8 invariants per foundation entry) producing a weakest-first review list, never a silent drop** · *proposed*
+  **Because:** H22, [HumanLayer](https://www.humanlayer.dev/blog/writing-a-good-claude-md)
 
-### Spec-driven-development artifacts: compare, never merge **(repokit design decision, 2026-08-01)**
+**Detection and delivery:**
 
-Tooling that reads an SDD artifact as authoritative and overwrites its own output from it rests on an assumption that no longer holds: that a human wrote the artifact. In current practice these files are generated by an agent from the same codebase, which places them in the same epistemic class as a mined convention — no better evidenced, and subject to the identical drift. Letting one overwrite the other destroys mined content on every sync and launders generated text into apparent authority.
+- **A16 — Build detectors for families 1–4 in dockit's detection layer, extending the existing fan-in / cross-feature analysis; leave family 6 unbuilt** · *proposed*
+  **Because:** H13, H3
+- **A17 — Emit every mined rule at Convention tier as a positive instruction carrying a named anti-pattern and a repair, with `[intended]` where the code hasn't caught up** · *proposed*
+  **Because:** H5, H12, H18, H19
+- **A18 — Declare a two-line Convention/Rule legend at the top of every generated file that carries tiered content** · *proposed*
+  **Because:** H12
+- **A19 — Route human-required items — unconfirmed conventions, empty rationale slots, `Doesn't cover:` intent questions, promotion candidates, SDD discrepancies — into the maintenance hub's existing status mode, read-only until the user opts into the walk** · *proposed*
+  **Because:** H20, H21
+- **A20 — Implement compare-never-merge for SDD artifacts: read whichever are present, write to none, report the three-way delta (present only upstream / present only locally / directly contradictory)** · *proposed*
+  **Because:** H21, [SpecKit](https://github.com/github/spec-kit), [OpenSpec](https://github.com/Fission-AI/OpenSpec), [Conductor](https://github.com/gemini-cli-extensions/conductor)
+- **A21 — Add a one-time `[TODO: known hazard?]` marker per foundation at registry entry or hotspot flip, with "nothing" a valid closing answer** · *proposed*
+  **Because:** H17
 
-The stable relationship is comparison. Sync reads whichever artifacts are present, writes to none of them, and reports the three-way delta: present only in the SDD artifact (adopt?), present only in the project's own principles (missing upstream?), and directly contradictory (which is right?). Neither side can silently clobber the other, and every reconciliation is a human decision.
+## Decisions (deliberately not doing)
 
-Detection targets, verified 2026-08-01:
+- **Stored predicates and any ongoing conformance measurement** (decided 2026-08-04). Dockit measures a pattern once, to earn the right to write a mined rule, then discards the command. It never re-measures an existing line. Three reasons, in order of force:
 
-| Framework | Artifact carrying conventions / standards |
-|---|---|
-| [SpecKit](https://github.com/github/spec-kit) | `.specify/memory/constitution.md` |
-| [OpenSpec](https://github.com/Fission-AI/OpenSpec) | `openspec/project.md` (tech stack + conventions); `openspec/AGENTS.md` |
-| [Conductor](https://github.com/gemini-cli-extensions/conductor) | `conductor/product-guidelines.md`, `conductor/workflow.md` (team conventions), `conductor/code_styleguides/` |
+  1. **The check never reached the reader who could act on it.** Agentkit strips `dockit:` comments when copying invariants into agent hot memory, by explicit design — "those are sync's business." The predicate ran at sync time, in a report, to a human. The agent never saw it. So the mitigation prescribed for the negative-constraint finding was structurally incapable of doing the job it was credited with, and no A/B was needed to establish that. Fatal on its own.
+  2. **Conformance isn't truth for a directive.** "All config comes from `Settings`" with three violating files is not a *false* sentence; it's a disobeyed one. Measuring that is a compliance audit, a different job from keeping documentation honest. Choice docs **direct future work** — they are not state trackers, and the two goals were conflated.
+  3. **Commodity, and done better elsewhere.** [ArchUnit](https://www.archunit.org/), [import-linter](https://import-linter.readthedocs.io/), and [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) enforce architectural rules on the hot path. A stored `grep` in a docs comment is a worse version of a solved problem, and the charter says to wrap or recommend commodity capability rather than build it.
 
-### Where this lands in repokit's plans
+  **Corollary — removal requires feature work, not decay.** A mined rule is removed only when the subject of the sentence disappears: the module deleted, the capability gone. Never because the rule became unpopular. `SearchClient` deleted → the rule goes. `SearchClient` bypassed in four new files → the rule stays exactly as written, because a directive being ignored is an argument for keeping it. This also removed the "N/M conform (100%)" roll call and the decay-disambiguation row from the review queue.
 
-Choice-mining slots into dockit's detection layer (extending the fan-in / cross-feature analysis dockit already performs) as the upstream feeder for the planned experiments: `Use when:` trigger lines, the instruction-density rule, omit-don't-invent at init, and agentkit's examples-first rule (family 5). Families 1–4 are buildable from analysis dockit already does or near-adjacent; family 6 is parked. All of these are **(repokit hypothesis)** — planned experiments, not established practice.
+  **What this does not remove: drift detection.** Sync still compares checkable claims against code, and `--deep` still verifies that every referenced path, symbol, command, and named anti-pattern resolves. Context rot is measured ([Treude & Baltes](https://arxiv.org/html/2606.09090)) — but what they measured is *does the thing this doc names still exist*, the descriptive check, not a conformance ratio on a prescriptive rule.
 
-The review channel folds into the maintenance hub's existing **status** mode rather than becoming a fourth mode. Status already reports what needs attention; the outstanding human-required items are more of the same list, and walking them conversationally is the natural continuation of a dashboard the user is already reading. The queue: unconfirmed conventions (keep, promote, drop), empty rationale slots, `Doesn't cover:` intent questions, promotion candidates surfaced from sustained conformance, flagged decay awaiting the is-the-doc-wrong-or-the-code-wrong call, and SDD-artifact discrepancies. Status stays read-only until the user answers — the walk is opt-in from the dashboard, not automatic. So the design adds **no new modes and no new files**; every piece routes through structure that already exists **(repokit hypothesis)**.
+- **Writing boundaries as explicit prohibitions** (decided 2026-08-01, re-decided 2026-08-04). On 2026-08-02 the opposite position — that boundaries need explicit prohibitions because negative space is what positive guidance can't supply — was written into the choice-mining guide as settled reasoning, in direct contradiction of the measured 10–100% failure rates. It was caught on re-reading this document and reverted the same day. Recorded because the generalization matters: a plausible mechanism argued from first principles will beat a cited finding in a drafting agent's attention unless the corpus is actually re-read.
+
+- **Running an A/B on the stored predicate's effect on authoring behavior** (decided 2026-08-04). The question was well-posed and would have measured something the architecture made impossible. Reading the data path first was cheaper than the eval. Worth remembering as a class of mistake — an experiment on a mechanism whose wiring nobody traced.
+
+- **Renaming FOUNDATIONS.md to CONVENTIONS.md.** Conflates thing with rule, and breaks the tools that read the file by name, for no informational gain.
+
+- **A new file for mined choices.** Routed into existing homes instead — FOUNDATIONS entries, PRINCIPLES.md, trigger lines, hot memory.
+
+- **Generating rationale under any confidence threshold.** The composite pattern (choice drafted, `[TODO: why?]` open) is the ceiling. A fluent invented reason is the worst output on the spectrum, because instructions-are-followed cuts both ways.
+
+- **Restating machine-enforced rules.** Linter and formatter config self-enforces; a restated enforced rule fails the per-line test by construction.
+
+- **ADR generation or scaffolding.** The ADRs-as-agent-context thesis is real but practitioner-only, and its headline quantitative claim traces to a nonexistent paper while real constraint research runs the other way. ADRs are composite artifacts whose choice content repokit's docs already carry; their unique payload is revision-time rationale, served by the `[TODO: why?]` slot. **A deliberate on-ramp remains:** the rationale block holds the reason and the rejected alternative, which are precisely an ADR's two distinguishing fields, so a future decision to capture ADRs becomes a mechanical extraction rather than a re-authoring. The format is chosen for that reason and should not be simplified away as off-plan.
 
 ## Sources
 
 | Source | Type | Why it matters |
 |--------|------|----------------|
-| [Evaluating AGENTS.md](https://www.sri.inf.ethz.ch/publications/gloaguen2026agentsmd) — Gloaguen, Mündler, Müller, Raychev, Vechev | Academic paper (ETH Zurich SRI Lab) | The instruction-followed / overview-unhelpful split; "rigorously but counterproductively"; the gap-filler asymmetry (paper-body details not independently re-verified). **Provenance checked 2026-08-04:** publisher page confirms venue **MemAgents @ ICLR 2026 (Oral & Runner-up Best Paper)** and the headline — *"no improvement in task success rates, while also increasing inference cost by over 20%"* — plus the conclusion that human-written context files "should describe only minimal requirements." The arXiv ID `2602.11988` cited in earlier drafts of this doc **could not be confirmed on the primary source**; secondary write-ups reporting +4% for developer-written and −3% for LLM-generated files are likewise unconfirmed. Cite the publisher page, not the arXiv ID |
-| [Packmind — Evaluating context for AI coding agents](https://packmind.com/evaluate-context-ai-coding-agent/) | Practitioner field review | Stale context obeyed with full compliance (Jest/Vitest class of drift) |
+| [Evaluating AGENTS.md](https://www.sri.inf.ethz.ch/publications/gloaguen2026agentsmd) — Gloaguen, Mündler, Müller, Raychev, Vechev | Academic paper (ETH Zurich SRI Lab) | The instruction-followed / overview-unhelpful split; "rigorously but counterproductively"; the gap-filler asymmetry (paper-body details not independently re-verified). **Provenance checked 2026-08-04:** the arXiv ID `2602.11988` cited in earlier drafts **could not be confirmed on the primary source**, and secondary write-ups reporting +4% / −3% are likewise unconfirmed. Cite the publisher page, not the arXiv ID |
+| [Packmind — Evaluating context for AI coding agents](https://packmind.com/evaluate-context-ai-coding-agent/) | Practitioner field review | Stale context obeyed with full compliance (the Jest/Vitest class of drift) |
+| [Treude & Baltes — Context Rot in AI-Assisted Software Development](https://arxiv.org/html/2606.09090) | Academic paper (SMU / Heidelberg) | Names *context rot*; DOCER over 612 config files / 356 repos, 23.0% carrying stale code references, 64% confirmed genuine. Recommends reusing documentation-consistency tooling rather than inventing new mechanisms |
 | [agents-lint](https://github.com/giacomo/agents-lint) | OSS tool | Existence proof that checked-in agent context rots |
 | [Anthropic — Claude Code best practices](https://code.claude.com/docs/en/best-practices) | Vendor guidance | The per-line admission test; bloat warning |
-| [HumanLayer — Writing a good CLAUDE.md](https://www.humanlayer.dev/blog/writing-a-good-claude-md) | Practitioner article | <300-line consensus; ~150–200 instruction ceiling (practitioner numbers, not measured research) |
-| [aider — repository map](https://aider.chat/2023/10/22/repomap.html) | Practitioner docs | The live per-turn ranking that static map clones drop |
-| [Serena issue #802](https://github.com/oraios/serena/issues/802) | Issue | Agents forget pull tools exist after compaction |
-| [Srikanth R — The Hidden Power of Markdown](https://www.linkedin.com/pulse/hidden-power-markdown-structuring-md-files-ai-coding-assistants-r-kdgof) | Practitioner article | Examples-propagate claim behind family 5 (anecdotal, not measured) |
+| [HumanLayer — Writing a good CLAUDE.md](https://www.humanlayer.dev/blog/writing-a-good-claude-md) | Practitioner article | <300-line consensus; ~150–200 instruction ceiling (practitioner numbers, not measured) |
 | [Augment Code — How to Build AGENTS.md](https://www.augmentcode.com/guides/how-to-build-agents-md) | Practitioner guide | Independent statement of the write-only-the-non-discoverable rule |
-| [Nygard — Documenting Architecture Decisions](https://www.cognitect.com/blog/2011/11/15/documenting-architecture-decisions) / [MADR](https://adr.github.io/madr/) | Practitioner article / standard | Canonical ADR forms — the structure that shows ADRs span all three bands |
-| [arXiv:2604.07192 — Compact Constraint Encoding](https://arxiv.org/abs/2604.07192) / [arXiv:2605.06445 — Constraint Decay](https://arxiv.org/abs/2605.06445) | Academic papers | Negative / counter-default constraints comply poorly; constraint pile-up degrades agents |
-| [Chris Swan — Using ADRs with AI coding assistants](https://blog.thestateofme.com/2025/07/10/using-architecture-decision-records-adrs-with-ai-coding-assistants/) | Practitioner article | Best real source for the ADRs-as-agent-context thesis (unmeasured) |
-| A production project's docs + generated agent (user-supplied, anonymized) | Field artifacts | The derivable-at-a-cost middle band: a visible choice, unknown at decision time |
-| Working discussions, Zach, 2026-07-31 → 2026-08-01 | Conversation | Everything marked **(repokit hypothesis)**: the three-band generalization, choice families, evidence-label-as-drift-contract, composite pattern, naming verdict, orthogonal-axes framing — to be validated by experiment in repokit |
+| [arXiv:2604.07192 — Compact Constraint Encoding](https://arxiv.org/abs/2604.07192) / [arXiv:2605.06445 — Constraint Decay](https://arxiv.org/abs/2605.06445) | Academic papers | Negative and counter-default constraints comply poorly; constraint pile-up degrades agents |
 | [arXiv:2409.20550 — LLM Hallucinations in Practical Code Generation](https://arxiv.org/abs/2409.20550) / [PACMSE](https://dl.acm.org/doi/10.1145/3728894) | Academic paper | Hand-annotated hallucination taxonomy; Project Context Conflicts 24.56%, Dependency Conflicts 11.26%; repository-level context awareness as root cause; RAG mitigation only +0.87–3.05 Pass@1 on a stale model cohort |
 | [arXiv:2602.11671 — Do Not Treat Code as Natural Language (Hydra / DAR)](https://arxiv.org/pdf/2602.11671) | Academic paper | Recall-over-precision for dependency retrieval, quoted verbatim from the paper body; class dependencies are what similarity retrieval misses worst |
-| A production project's codeagent audit (user-supplied, anonymized, 2026-08-02) | Field artifacts | Four agents, four blind spots; two were ambient-capability leaks invisible to vendor-SDK detection (family 1b); the unminable facet-exclusion rule behind the hazard question. LLM-authored report, illustrative before/after pairs — no measured A/B |
-| Working discussion, Zach, 2026-08-01 (second pass) | Conversation | The refinements layered on top of the above: stored predicates in place of visible evidence labels; Convention/Rule strength tiers replacing the confirmation gate; rationale as an inline collapsed ADR stub; the review channel; compare-don't-merge for SDD artifacts; the name-the-alternative filter; `Extend by:` / `Doesn't cover:` and the canonical call site in FOUNDATIONS entries |
-| [Treude & Baltes — Context Rot in AI-Assisted Software Development](https://arxiv.org/html/2606.09090) | Academic paper (SMU / Heidelberg) | Names *context rot* — divergence between what a config file says and what holds. Ran DOCER over **612 config files / 356 repos: 23.0% carried stale code references, 230 total, 64% confirmed genuine on manual validation.** Recommends reusing existing documentation-consistency tooling on AI config artifacts rather than inventing new mechanisms. The measured staleness is *does the named element still exist* — descriptive, not conformance |
-| [ArchUnit](https://www.archunit.org/) · [import-linter](https://import-linter.readthedocs.io/) · [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) | OSS tools | Mature architecture-conformance enforcement — the commodity that made repokit's stored predicates redundant. Rules live in the test suite / linter config and fail the build; recommend these instead of measuring conformance from a docs comment |
-| [Factory.ai — Using linters to direct agents](https://factory.ai/news/using-linters-to-direct-agents) | Practitioner article | Independent statement of the split repokit adopted: prose establishes *why* a standard matters, linting creates the *guarantee*. Notably keeps the enforcement **in the linter**, mapping each prose guideline to a lint rule ID — nobody in the field puts enforcement inside the doc |
-| [Docs as Tests](https://www.docsastests.com/) · Rust doc-tests | Methodology / language feature | Prior art for executable documentation — and a boundary marker: what gets tested is *documented procedures and examples*, never a conformance ratio on a directive |
-| [ADR practice — techdebt.best](https://techdebt.best/architectural-decisions/) · [Azure Well-Architected](https://learn.microsoft.com/en-us/azure/well-architected/architect-role/architecture-decision-record) | Practitioner guides | Decision records are point-in-time and effectively never machine-verified; the accepted remedies are a human review cadence and a "last verified" date, with automated tests recommended as a *separate* mechanism. Corroborates keeping verification out of the decision document |
-| Working discussion, Zach, 2026-08-03 → 2026-08-04 | Conversation | Predicate removal and the anti-pattern harvest; removal-requires-feature-work; choice-docs-direct-not-track; run-report restructure (`Updated` block, `Left alone` as a count); next-steps gating; the count-only-detection greenfield blindspot (see [foundations-reference.md](./foundations-reference.md)); legibility as a correctness property in the charter |
-
-## Resolved (deliberately not doing)
-
-- **Stored predicates and any ongoing conformance measurement (decided 2026-08-04).** Dockit measures a pattern once, to earn the right to write a mined rule, then discards the command. It never re-measures an existing line. Three reasons, in order of force:
-
-  1. **The check never reached the reader who could act on it** — see the resolved predicate question in [Open questions](#open-questions). Fatal on its own.
-  2. **Conformance isn't truth for a directive.** "All config comes from `Settings`" with three violating files is not a *false* sentence; it's a disobeyed one. Measuring that is a compliance audit, which is a different job from keeping documentation honest. Choice docs **direct future work** — they are not state trackers, and the two goals were conflated.
-  3. **Commodity, and done better elsewhere.** [ArchUnit](https://www.archunit.org/), [import-linter](https://import-linter.readthedocs.io/), and [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) enforce architectural rules on the hot path — pre-commit, CI, build failure — where enforcement works. A stored `grep` in a docs comment is a worse version of a solved problem, and the charter already says to wrap or recommend commodity capability rather than build it. Recommend these in generated docs.
-
-  **Corollary — removal requires feature work, not decay.** A mined rule is removed only when *the subject of the sentence disappears*: the module deleted, the capability gone. Never because the rule became unpopular. `SearchClient` deleted → the rule goes. `SearchClient` bypassed in four new files → the rule stays exactly as written, because a directive being ignored is an argument for keeping it. This also removed a whole class of report noise — the "N/M conform (100%)" roll call, and the decay-disambiguation row in the review queue.
-
-  **What this does not remove: drift detection.** Sync still compares checkable claims against code, and `--deep` still verifies that every referenced path, symbol, command, and *named anti-pattern* resolves. Context rot is real and measured ([Treude & Baltes](https://arxiv.org/html/2606.09090): 23% of 356 repos carried stale code references in AI config files, 64% confirmed on manual validation) — but the staleness they measured is *does the thing this doc names still exist*, which is the descriptive check, not a conformance ratio on a prescriptive rule.
-
-- **Renaming FOUNDATIONS.md to CONVENTIONS.md.** Conflates thing with rule; breaks tools that read the file by name, for no informational gain.
-- **A new file for mined choices.** Routed into existing homes (FOUNDATIONS entries, PRINCIPLES.md, trigger lines, hot memory).
-- **Generating rationale under any confidence threshold.** The composite pattern (choice drafted, `[TODO: why?]` open) is the ceiling.
-- **Restating machine-enforced rules.** Linter/formatter config self-enforces; a restated enforced rule fails the per-line test by construction.
-- **ADR generation or scaffolding.** Reviewed the pro-ADR research (2026-08-01): the "ADRs as agent context" thesis is real but practitioner-only, and its headline quantitative claim (>60% regression reduction via rejected-option negative constraints, attributed to ACM/IEEE 2024) traces to a nonexistent paper — while real constraint research runs the other way. ADRs are composite artifacts whose choice content repokit's docs already carry; their unique payload (rationale) is revision-time and served by the `[TODO: why?]` slot plus on-demand storage. Their remaining marginal use is spec-phase decision review (a plan reopening a settled question), not generation-phase subagents. No ADR feature.
-
-  **Amended 2026-08-01 — no ADR feature, but a deliberate on-ramp.** Still nothing generated and no ADR files written. The revision is to the rationale block's *shape*: it holds the reason and the rejected alternative, which are precisely an ADR's two distinguishing fields, so a future decision to capture ADRs becomes a mechanical extraction rather than a re-authoring. The format is chosen for that reason and should not be simplified away as off-plan. It also inverts the usual ADR failure — rationale that lives beside its rule cannot drift from the rule the way a separate decision file does.
+| [ArchUnit](https://www.archunit.org/) · [import-linter](https://import-linter.readthedocs.io/) · [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) | OSS tools | Mature architecture-conformance enforcement — the commodity that made stored predicates redundant |
+| [Factory.ai — Using linters to direct agents](https://factory.ai/news/using-linters-to-direct-agents) | Practitioner article | Prose establishes *why* a standard matters, linting creates the *guarantee* — and enforcement stays in the linter, mapped to lint rule IDs |
+| [Docs as Tests](https://www.docsastests.com/) · Rust doc-tests | Methodology / language feature | Prior art for executable documentation, and a boundary marker: what gets tested is procedures and examples, never a conformance ratio on a directive |
+| [ADR practice — techdebt.best](https://techdebt.best/architectural-decisions/) · [Azure Well-Architected](https://learn.microsoft.com/en-us/azure/well-architected/architect-role/architecture-decision-record) | Practitioner guides | Decision records are point-in-time and effectively never machine-verified; accepted remedies are a review cadence and a "last verified" date, with automated tests as a *separate* mechanism |
+| [Nygard — Documenting Architecture Decisions](https://www.cognitect.com/blog/2011/11/15/documenting-architecture-decisions) / [MADR](https://adr.github.io/madr/) | Practitioner article / standard | Canonical ADR forms — the structure showing ADRs span all three bands |
+| [Chris Swan — Using ADRs with AI coding assistants](https://blog.thestateofme.com/2025/07/10/using-architecture-decision-records-adrs-with-ai-coding-assistants/) | Practitioner article | Best real source for the ADRs-as-agent-context thesis (unmeasured) |
+| [aider — repository map](https://aider.chat/2023/10/22/repomap.html) | Practitioner docs | The live per-turn ranking that static map clones drop |
+| [Serena issue #802](https://github.com/oraios/serena/issues/802) | Issue | Agents forget pull tools exist after compaction |
+| [Srikanth R — The Hidden Power of Markdown](https://www.linkedin.com/pulse/hidden-power-markdown-structuring-md-files-ai-coding-assistants-r-kdgof) | Practitioner article | The examples-propagate claim behind family 5 (anecdotal, not measured) |
+| [SpecKit](https://github.com/github/spec-kit) · [OpenSpec](https://github.com/Fission-AI/OpenSpec) · [Conductor](https://github.com/gemini-cli-extensions/conductor) | OSS frameworks | Artifact locations for SDD convention files, verified 2026-08-01 |
+| A production project's docs + generated agent (user-supplied, anonymized) | Field artifacts | The derivable-at-a-cost middle band: a visible choice, unknown at decision time |
+| A production project's code-agent audit (user-supplied, anonymized, 2026-08-02) | Field artifacts | Four agents, four blind spots; two were ambient-capability leaks invisible to vendor-SDK detection (family 1b); the unminable facet-exclusion rule behind H17. LLM-authored report, illustrative before/after pairs — no measured A/B |
 
 ## Open questions
 
-- **Family 6 (directional choices):** is git-recency inference ever safe enough to draft, or is legacy-vs-current permanently human-only? Wrong inversions are confidently harmful. Default: parked.
-- **Conformance thresholds:** what N-of-M ratio justifies drafting a structural convention? No literature on the ratio; overall size budgets have practitioner numbers ([HumanLayer](https://www.humanlayer.dev/blog/writing-a-good-claude-md): <300 lines, ~150–200 instruction ceiling) but those are consensus, not measurement. Ratio stays a labeled default (e.g., ≥80% with exceptions listed), revisited with evals.
-- **Does choice-mining output stand alone** in the plain-harness configuration (no agentkit agents, docs only)? Untested.
-- **The "surprising choices" filter:** the measured value of curated context concentrates in *non-obvious* facts, which suggests convention-mining needs a second filter beyond conformance — deviation-from-ecosystem-default (13/13 files following standard pytest layout is a true choice but fails the per-line test). *Mechanism proposed 2026-08-01 **(repokit hypothesis, untested)**:* require the drafter to **name the plausible alternative the team did not take**. If no alternative can be named, the pattern is the path of least resistance rather than a selection, and the line is cut. This substitutes a generative test for the comparison against ecosystem baselines that has no mechanical implementation — it needs no corpus and no framework-defaults database, only the drafting model's own priors, which is exactly the knowledge that makes a fact obvious-or-not to the agent reading it downstream. It doubles as the rationale prompt, since the rejected alternative is half of the collapsed why-block. Open risk: a sufficiently fluent drafter can name an alternative for anything, so the filter may under-cut; whether it discriminates in practice is an eval question.
-
-- **~~Does a stored predicate change behavior at authoring time, or only catch drift at sync time?~~ (added 2026-08-02 — RESOLVED 2026-08-04, no eval needed)** The question asked whether an agent reading a rule *with* a runnable predicate beside it complies better than one reading the rule alone. **It cannot, and no A/B was needed to establish it: the agent never sees the predicate.** Agentkit strips `dockit:` comments when copying invariants into agent hot memory — by explicit design, "those are sync's business." The predicate ran at sync time, in a report, to a human. So the mitigation prescribed for key finding #3 was structurally incapable of doing the job it was credited with, and the guide's claim that the predicate "carries the enforcement the wording can't" was false as written for the entire time it stood.
-
-  **What replaced it.** The predicate's *pattern* — `grep -rE 'os.environ|os.getenv'` — encoded the one genuinely actionable fact in the entry: which specific API is the wrong path. That was locked in a comment no agent read. It is now harvested into the visible line as a **named anti-pattern** with a repair (*"direct `os.environ` reads bypass validation and defaults — add a field to `Settings`"*), keeping the imperative positive so key finding #3 still holds. This is a strictly better answer to #3 than the predicate ever was, and it needs no verification machinery.
-
-  **Still open, and now the real question:** does naming the anti-pattern inside a positive instruction improve compliance over the bare positive instruction? That *is* an A/B — same task, same repo, rule alone versus rule + named anti-pattern + repair — and it's the eval the original question should have been. Unmeasured **(repokit hypothesis)**.
-
-  *Second-order note:* the original question was well-posed and would have run an experiment to measure something the architecture made impossible. Reading the data path first was cheaper than the eval. Worth remembering as a class of mistake — an A/B on a mechanism whose wiring nobody traced.
-
-  *History, recorded because the record is the point:* on 2026-08-02 the opposite position — that boundaries should be written as explicit prohibitions because negative space is what positive guidance can't supply — was written into the choice-mining guide as settled reasoning, in direct contradiction of key finding #3 and its measured 10–100% failure rates. It was caught on re-reading this document and reverted the same day. The generalization: a plausible mechanism argued from first principles will beat a cited finding in a drafting agent's attention unless the corpus is actually re-read. That is the drift this project exists to prevent, occurring inside the project.
-
-- **Is the hazard question a real content source, or a nag? (added 2026-08-02)** Some of the highest-value invariants are unreachable by *any* analysis — the anonymized field case is *"exclude numeric and date fields from facet requests; the vendor returns 400."* No import graph implies it, no conformance count suggests it, and the compliant code looks like ordinary filtering. It exists because somebody shipped the obvious version and watched it fail. Proposed mechanism **(repokit hypothesis)**: a one-time `[TODO: known hazard?]` marker per foundation at registry entry or hotspot flip, asking *"what has broken here that a newcomer wouldn't predict?"*, with "nothing" as a valid closing answer. Open: what fraction of foundations yield an answer, whether answers are genuinely non-derivable or just not-yet-derived, and whether repeated asking trains users to dismiss the whole review channel. Related to the review-channel question below — this row adds volume to a channel already suspected of going unread. n=1 today.
-
-- **Does `[intended]` get read as "optional"? (added 2026-08-04)** The marker says *decided, and the code hasn't caught up* — a state a scaffolded project is almost entirely made of, and the thing that lets a sanctioned path be documented before anything uses it. The design is careful that it qualifies the *code*, not the rule's force: a Convention stays deviable-with-a-reason and a Rule stays not, marker or no marker. Whether an agent actually reads it that way is unmeasured, and the failure mode is asymmetric — treating `[intended]` as a weaker rule is exactly the behaviour that keeps a new sanctioned path unused, since the agent falls back to copying the neighbours the rule exists to replace. Testable with the same three-arm setup as the anti-pattern question, adding an `[intended]`-marked arm on a foundation with zero consumers **(repokit hypothesis)**.
-
-- **Does the review channel actually get used?** The design routes all human-required work — rationale, promotions, intent questions, decay disambiguation — into a single conversational pass, on the argument that a pre-write confirmation gate would simply stall generation. That trades a hard failure (nothing gets written) for a soft one (everything gets written and nobody reviews it). Unmeasured, and the more likely failure mode of the two **(repokit hypothesis)**.
+- **Family 6 (directional choices):** is git-recency inference ever safe enough to draft, or is legacy-vs-current permanently human-only? Wrong inversions are confidently harmful. No position taken; parked by default rather than decided against.
+- **Conformance thresholds:** what N-of-M ratio justifies drafting a structural convention? No literature on the ratio. Overall size budgets have practitioner numbers but those are consensus, not measurement. Currently a labeled default (≥80% with exceptions listed), and H6 argues it may be set too high — but nothing here takes a position on the number itself.
+- **Does choice-mining output stand alone** in the plain-harness configuration — docs only, no agentkit agents? Untested, and no position.
+- **Does the greenfield case break count-based detection?** A scaffolded project has sanctioned paths with zero instances, so every count-based detector returns nothing. `[intended]` is the marker for it (H19) but whether detection can surface a path nothing uses yet is unresolved.
+- **What happens when two mined families disagree** — a structural convention at 11/13 whose two exceptions are the most recently added files? That's family 2 and family 6 pointing opposite ways on the same code, and nothing in the design arbitrates.
